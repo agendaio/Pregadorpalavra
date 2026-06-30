@@ -5,7 +5,7 @@
  * nos clientes. Combinado com Workbox autoUpdate, isso garante que
  * os usuários sempre vejam a versão mais recente.
  */
-export const APP_VERSION = '0.3.1';
+export const APP_VERSION = '0.4.0';
 
 /** Versão do service worker / cache do Workbox */
 export const SW_CACHE_VERSION = `pregador-os-v${APP_VERSION}`;

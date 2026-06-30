@@ -18,12 +18,42 @@ import { PWAUpdatePrompt } from '@/components/pwa/PWAUpdatePrompt';
 import { semearExemplos } from '@/db/seed';
 import { initTema } from '@/stores/ui';
 
+// Admin
+import { AdminLoginPage } from '@/admin/Login';
+import { AdminShell } from '@/admin/AdminShell';
+import { AdminDashboard } from '@/admin/Dashboard';
+import { AdminUsers } from '@/admin/Users';
+import { AdminPlans } from '@/admin/Plans';
+import { AdminFeatures } from '@/admin/Features';
+import { AdminApiKeys } from '@/admin/ApiKeys';
+import { AdminUsage } from '@/admin/Usage';
+import { AdminSubscriptions } from '@/admin/Subscriptions';
+import { AdminNotifications } from '@/admin/Notifications';
+import { AdminLogs } from '@/admin/Logs';
+import { AdminSettings } from '@/admin/Settings';
+
 /** Wrapper que permite AnimatePresence com React Router */
 function AnimatedRoutes() {
   const location = useLocation();
   return (
     <AnimatePresence mode="wait" initial={false}>
       <Routes location={location} key={location.pathname.split('/')[1] || 'root'}>
+        {/* Painel Admin — separado do app do pregador */}
+        <Route path="/admin/login" element={<AdminLoginPage />} />
+        <Route path="/admin" element={<AdminShell />}>
+          <Route index element={<Navigate to="/admin/dashboard" replace />} />
+          <Route path="dashboard" element={<AdminDashboard />} />
+          <Route path="users" element={<AdminUsers />} />
+          <Route path="plans" element={<AdminPlans />} />
+          <Route path="features" element={<AdminFeatures />} />
+          <Route path="api-keys" element={<AdminApiKeys />} />
+          <Route path="usage" element={<AdminUsage />} />
+          <Route path="subscriptions" element={<AdminSubscriptions />} />
+          <Route path="notifications" element={<AdminNotifications />} />
+          <Route path="logs" element={<AdminLogs />} />
+          <Route path="settings" element={<AdminSettings />} />
+        </Route>
+
         {/* Modo Púlpito é fullscreen, sem AppShell */}
         <Route path="/pulpit/:id" element={<PulpitPage />} />
 
