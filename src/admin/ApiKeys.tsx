@@ -181,8 +181,13 @@ function ApiKeysSection() {
         body: { provider, apiKey: apiKeyRaw.trim(), model: modelo },
       });
       if (error || !data) {
-        const msg = String(error?.message ?? 'Sem resposta do servidor');
-        setTestResults([{ name: 'Erro de conexão', passed: false, message: msg }]);
+        const status = (error as any)?.context?.status;
+        const bodyMsg = (error as any)?.context?.body?.message ?? (error as any)?.message ?? String(error ?? '');
+        let msg = String(bodyMsg);
+        if (String(msg).includes('Failed to send') || String(msg).includes('Fetch')) {
+          msg = 'Não foi possível conectar ao servidor. Verifique sua internet e tente novamente.';
+        }
+        setTestResults([{ name: 'Erro de conexão', passed: false, message: `HTTP ${status ?? '?'} - ${msg}` }]);
       } else {
         const r = data as { success: boolean; tests: TestResult[] };
         setTestResults(r.tests);
@@ -459,7 +464,21 @@ function AgentesSection() {
       const { data, error } = await sb!.functions.invoke('ai-chat', {
         body: { mensagem: testInput, agente_id: testAgent.id, modo: 'test' },
       });
-      if (error) throw new Error(String(error));
+      if (error) {
+        const e: any = error;
+        const status = e?.context?.status;
+        const bodyMsg = e?.context?.body?.message ?? e?.message ?? String(error);
+        let detail = `HTTP ${status ?? '?'} - ${bodyMsg}`;
+
+        if (String(bodyMsg).includes('quota') || String(bodyMsg).includes('429')) {
+          detail = `⚠️ QUOTA ESGOTADA — A chave da OpenAI não tem crédito. Adicione saldo em platform.openai.com ou cadastre uma nova chave.`;
+        } else if (String(bodyMsg).includes('invalid_token') || status === 401) {
+          detail = `🔑 Token inválido. Faça logout e login novamente.`;
+        } else if (String(bodyMsg).includes('Fetch') || String(bodyMsg).includes('Failed')) {
+          detail = `🌐 Falha de conexão. Verifique sua internet.`;
+        }
+        throw new Error(detail);
+      }
       setTestOutput(JSON.stringify(data, null, 2));
     } catch (e) {
       setTestOutput(`Erro: ${(e as Error).message}`);

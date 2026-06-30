@@ -528,18 +528,30 @@ serve(async (req) => {
     }
     const jwt = authHeader.replace(/^Bearer\s+/i, '');
 
-    // Clientes Supabase
+    // Cliente admin (bypass RLS)
     const sbAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
-    const sbUser = createClient(SUPABASE_URL, Deno.env.get('SUPABASE_ANON_KEY')!, {
-      global: { headers: { authorization: authHeader } },
-    });
 
-    // Validar token
-    const { data: userData, error: userErr } = await sbUser.auth.getUser(jwt);
-    if (userErr || !userData.user) {
-      return jsonError(401, 'invalid_token', 'Token inválido ou expirado');
+    // Validar token via REST endpoint (suporta HS256 + ES256)
+    let userId: string;
+    try {
+      const userResp = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+        headers: {
+          'Authorization': `Bearer ${jwt}`,
+          'apikey': Deno.env.get('SUPABASE_ANON_KEY')!,
+        },
+      });
+      if (!userResp.ok) {
+        const errText = await userResp.text();
+        return jsonError(401, 'invalid_token', `Token inválido ou expirado (HTTP ${userResp.status}): ${errText.slice(0, 200)}`);
+      }
+      const userJson = await userResp.json();
+      userId = userJson.id;
+      if (!userId) {
+        return jsonError(401, 'invalid_token', 'Resposta sem user.id');
+      }
+    } catch (e) {
+      return jsonError(401, 'invalid_token', `Falha ao validar token: ${(e as Error).message}`);
     }
-    const userId = userData.user.id;
 
     // Verificar se é admin
     const { data: adminData } = await sbAdmin
@@ -565,7 +577,13 @@ serve(async (req) => {
     } = body;
 
     if (!Array.isArray(messages) || messages.length === 0) {
-      return jsonError(400, 'invalid_body', 'messages[] é obrigatório');
+      // Compatibilidade: aceita { mensagem: '...' } também
+      const mensagemSimples = (body as { mensagem?: string }).mensagem;
+      if (typeof mensagemSimples === 'string' && mensagemSimples.trim()) {
+        (body as { messages?: unknown }).messages = [{ role: 'user', content: mensagemSimples.trim() }];
+      } else {
+        return jsonError(400, 'invalid_body', 'messages[] ou mensagem é obrigatório');
+      }
     }
 
     // Obter API key ativa do banco
