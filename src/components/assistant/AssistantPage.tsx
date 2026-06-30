@@ -180,34 +180,38 @@ function AssistenteHome({
   const s = saudacoes[new Date().getDate() % saudacoes.length];
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-7">
+    <div className="flex flex-col items-center px-4 py-8">
+      {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.32, ease: EASE_OUT }}
-        className="mb-7 text-center"
+        className="mb-8 text-center"
       >
-        <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-ink-900 to-ink-700 text-white shadow-soft dark:from-ink-800 dark:to-ink-700">
-          <Sparkles className="h-6 w-6" />
+        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-ink-900 to-ink-700 text-white shadow-lg dark:from-ink-800 dark:to-ink-700">
+          <Sparkles className="h-7 w-7" />
         </div>
-        <h2 className="text-[19px] font-semibold tracking-tight text-ink-900 dark:text-white">{s}</h2>
+        <h2 className="text-xl font-bold tracking-tight text-ink-900 dark:text-white">{s}</h2>
         {temContexto && tituloMsg && (
-          <p className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-ink-100 px-3 py-1 text-[12px] text-ink-700 dark:bg-ink-800 dark:text-ink-200">
-            <BookOpen className="h-3.5 w-3.5" />
+          <p className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-ink-100 px-4 py-1.5 text-sm text-ink-700 dark:bg-ink-800 dark:text-ink-200">
+            <BookOpen className="h-4 w-4" />
             Contexto: {tituloMsg}
           </p>
         )}
       </motion.div>
 
+      {/* Card de ações */}
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.08, duration: 0.32, ease: EASE_OUT }}
+        className="w-full max-w-xl rounded-3xl border border-ink-200/80 bg-white px-5 py-6 shadow-md dark:border-ink-800 dark:bg-ink-900/30 sm:max-w-2xl"
       >
-        <p className="mb-3 px-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-500 dark:text-ink-400">
+        <p className="mb-4 text-center text-xs font-semibold uppercase tracking-[0.14em] text-ink-400 dark:text-ink-500">
           Ações rápidas
         </p>
-        <div className="grid grid-cols-2 gap-2.5">
+        {/* Grid responsivo: 3 colunas em lg, 2 em sm+ */}
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           {ACOES_RAPIDAS.map((acao, i) => {
             const Icon = acao.icon;
             const gradiente = GRADIENTES[acao.idAcao] ?? 'from-ink-600 to-ink-800';
@@ -224,20 +228,24 @@ function AssistenteHome({
                   )
                 }
                 disabled={enviando}
-                className="group flex items-center gap-3 rounded-2xl border border-ink-200/80 bg-white p-3.5 text-left transition-all hover:border-ink-300 hover:shadow-soft active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50 dark:border-ink-800 dark:bg-ink-900/40"
+                className="group flex flex-col items-center gap-2.5 rounded-2xl border border-ink-100 bg-paper px-3 py-4 text-center transition-all hover:border-ink-200 hover:shadow-sm active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50 dark:border-ink-800 dark:bg-ink-900/40 sm:flex-row sm:gap-3 sm:rounded-xl sm:border sm:px-4 sm:py-3 sm:text-left"
               >
-                <span className={cn('flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-white shadow-sm', gradiente)}>
-                  <Icon className="h-4 w-4" />
+                <span className={cn('flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-white shadow-sm', gradiente)}>
+                  <Icon className="h-5 w-5" />
                 </span>
-                <span className="text-[13.5px] font-medium leading-snug text-ink-800 group-hover:text-ink-900 dark:text-ink-100 dark:group-hover:text-white">
+                <span className="text-sm font-medium leading-snug text-ink-800 group-hover:text-ink-900 dark:text-ink-100 dark:group-hover:text-white">
                   {acao.rotulo}
                 </span>
-                <ChevronRight className="ml-auto h-3.5 w-3.5 flex-shrink-0 text-ink-300 transition-transform group-hover:translate-x-0.5 dark:text-ink-600" />
               </motion.button>
             );
           })}
         </div>
       </motion.div>
+
+      {/* Dica */}
+      <p className="mt-5 text-center text-sm text-ink-400 dark:text-ink-500">
+        Abra uma mensagem pelo editor para contexto completo
+      </p>
     </div>
   );
 }
