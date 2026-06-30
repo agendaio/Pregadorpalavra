@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Settings as SettingsIcon, Loader2, AlertCircle, Server, Database } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuthAdminStore } from '@/stores/authAdmin';
-import { APP_VERSION } from '../../v.config';
+import { APP_VERSION } from '@/v.config';
 
 export function AdminSettings() {
   const admin = useAuthAdminStore((s) => s.admin);

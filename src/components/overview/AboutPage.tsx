@@ -13,7 +13,7 @@ import {
   ChevronLeft,
 } from 'lucide-react';
 import { MobileHeader } from '@/components/layout/MobileHeader';
-import { APP_VERSION } from '../../../v.config';
+import { APP_VERSION } from '@/v.config';
 
 export function AboutPage() {
   return (

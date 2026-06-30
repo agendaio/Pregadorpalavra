@@ -13,7 +13,7 @@ import {
 import { useUIStore } from '@/stores/ui';
 import { MobileHeader } from '@/components/layout/MobileHeader';
 import { cn } from '@/lib/utils';
-import { APP_VERSION } from '../../../v.config';
+import { APP_VERSION } from '@/v.config';
 
 interface Item {
   to?: string;

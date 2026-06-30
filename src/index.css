@@ -108,9 +108,36 @@
     @apply outline-none min-h-[280px] leading-relaxed text-[17px];
   }
   .tiptap p { @apply my-3; }
-  .tiptap h1 { @apply text-3xl font-semibold mt-6 mb-3 tracking-tight; }
-  .tiptap h2 { @apply text-2xl font-semibold mt-5 mb-2 tracking-tight; }
-  .tiptap h3 { @apply text-xl font-semibold mt-4 mb-2; }
+  /* H1 — Título de capítulo: grande, destaque principal */
+  .tiptap h1 {
+    @apply text-2xl font-bold mt-6 mb-3 tracking-tight;
+    @apply text-ink-900 dark:text-white;
+    border-left: 3px solid #18181b;
+    padding-left: 0.75rem;
+    margin-left: -0.75rem;
+  }
+  /* H2 — Subtítulo: menor, destaque colorido, agrupa pontos */
+  .tiptap h2 {
+    @apply text-[17px] font-semibold mt-5 mb-2 tracking-tight leading-snug;
+    @apply text-indigo-700 dark:text-indigo-300;
+    border-left: 3px solid #6366f1;
+    padding-left: 0.6rem;
+    margin-left: -0.6rem;
+    background: rgba(99, 102, 241, 0.05);
+    border-radius: 0 4px 4px 0;
+    padding-top: 0.25rem;
+    padding-bottom: 0.25rem;
+  }
+  /* H3 — Sub-subtítulo: menor ainda, agrupador de frases */
+  .tiptap h3 {
+    @apply text-[15px] font-semibold mt-4 mb-2 leading-snug;
+    @apply text-amber-700 dark:text-amber-400;
+    border-left: 2px solid #f59e0b;
+    padding-left: 0.5rem;
+    margin-left: -0.5rem;
+    padding-top: 0.2rem;
+    padding-bottom: 0.2rem;
+  }
   .tiptap ul { @apply list-disc pl-6 my-3; }
   .tiptap ol { @apply list-decimal pl-6 my-3; }
   .tiptap blockquote {

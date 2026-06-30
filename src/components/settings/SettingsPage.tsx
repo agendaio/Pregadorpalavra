@@ -17,7 +17,7 @@ import { MobileHeader } from '@/components/layout/MobileHeader';
 import { db } from '@/db/schema';
 import { useUIStore, FONT_SIZE_LABELS, type FontSize } from '@/stores/ui';
 import { semearExemplos } from '@/db/seed';
-import { APP_VERSION } from '../../../v.config';
+import { APP_VERSION } from '@/v.config';
 import {
   aiDB,
   obterStats,

@@ -19,6 +19,7 @@ import { useUIStore } from '@/stores/ui';
 import { useMensagensStore } from '@/stores/mensagens';
 import { Button } from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
+import { APP_VERSION } from '@/v.config';
 
 const NAV = [
   { to: '/', label: 'Início', icon: Home, end: true },
@@ -61,7 +62,7 @@ export function DesktopShell({ children }: { children: ReactNode }) {
               <LogoPregador />
               <div className="leading-tight">
                 <div className="text-[13px] font-semibold tracking-tight text-ink-900">Pregador OS</div>
-                <div className="text-[10.5px] uppercase tracking-[0.12em] text-ink-500">v0.2</div>
+                <div className="text-[10.5px] uppercase tracking-[0.12em] text-ink-500">v{APP_VERSION}</div>
               </div>
             </div>
           )}

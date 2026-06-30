@@ -9,12 +9,14 @@ import {
   Italic,
   Heading1,
   Heading2,
+  Heading3,
   List,
   ListOrdered,
   Quote,
   Code,
   Undo2,
   Redo2,
+  Minus,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -57,6 +59,7 @@ export function RichEditor({ value, onChange, placeholder, className }: Props) {
 
   if (!editor) return null;
 
+  // ─── Botão genérico da toolbar ─────────────────────────────────────────────
   const Btn = ({
     onClick,
     active,
@@ -72,59 +75,156 @@ export function RichEditor({ value, onChange, placeholder, className }: Props) {
       onClick={onClick}
       title={title}
       className={cn(
-        'flex h-8 w-8 items-center justify-center rounded-md transition-colors',
-        active ? 'bg-ink-100 text-ink-900' : 'text-ink-600 hover:bg-ink-100',
+        'flex h-8 min-w-[2.5rem] items-center justify-center gap-1 rounded-md px-1.5 text-[12px] font-semibold transition-colors',
+        active
+          ? 'bg-ink-900 text-white dark:bg-white dark:text-ink-950'
+          : 'text-ink-600 hover:bg-ink-100 dark:text-ink-400 dark:hover:bg-ink-800',
       )}
     >
       {children}
     </button>
   );
 
+  // ─── Botão de heading com indicador visual de nível ─────────────────────────
+  const HeadingBtn = ({
+    level,
+    label,
+    active,
+    title,
+  }: {
+    level: 1 | 2 | 3;
+    label: string;
+    active?: boolean;
+    title?: string;
+  }) => (
+    <button
+      onClick={() => editor.chain().focus().toggleHeading({ level }).run()}
+      title={title}
+      className={cn(
+        'flex h-8 min-w-[2.5rem] flex-col items-center justify-center gap-0 rounded-md px-1.5 text-[9.5px] font-bold leading-none transition-colors',
+        active
+          ? 'bg-ink-900 text-white dark:bg-white dark:text-ink-950'
+          : 'text-ink-600 hover:bg-ink-100 dark:text-ink-400 dark:hover:bg-ink-800',
+      )}
+    >
+      {/* Traço que indica o nível visualmente */}
+      <span
+        className={cn(
+          'mb-0.5 block rounded-sm bg-current',
+          level === 1 ? 'h-[3px] w-4' : level === 2 ? 'h-[2.5px] w-3.5' : 'h-[2px] w-3',
+        )}
+      />
+      {label}
+    </button>
+  );
+
   return (
-    <div className={cn('rounded-xl border border-ink-200/80 bg-white', className)}>
+    <div className={cn('rounded-xl border border-ink-200/80 bg-white dark:border-ink-700 dark:bg-ink-900', className)}>
       {/* Toolbar */}
-      <div className="flex items-center gap-0.5 border-b border-ink-200/80 px-2 py-1.5">
-        <Btn onClick={() => editor.chain().focus().toggleBold().run()} active={editor.isActive('bold')} title="Negrito (Ctrl+B)">
+      <div className="flex items-center gap-0.5 border-b border-ink-200/80 px-2 py-1.5 dark:border-ink-700">
+        {/* Negrito / Itálico */}
+        <Btn
+          onClick={() => editor.chain().focus().toggleBold().run()}
+          active={editor.isActive('bold')}
+          title="Negrito (Ctrl+B)"
+        >
           <Bold className="h-3.5 w-3.5" />
         </Btn>
-        <Btn onClick={() => editor.chain().focus().toggleItalic().run()} active={editor.isActive('italic')} title="Itálico (Ctrl+I)">
+        <Btn
+          onClick={() => editor.chain().focus().toggleItalic().run()}
+          active={editor.isActive('italic')}
+          title="Itálico (Ctrl+I)"
+        >
           <Italic className="h-3.5 w-3.5" />
         </Btn>
-        <div className="mx-1 h-5 w-px bg-ink-200" />
-        <Btn onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} active={editor.isActive('heading', { level: 1 })} title="Título 1">
-          <Heading1 className="h-3.5 w-3.5" />
-        </Btn>
-        <Btn onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} active={editor.isActive('heading', { level: 2 })} title="Título 2">
-          <Heading2 className="h-3.5 w-3.5" />
-        </Btn>
-        <div className="mx-1 h-5 w-px bg-ink-200" />
-        <Btn onClick={() => editor.chain().focus().toggleBulletList().run()} active={editor.isActive('bulletList')} title="Lista">
+
+        <div className="mx-1 h-5 w-px bg-ink-200 dark:bg-ink-700" />
+
+        {/* Heading buttons — capítulo / subtítulo / sub-subtítulo */}
+        <HeadingBtn
+          level={1}
+          label="H1"
+          active={editor.isActive('heading', { level: 1 })}
+          title="Título de capítulo"
+        />
+        <HeadingBtn
+          level={2}
+          label="H2"
+          active={editor.isActive('heading', { level: 2 })}
+          title="Subtítulo — agrupa pontos dentro de um capítulo"
+        />
+        <HeadingBtn
+          level={3}
+          label="H3"
+          active={editor.isActive('heading', { level: 3 })}
+          title="Sub-subtítulo — organiza frases dentro de um subtítulo"
+        />
+
+        <div className="mx-1 h-5 w-px bg-ink-200 dark:bg-ink-700" />
+
+        {/* Listas */}
+        <Btn
+          onClick={() => editor.chain().focus().toggleBulletList().run()}
+          active={editor.isActive('bulletList')}
+          title="Lista com marcadores"
+        >
           <List className="h-3.5 w-3.5" />
         </Btn>
-        <Btn onClick={() => editor.chain().focus().toggleOrderedList().run()} active={editor.isActive('orderedList')} title="Lista numerada">
+        <Btn
+          onClick={() => editor.chain().focus().toggleOrderedList().run()}
+          active={editor.isActive('orderedList')}
+          title="Lista numerada"
+        >
           <ListOrdered className="h-3.5 w-3.5" />
         </Btn>
-        <Btn onClick={() => editor.chain().focus().toggleBlockquote().run()} active={editor.isActive('blockquote')} title="Citação">
+
+        <div className="mx-1 h-5 w-px bg-ink-200 dark:bg-ink-700" />
+
+        {/* Citação / Código */}
+        <Btn
+          onClick={() => editor.chain().focus().toggleBlockquote().run()}
+          active={editor.isActive('blockquote')}
+          title="Citação"
+        >
           <Quote className="h-3.5 w-3.5" />
         </Btn>
-        <Btn onClick={() => editor.chain().focus().toggleCodeBlock().run()} active={editor.isActive('codeBlock')} title="Código">
+        <Btn
+          onClick={() => editor.chain().focus().toggleCodeBlock().run()}
+          active={editor.isActive('codeBlock')}
+          title="Bloco de código"
+        >
           <Code className="h-3.5 w-3.5" />
         </Btn>
+
+        {/* Separador horizontal */}
+        <Btn
+          onClick={() => editor.chain().focus().setHorizontalRule().run()}
+          title="Linha horizontal"
+        >
+          <Minus className="h-3.5 w-3.5" />
+        </Btn>
+
         <div className="ml-auto flex items-center gap-0.5">
-          <Btn onClick={() => editor.chain().focus().undo().run()} title="Desfazer">
+          <Btn
+            onClick={() => editor.chain().focus().undo().run()}
+            title="Desfazer (Ctrl+Z)"
+          >
             <Undo2 className="h-3.5 w-3.5" />
           </Btn>
-          <Btn onClick={() => editor.chain().focus().redo().run()} title="Refazer">
+          <Btn
+            onClick={() => editor.chain().focus().redo().run()}
+            title="Refazer (Ctrl+Y)"
+          >
             <Redo2 className="h-3.5 w-3.5" />
           </Btn>
         </div>
         <span className="ml-2 text-[10.5px] text-ink-400">
-          {editor.storage.characterCount?.characters?.() ?? 0} caracteres
+          {editor.storage.characterCount?.characters?.() ?? 0}
         </span>
       </div>
 
       {/* Conteúdo */}
-      <div className="px-5 py-4">
+      <div className="px-5 py-4 dark:bg-ink-900">
         <EditorContent editor={editor} />
       </div>
     </div>
