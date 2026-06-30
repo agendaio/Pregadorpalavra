@@ -182,12 +182,26 @@ function ApiKeysSection() {
       });
       if (error || !data) {
         const status = (error as any)?.context?.status;
-        const bodyMsg = (error as any)?.context?.body?.message ?? (error as any)?.message ?? String(error ?? '');
-        let msg = String(bodyMsg);
-        if (String(msg).includes('Failed to send') || String(msg).includes('Fetch')) {
-          msg = 'Não foi possível conectar ao servidor. Verifique sua internet e tente novamente.';
+        const errBody = (error as any)?.context?.body;
+        let msg = errBody?.message ?? (error as any)?.message ?? String(error ?? '');
+
+        // Mostrar mensagem real do provedor (openai quota, anthropic credit, etc)
+        if (errBody?.tests && Array.isArray(errBody.tests)) {
+          setTestResults(errBody.tests);
+          setTestOk(false);
+          return;
         }
-        setTestResults([{ name: 'Erro de conexão', passed: false, message: `HTTP ${status ?? '?'} - ${msg}` }]);
+
+        if (String(msg).includes('quota') || String(msg).includes('credit') || status === 429) {
+          msg = `💳 Sem crédito na conta ${provider}. Adicione saldo em ${provider === 'anthropic' ? 'console.anthropic.com → Plans & Billing' : 'platform.openai.com → Billing'}.`;
+        } else if (status === 401) {
+          msg = `🔑 Chave inválida ou expirada. Verifique em ${provider}.`;
+        } else if (status === 403) {
+          msg = `⛔ Sem permissão. A chave não tem acesso a este modelo.`;
+        } else if (!status && String(msg).match(/Failed to send|FetchError/i)) {
+          msg = 'Não foi possível conectar ao servidor. Verifique sua internet.';
+        }
+        setTestResults([{ name: status ? `HTTP ${status}` : 'Erro de conexão', passed: false, message: msg }]);
       } else {
         const r = data as { success: boolean; tests: TestResult[] };
         setTestResults(r.tests);
@@ -468,14 +482,16 @@ function AgentesSection() {
         const e: any = error;
         const status = e?.context?.status;
         const bodyMsg = e?.context?.body?.message ?? e?.message ?? String(error);
-        let detail = `HTTP ${status ?? '?'} - ${bodyMsg}`;
+        let detail = bodyMsg || `HTTP ${status ?? '?'}`;
 
-        if (String(bodyMsg).includes('quota') || String(bodyMsg).includes('429')) {
-          detail = `⚠️ QUOTA ESGOTADA — A chave da OpenAI não tem crédito. Adicione saldo em platform.openai.com ou cadastre uma nova chave.`;
+        if (String(bodyMsg).match(/quota|credit balance|insufficient/i) || status === 429) {
+          detail = `💳 Sem crédito na conta. Adicione saldo no provedor (Anthropic: console.anthropic.com → Plans & Billing | OpenAI: platform.openai.com → Billing).`;
         } else if (String(bodyMsg).includes('invalid_token') || status === 401) {
           detail = `🔑 Token inválido. Faça logout e login novamente.`;
-        } else if (String(bodyMsg).includes('Fetch') || String(bodyMsg).includes('Failed')) {
-          detail = `🌐 Falha de conexão. Verifique sua internet.`;
+        } else if (String(bodyMsg).match(/Failed to send|FetchError|network/i) || !status) {
+          detail = `🌐 Falha de conexão. Verifique sua internet e tente novamente.`;
+        } else {
+          detail = `❌ ${bodyMsg}`;
         }
         throw new Error(detail);
       }
