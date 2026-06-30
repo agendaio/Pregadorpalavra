@@ -242,15 +242,35 @@ END $$;
 -- ROW LEVEL SECURITY
 -- =====================================================
 
+-- Função helper SECURITY DEFINER: verifica se o usuário atual é admin ativo.
+-- SECURITY DEFINER = roda como owner (postgres), ignora RLS na consulta interna.
+-- Isso quebra a recursão infinita que ocorreria com EXISTS direto na tabela admins.
+CREATE OR REPLACE FUNCTION public.auth_is_admin()
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1 FROM public.admins
+    WHERE user_id = auth.uid() AND ativo = true
+    LIMIT 1
+  );
+END;
+$$;
+GRANT EXECUTE ON FUNCTION public.auth_is_admin() TO authenticated, anon;
+
 -- Admins: bloqueia tudo por padrão; só admins ativos acessam
 ALTER TABLE public.admins ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS admins_select_self ON public.admins;
-CREATE POLICY admins_select_self ON public.admins
+DROP POLICY IF EXISTS admins_select_own ON public.admins;
+CREATE POLICY admins_select_own ON public.admins
   FOR SELECT TO authenticated
-  USING (user_id = auth.uid() OR EXISTS (
-    SELECT 1 FROM public.admins a2
-    WHERE a2.user_id = auth.uid() AND a2.ativo = true
-  ));
+  USING (user_id = auth.uid());
+DROP POLICY IF EXISTS admins_select_all ON public.admins;
+CREATE POLICY admins_select_all ON public.admins
+  FOR SELECT TO authenticated
+  USING (public.auth_is_admin());
 
 -- Plans: leitura pública (qualquer um vê os planos)
 ALTER TABLE public.plans ENABLE ROW LEVEL SECURITY;
@@ -258,29 +278,29 @@ DROP POLICY IF EXISTS plans_select_public ON public.plans;
 CREATE POLICY plans_select_public ON public.plans FOR SELECT TO anon, authenticated USING (true);
 DROP POLICY IF EXISTS plans_admin_write ON public.plans;
 CREATE POLICY plans_admin_write ON public.plans FOR ALL TO authenticated
-  USING (EXISTS (SELECT 1 FROM public.admins WHERE user_id = auth.uid() AND ativo = true))
-  WITH CHECK (EXISTS (SELECT 1 FROM public.admins WHERE user_id = auth.uid() AND ativo = true));
+  USING (public.auth_is_admin())
+  WITH CHECK (public.auth_is_admin());
 
 -- Users: cada user vê só seu próprio perfil; admins veem todos
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS users_select_self ON public.users;
 CREATE POLICY users_select_self ON public.users FOR SELECT TO authenticated
-  USING (id = auth.uid() OR EXISTS (SELECT 1 FROM public.admins WHERE user_id = auth.uid() AND ativo = true));
+  USING (id = auth.uid() OR public.auth_is_admin());
 DROP POLICY IF EXISTS users_update_self ON public.users;
 CREATE POLICY users_update_self ON public.users FOR UPDATE TO authenticated
-  USING (id = auth.uid() OR EXISTS (SELECT 1 FROM public.admins WHERE user_id = auth.uid() AND ativo = true));
+  USING (id = auth.uid() OR public.auth_is_admin());
 
 -- Subscriptions
 ALTER TABLE public.subscriptions ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS subs_select_own ON public.subscriptions;
 CREATE POLICY subs_select_own ON public.subscriptions FOR SELECT TO authenticated
-  USING (user_id = auth.uid() OR EXISTS (SELECT 1 FROM public.admins WHERE user_id = auth.uid() AND ativo = true));
+  USING (user_id = auth.uid() OR public.auth_is_admin());
 
 -- Usage log: users veem o próprio, admins veem tudo
 ALTER TABLE public.usage_log ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS usage_select_own ON public.usage_log;
 CREATE POLICY usage_select_own ON public.usage_log FOR SELECT TO authenticated
-  USING (user_id = auth.uid() OR EXISTS (SELECT 1 FROM public.admins WHERE user_id = auth.uid() AND ativo = true));
+  USING (user_id = auth.uid() OR public.auth_is_admin());
 DROP POLICY IF EXISTS usage_insert_self ON public.usage_log;
 CREATE POLICY usage_insert_self ON public.usage_log FOR INSERT TO authenticated
   WITH CHECK (user_id = auth.uid() OR user_id IS NULL);
@@ -291,22 +311,22 @@ DROP POLICY IF EXISTS flags_select_public ON public.feature_flags;
 CREATE POLICY flags_select_public ON public.feature_flags FOR SELECT TO anon, authenticated USING (true);
 DROP POLICY IF EXISTS flags_admin_write ON public.feature_flags;
 CREATE POLICY flags_admin_write ON public.feature_flags FOR ALL TO authenticated
-  USING (EXISTS (SELECT 1 FROM public.admins WHERE user_id = auth.uid() AND ativo = true))
-  WITH CHECK (EXISTS (SELECT 1 FROM public.admins WHERE user_id = auth.uid() AND ativo = true));
+  USING (public.auth_is_admin())
+  WITH CHECK (public.auth_is_admin());
 
 -- Audit logs: só admins
 ALTER TABLE public.audit_logs ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS audit_admin_only ON public.audit_logs;
 CREATE POLICY audit_admin_only ON public.audit_logs FOR ALL TO authenticated
-  USING (EXISTS (SELECT 1 FROM public.admins WHERE user_id = auth.uid() AND ativo = true))
-  WITH CHECK (EXISTS (SELECT 1 FROM public.admins WHERE user_id = auth.uid() AND ativo = true));
+  USING (public.auth_is_admin())
+  WITH CHECK (public.auth_is_admin());
 
 -- API keys: só admins (service role bypassa RLS)
 ALTER TABLE public.api_keys ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS apikeys_admin_only ON public.api_keys;
 CREATE POLICY apikeys_admin_only ON public.api_keys FOR ALL TO authenticated
-  USING (EXISTS (SELECT 1 FROM public.admins WHERE user_id = auth.uid() AND ativo = true))
-  WITH CHECK (EXISTS (SELECT 1 FROM public.admins WHERE user_id = auth.uid() AND ativo = true));
+  USING (public.auth_is_admin())
+  WITH CHECK (public.auth_is_admin());
 
 -- =====================================================
 -- Trigger: cria users profile automaticamente no signup
