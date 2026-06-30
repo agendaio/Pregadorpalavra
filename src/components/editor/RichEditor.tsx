@@ -55,10 +55,6 @@ export function RichEditor({ value, onChange, placeholder, className }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
 
-  useEffect(() => {
-    return () => editor?.destroy();
-  }, [editor]);
-
   if (!editor) return null;
 
   const Btn = ({

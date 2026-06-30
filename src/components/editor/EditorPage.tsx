@@ -10,10 +10,7 @@ import {
   Sparkles,
   PanelRightOpen,
   PanelRightClose,
-  History,
-  ArrowLeft,
   MoreVertical,
-  Edit3,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { db } from '@/db/schema';
@@ -22,16 +19,17 @@ import { useUIStore } from '@/stores/ui';
 import { RichEditor } from '@/components/editor/RichEditor';
 import { AIPanel } from '@/components/ai/AIPanel';
 import { MobileHeader } from '@/components/layout/MobileHeader';
-import { Button } from '@/components/ui/Button';
 import { Input, Label, Textarea } from '@/components/ui/Input';
+import { BottomSheet } from '@/components/ui/BottomSheet';
 import { PulpitFab } from '@/components/layout/PulpitFab';
 import { useIsMobile } from '@/lib/responsive';
 import { cn, formatarRelativo } from '@/lib/utils';
+import { SPRING_IOS } from '@/lib/motion';
 
 const STATUS_OPCOES = [
-  { id: 'rascunho', label: 'Rascunho' },
-  { id: 'pronta', label: 'Pronta' },
-  { id: 'pregada', label: 'Pregada' },
+  { id: 'rascunho',  label: 'Rascunho' },
+  { id: 'pronta',    label: 'Pronta' },
+  { id: 'pregada',   label: 'Pregada' },
   { id: 'arquivada', label: 'Arquivada' },
 ] as const;
 
@@ -48,14 +46,9 @@ export function EditorPage() {
   const setIA = useUIStore((s) => s.setIA);
   const mostrarToast = useUIStore((s) => s.mostrarToast);
 
-  const historico = useLiveQuery(
-    () => (id ? db.historico.where('mensagemId').equals(id).reverse().sortBy('versao') : []),
-    [id],
-  );
-
   const [novaTag, setNovaTag] = useState('');
   const [salvando, setSalvando] = useState(false);
-  const [showMeta, setShowMeta] = useState(!isMobile); // mobile começa fechado
+  const [showMeta, setShowMeta] = useState(!isMobile);
   const [showMenu, setShowMenu] = useState(false);
 
   useEffect(() => {
@@ -73,8 +66,11 @@ export function EditorPage() {
 
   if (!mensagem) {
     return (
-      <div className="flex h-full items-center justify-center text-ink-500">
-        Carregando mensagem…
+      <div className="flex h-full items-center justify-center text-ink-500 dark:text-ink-400">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-ink-300 border-t-ink-900 dark:border-ink-700 dark:border-t-white" />
+          <span className="text-[13px]">Carregando mensagem…</span>
+        </div>
       </div>
     );
   }
@@ -103,8 +99,7 @@ export function EditorPage() {
   const removerTag = (t: string) => patch({ tags: mensagem.tags.filter((x) => x !== t) });
 
   return (
-    <div className="flex h-full flex-col">
-      {/* Header */}
+    <div className="flex h-full flex-col bg-paper text-ink-900 dark:bg-paper-dark dark:text-ink-100">
       <MobileHeader
         title={mensagem.titulo || 'Sem título'}
         subtitle={`Atualizada ${formatarRelativo(mensagem.atualizadoEm)} · v${mensagem.versao}`}
@@ -112,41 +107,54 @@ export function EditorPage() {
         right={
           <>
             {!isMobile && (
-              <Button variant="ghost" size="icon" onClick={handleSalvar} aria-label="Salvar">
+              <button
+                onClick={handleSalvar}
+                aria-label="Salvar"
+                className="flex h-11 w-11 items-center justify-center rounded-full text-ink-700 transition-colors hover:bg-ink-100 active:bg-ink-200 dark:text-ink-200 dark:hover:bg-ink-800/60"
+              >
                 <Save className="h-5 w-5" />
-              </Button>
+              </button>
             )}
-            <Button variant="ghost" size="icon" onClick={() => setIA(!iaAberta)} aria-label="Alternar IA" className="md:flex">
-              {iaAberta ? <PanelRightClose className="h-5 w-5" /> : <PanelRightOpen className="h-5 w-5" />}
-            </Button>
-            <Button variant="ghost" size="icon" onClick={() => setShowMenu(!showMenu)} aria-label="Mais opções">
+            <button
+              onClick={() => setIA(!iaAberta)}
+              aria-label="Alternar IA"
+              className="hidden md:flex h-11 w-11 items-center justify-center rounded-full text-ink-700 transition-colors hover:bg-ink-100 active:bg-ink-200 dark:text-ink-200 dark:hover:bg-ink-800/60"
+            >
+              {iaAberta ? (
+                <PanelRightClose className="h-5 w-5" />
+              ) : (
+                <PanelRightOpen className="h-5 w-5" />
+              )}
+            </button>
+            <button
+              onClick={() => setShowMenu(!showMenu)}
+              aria-label="Mais opções"
+              className="-mr-1 flex h-11 w-11 items-center justify-center rounded-full text-ink-700 transition-colors hover:bg-ink-100 active:bg-ink-200 dark:text-ink-200 dark:hover:bg-ink-800/60"
+            >
               <MoreVertical className="h-5 w-5" />
-            </Button>
+            </button>
           </>
         }
       />
 
-      {/* Editor + Painel */}
       <div className="flex flex-1 overflow-hidden">
         {/* Coluna principal */}
         <div className="flex flex-1 flex-col overflow-hidden">
           <div className="flex-1 overflow-y-auto pb-32 md:pb-12">
-            {/* Título grande editável inline */}
             <div className="px-5 pt-4 md:px-8 md:pt-6">
               <input
                 value={mensagem.titulo}
                 onChange={(e) => patch({ titulo: e.target.value })}
                 placeholder="Título da mensagem"
-                className="w-full bg-transparent text-[20px] font-semibold tracking-tight text-ink-900 outline-none placeholder:text-ink-300 md:text-2xl"
+                className="w-full bg-transparent text-[22px] font-semibold tracking-[-0.018em] text-ink-900 outline-none placeholder:text-ink-300 dark:text-white md:text-[26px]"
               />
               {mensagem.textoBase && (
-                <div className="mt-1 inline-flex items-center rounded-full bg-ink-100 px-2.5 py-0.5 text-[11px] font-medium text-ink-700">
+                <div className="mt-1.5 inline-flex items-center rounded-full bg-ink-100 px-2.5 py-0.5 text-[11.5px] font-medium text-ink-700 dark:bg-ink-800 dark:text-ink-200">
                   {mensagem.textoBase}
                 </div>
               )}
             </div>
 
-            {/* Metadados (sheet em mobile / inline em desktop) */}
             {showMeta && (
               <div className="mx-auto max-w-3xl px-5 pt-5 md:px-8">
                 <div className="grid grid-cols-2 gap-x-4 gap-y-3 md:gap-y-4">
@@ -184,17 +192,16 @@ export function EditorPage() {
                   </div>
                 </div>
 
-                {/* Status */}
                 <div className="mt-4 flex flex-wrap items-center gap-1.5">
                   {STATUS_OPCOES.map((s) => (
                     <button
                       key={s.id}
                       onClick={() => patch({ status: s.id })}
                       className={cn(
-                        'rounded-full px-2.5 py-1 text-[11.5px] font-medium transition-colors',
+                        'rounded-full px-3 py-1 text-[12px] font-medium transition-all active:scale-95',
                         mensagem.status === s.id
-                          ? 'bg-ink-900 text-white'
-                          : 'bg-white border border-ink-200/80 text-ink-600',
+                          ? 'bg-ink-900 text-white dark:bg-white dark:text-ink-950'
+                          : 'bg-white border border-ink-200/80 text-ink-600 hover:bg-ink-50 dark:border-ink-700 dark:bg-ink-900/40 dark:text-ink-300',
                       )}
                     >
                       {s.label}
@@ -202,11 +209,13 @@ export function EditorPage() {
                   ))}
                 </div>
 
-                {/* Tags */}
                 <div className="mt-3">
                   <div className="flex flex-wrap items-center gap-1.5">
                     {mensagem.tags.map((t) => (
-                      <span key={t} className="inline-flex items-center gap-1 rounded-full bg-ink-100 px-2 py-0.5 text-[11.5px] text-ink-700">
+                      <span
+                        key={t}
+                        className="inline-flex items-center gap-1 rounded-full bg-ink-100 px-2 py-0.5 text-[12px] text-ink-700 dark:bg-ink-800 dark:text-ink-200"
+                      >
                         <TagIcon className="h-3 w-3" />
                         {t}
                         <button onClick={() => removerTag(t)} className="ml-0.5">
@@ -214,7 +223,7 @@ export function EditorPage() {
                         </button>
                       </span>
                     ))}
-                    <div className="flex items-center gap-1 rounded-full border border-dashed border-ink-300 px-2 py-0.5">
+                    <div className="flex items-center gap-1 rounded-full border border-dashed border-ink-300 px-2 py-0.5 dark:border-ink-600">
                       <Plus className="h-3 w-3 text-ink-400" />
                       <input
                         value={novaTag}
@@ -222,33 +231,31 @@ export function EditorPage() {
                         onKeyDown={(e) => e.key === 'Enter' && adicionarTag()}
                         onBlur={adicionarTag}
                         placeholder="tag"
-                        className="w-16 bg-transparent text-[11.5px] outline-none placeholder:text-ink-400"
+                        className="w-16 bg-transparent text-[12px] outline-none placeholder:text-ink-400"
                       />
                     </div>
                   </div>
                 </div>
 
-                <div className="my-5 border-t border-ink-200/70" />
+                <div className="my-5 border-t border-ink-200/70 dark:border-ink-800" />
               </div>
             )}
 
-            {/* Botão "mostrar metadados" em mobile */}
             {!showMeta && (
               <div className="px-5 pt-2 md:hidden">
                 <button
                   onClick={() => setShowMeta(true)}
-                  className="inline-flex items-center gap-1.5 rounded-full bg-ink-100 px-3 py-1 text-[11.5px] font-medium text-ink-700"
+                  className="inline-flex items-center gap-1.5 rounded-full bg-ink-100 px-3 py-1 text-[12px] font-medium text-ink-700 dark:bg-ink-800 dark:text-ink-200"
                 >
-                  <Edit3 className="h-3 w-3" /> Detalhes da mensagem
+                  Detalhes da mensagem
                 </button>
               </div>
             )}
 
-            {/* Esboço */}
             <div className="mx-auto max-w-3xl px-5 pb-6 md:px-8">
               <div className="mb-2 flex items-center justify-between">
-                <h2 className="text-[13px] font-semibold tracking-tight text-ink-900">Esboço</h2>
-                <span className="text-[10.5px] text-ink-500">dica: peça ao assistente →</span>
+                <h2 className="text-[13.5px] font-semibold tracking-tight text-ink-900 dark:text-white">Esboço</h2>
+                <span className="text-[11px] text-ink-500 dark:text-ink-400">dica: peça ao assistente →</span>
               </div>
               <RichEditor
                 value={mensagem.esboco}
@@ -257,9 +264,8 @@ export function EditorPage() {
               />
             </div>
 
-            {/* Conteúdo principal */}
             <div className="mx-auto max-w-3xl px-5 pb-6 md:px-8">
-              <h2 className="mb-2 text-[13px] font-semibold tracking-tight text-ink-900">Mensagem completa</h2>
+              <h2 className="mb-2 text-[13.5px] font-semibold tracking-tight text-ink-900 dark:text-white">Mensagem completa</h2>
               <RichEditor
                 value={mensagem.conteudo}
                 onChange={(html) => patch({ conteudo: html })}
@@ -267,9 +273,8 @@ export function EditorPage() {
               />
             </div>
 
-            {/* Observações */}
             <div className="mx-auto max-w-3xl px-5 pb-24 md:px-8">
-              <h2 className="mb-2 text-[13px] font-semibold tracking-tight text-ink-900">Observações</h2>
+              <h2 className="mb-2 text-[13.5px] font-semibold tracking-tight text-ink-900 dark:text-white">Observações</h2>
               <Textarea
                 value={mensagem.observacoes}
                 onChange={(e) => patch({ observacoes: e.target.value })}
@@ -284,91 +289,58 @@ export function EditorPage() {
         {!isMobile && iaAberta && (
           <motion.aside
             initial={{ width: 0, opacity: 0 }}
-            animate={{ width: 360, opacity: 1 }}
+            animate={{ width: 380, opacity: 1 }}
             exit={{ width: 0, opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="flex-shrink-0 overflow-hidden border-l border-ink-200/70 bg-paper"
+            transition={{ duration: 0.24 }}
+            className="flex-shrink-0 overflow-hidden border-l border-ink-200/70 bg-paper dark:border-ink-800 dark:bg-paper-dark"
           >
-            <div className="h-full w-[360px]">
+            <div className="h-full w-[380px]">
               <AIPanel />
             </div>
           </motion.aside>
         )}
       </div>
 
-      {/* Bottom sheet da IA em mobile */}
+      {/* Bottom sheet IA em mobile */}
       {isMobile && (
-        <AnimatePresence>
-          {iaAberta && (
-            <>
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="fixed inset-0 z-40 bg-ink-950/30 backdrop-blur-sm"
-                onClick={() => setIA(false)}
-              />
-              <motion.div
-                initial={{ y: '100%' }}
-                animate={{ y: 0 }}
-                exit={{ y: '100%' }}
-                transition={{ type: 'spring', stiffness: 360, damping: 36 }}
-                drag="y"
-                dragConstraints={{ top: 0, bottom: 0 }}
-                dragElastic={0.2}
-                onDragEnd={(_, info) => {
-                  if (info.offset.y > 120) setIA(false);
-                }}
-                className="fixed inset-x-0 bottom-0 z-50 flex h-[85vh] flex-col rounded-t-3xl bg-paper shadow-ring"
-              >
-                <div className="flex flex-shrink-0 items-center justify-center py-2">
-                  <div className="h-1 w-10 rounded-full bg-ink-300" />
-                </div>
-                <div className="flex-1 overflow-hidden">
-                  <AIPanel />
-                </div>
-              </motion.div>
-            </>
-          )}
-        </AnimatePresence>
+        <BottomSheet open={iaAberta} onClose={() => setIA(false)} title="Assistente Ministerial" height="lg">
+          <AIPanel />
+        </BottomSheet>
       )}
 
-      {/* FAB do Modo Púlpito */}
       <PulpitFab to={`/pulpit/${mensagem.id}`} />
 
-      {/* Menu flutuante "..." */}
-      <AnimatePresence>
-        {showMenu && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 z-30"
-              onClick={() => setShowMenu(false)}
-            />
-            <motion.div
-              initial={{ opacity: 0, y: -8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              className="fixed right-2 top-14 z-40 w-56 overflow-hidden rounded-2xl border border-ink-200 bg-white shadow-ring"
+      {/* Menu flutuante */}
+      <BottomSheet open={showMenu} onClose={() => setShowMenu(false)} title="Ações">
+        <div className="px-4 pb-4">
+          <div className="overflow-hidden rounded-2xl border border-ink-200/80 bg-white shadow-soft dark:border-ink-800 dark:bg-ink-900/40">
+            <button
+              onClick={() => { handleSalvar(); setShowMenu(false); }}
+              className="flex w-full items-center gap-3 px-4 py-3.5 text-[14px] transition-colors active:bg-ink-50 dark:active:bg-ink-800/40"
             >
-              <button onClick={() => { handleSalvar(); setShowMenu(false); }} className="flex w-full items-center gap-2.5 px-4 py-2.5 text-[13px] hover:bg-ink-50">
-                <Save className="h-4 w-4 text-ink-700" /> Salvar agora
-              </button>
-              <button onClick={() => { setShowMeta(!showMeta); setShowMenu(false); }} className="flex w-full items-center gap-2.5 border-t border-ink-100 px-4 py-2.5 text-[13px] hover:bg-ink-50">
-                <Edit3 className="h-4 w-4 text-ink-700" /> {showMeta ? 'Ocultar' : 'Mostrar'} detalhes
-              </button>
-              <button onClick={() => { setIA(!iaAberta); setShowMenu(false); }} className="flex w-full items-center gap-2.5 border-t border-ink-100 px-4 py-2.5 text-[13px] hover:bg-ink-50">
-                <Sparkles className="h-4 w-4 text-ink-700" /> {iaAberta ? 'Fechar' : 'Abrir'} Assistente
-              </button>
-              <button onClick={() => { handleExcluir(); setShowMenu(false); }} className="flex w-full items-center gap-2.5 border-t border-ink-100 px-4 py-2.5 text-[13px] text-accent hover:bg-accent-soft">
-                <Trash2 className="h-4 w-4" /> Excluir mensagem
-              </button>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
+              <Save className="h-[18px] w-[18px] text-ink-700 dark:text-ink-200" /> Salvar agora
+            </button>
+            <button
+              onClick={() => { setShowMeta(!showMeta); setShowMenu(false); }}
+              className="flex w-full items-center gap-3 border-t border-ink-100 px-4 py-3.5 text-[14px] transition-colors active:bg-ink-50 dark:border-ink-800 dark:active:bg-ink-800/40"
+            >
+              <TagIcon className="h-[18px] w-[18px] text-ink-700 dark:text-ink-200" /> {showMeta ? 'Ocultar' : 'Mostrar'} detalhes
+            </button>
+            <button
+              onClick={() => { setIA(!iaAberta); setShowMenu(false); }}
+              className="flex w-full items-center gap-3 border-t border-ink-100 px-4 py-3.5 text-[14px] transition-colors active:bg-ink-50 dark:border-ink-800 dark:active:bg-ink-800/40"
+            >
+              <Sparkles className="h-[18px] w-[18px] text-ink-700 dark:text-ink-200" /> {iaAberta ? 'Fechar' : 'Abrir'} Assistente
+            </button>
+            <button
+              onClick={() => { handleExcluir(); setShowMenu(false); }}
+              className="flex w-full items-center gap-3 border-t border-red-100 px-4 py-3.5 text-[14px] text-red-600 transition-colors active:bg-red-50/50 dark:border-red-500/20 dark:text-red-400 dark:active:bg-red-500/10"
+            >
+              <Trash2 className="h-[18px] w-[18px]" /> Excluir mensagem
+            </button>
+          </div>
+        </div>
+      </BottomSheet>
     </div>
   );
 }

@@ -1,0 +1,13 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /admin/*
+Allow: /biblioteca
+Allow: /esbocos
+Allow: /assistente
+Allow: /estudo
+Allow: /analista
+Allow: /sobre
+Allow: /configuracoes
+
+Sitemap: https://pregador-os.vercel.app/sitemap.xml

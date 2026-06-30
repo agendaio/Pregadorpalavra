@@ -3,13 +3,67 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Pregador OS — O sistema operacional para pregadores. Estude, prepare, ministre." />
-    <meta name="theme-color" content="#0d0d0c" />
+
+    <!-- Viewport iOS-friendly (viewport-fit=cover + safe-area) -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover, user-scalable=no"
+    />
+
+    <!-- SEO básico -->
+    <meta name="description" content="Pregador OS — O sistema operacional para pregadores. Estude, prepare e ministre. Com IA ministerial integrada, modo púlpito offline, esboços bíblicos estruturados e mais." />
+    <meta name="keywords" content="pregador, sermão, bíblia, esboço, pregação, púlpito, teologia, IA, gospel" />
+    <meta name="author" content="Solai Brasil" />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://pregador-os.vercel.app/" />
+
+    <!-- PWA / Mobile Web App -->
+    <meta name="theme-color" content="#fbfbf9" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#15151a" media="(prefers-color-scheme: dark)" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="format-detection" content="telephone=no" />
+
+    <!-- Apple (Safari iOS + Standalone mode) -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Pregador OS" />
+    <meta name="apple-touch-fullscreen" content="yes" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="mask-icon" href="/favicon.svg" color="#1a1a18" />
+
+    <!-- iOS Splash screens (only for iOS < 17; iOS 17+ uses CSS background) -->
+    <link rel="apple-touch-startup-image" href="/splash-1290x2796.png" media="(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3)" />
+    <link rel="apple-touch-startup-image" href="/splash-1179x2556.png" media="(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3)" />
+    <link rel="apple-touch-startup-image" href="/splash-1284x2778.png" media="(device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3)" />
+    <link rel="apple-touch-startup-image" href="/splash-1170x2532.png" media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3)" />
+    <link rel="apple-touch-startup-image" href="/splash-750x1334.png" media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2)" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://pregador-os.vercel.app/" />
+    <meta property="og:title" content="Pregador OS — Sistema Operacional para Pregadores" />
+    <meta property="og:description" content="Estude, prepare e ministre. Com IA ministerial integrada, modo púlpito offline e esboços estruturados." />
+    <meta property="og:image" content="https://pregador-os.vercel.app/icon-512.png" />
+    <meta property="og:locale" content="pt_BR" />
+    <meta property="og:site_name" content="Pregador OS" />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:url" content="https://pregador-os.vercel.app/" />
+    <meta name="twitter:title" content="Pregador OS — Sistema Operacional para Pregadores" />
+    <meta name="twitter:description" content="Estude, prepare e ministre. Com IA ministerial integrada, modo púlpito offline e esboços estruturados." />
+    <meta name="twitter:image" content="https://pregador-os.vercel.app/icon-512.png" />
+
+    <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-    <title>Pregador OS</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&display=swap"
+      rel="stylesheet"
+    />
+
+    <title>Pregador OS — Sistema Operacional para Pregadores</title>
   </head>
   <body>
     <div id="root"></div>

@@ -11,7 +11,21 @@ export default defineConfig({
       injectRegister: 'auto',
       filename: 'sw.js',
       manifestFilename: 'manifest.webmanifest',
-      includeAssets: ['favicon.svg', 'apple-touch-icon.png', 'icon-192.png', 'icon-512.png', 'icon-maskable-192.png', 'icon-maskable-512.png'],
+      includeAssets: [
+        'favicon.svg',
+        'apple-touch-icon.png',
+        'icon-192.png',
+        'icon-512.png',
+        'icon-maskable-192.png',
+        'icon-maskable-512.png',
+        'splash-1290x2796.png',
+        'splash-1179x2556.png',
+        'splash-1284x2778.png',
+        'splash-1170x2532.png',
+        'splash-750x1334.png',
+        'robots.txt',
+        'sitemap.xml',
+      ],
       manifest: {
         name: 'Pregador OS — Sistema Operacional para Pregadores',
         short_name: 'Pregador OS',
@@ -23,38 +37,13 @@ export default defineConfig({
         scope: '/',
         start_url: '/',
         lang: 'pt-BR',
-        categories: ['productivity', 'lifestyle', 'education'],
+        categories: ['productivity', 'lifestyle', 'education', 'books'],
         icons: [
-          {
-            src: '/icon-192.png',
-            sizes: '192x192',
-            type: 'image/png',
-            purpose: 'any',
-          },
-          {
-            src: '/icon-maskable-192.png',
-            sizes: '192x192',
-            type: 'image/png',
-            purpose: 'maskable',
-          },
-          {
-            src: '/icon-512.png',
-            sizes: '512x512',
-            type: 'image/png',
-            purpose: 'any',
-          },
-          {
-            src: '/icon-maskable-512.png',
-            sizes: '512x512',
-            type: 'image/png',
-            purpose: 'maskable',
-          },
-          {
-            src: '/apple-touch-icon.png',
-            sizes: '180x180',
-            type: 'image/png',
-            purpose: 'any',
-          },
+          { src: '/icon-192.png',         sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: '/icon-maskable-192.png', sizes: '192x192', type: 'image/png', purpose: 'maskable' },
+          { src: '/icon-512.png',         sizes: '512x512', type: 'image/png', purpose: 'any' },
+          { src: '/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+          { src: '/apple-touch-icon.png',  sizes: '180x180', type: 'image/png', purpose: 'any' },
         ],
         shortcuts: [
           {
@@ -107,29 +96,55 @@ export default defineConfig({
             },
           },
           {
-            urlPattern: /^https:\/\/api\.openai\.com\/.*/i,
-            handler: 'NetworkOnly',
-            options: { cacheName: 'openai-no-cache' },
+            urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'supabase-api',
+              networkTimeoutSeconds: 6,
+              expiration: { maxEntries: 100, maxAgeSeconds: 60 * 60 * 24 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
           },
         ],
         navigateFallback: '/index.html',
         navigateFallbackDenylist: [/^\/api/, /^\/__/, /\.svg$/, /\.png$/],
       },
-      devOptions: {
-        enabled: false,
-      },
+      devOptions: { enabled: false },
     }),
   ],
   resolve: {
-    alias: {
-      '@': path.resolve(__dirname, './src'),
+    alias: { '@': path.resolve(__dirname, './src') },
+  },
+  build: {
+    target: 'es2020',
+    cssCodeSplit: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // vendor
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          // editor (Tiptap é o mais pesado)
+          'editor-vendor': [
+            '@tiptap/react',
+            '@tiptap/starter-kit',
+            '@tiptap/extension-character-count',
+            '@tiptap/extension-placeholder',
+            '@tiptap/extension-typography',
+          ],
+          // animação
+          'motion': ['framer-motion'],
+          // icons
+          'icons': ['lucide-react'],
+          // utils (date-fns, clsx, tailwind-merge)
+          'utils': ['clsx', 'tailwind-merge', 'date-fns', 'nanoid'],
+          // dexie (IndexedDB)
+          'db': ['dexie', 'dexie-react-hooks'],
+          // supabase
+          'supabase': ['@supabase/supabase-js'],
+        },
+      },
     },
   },
-  server: {
-    port: 8080,
-    host: true,
-  },
-  preview: {
-    port: 8080,
-  },
+  server: { port: 8080, host: true },
+  preview: { port: 8080 },
 });

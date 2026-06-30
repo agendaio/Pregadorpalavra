@@ -4,31 +4,33 @@
 
 @layer base {
   :root {
-    color-scheme: light;
+    color-scheme: light dark;
   }
 
   html,
   body,
   #root {
     height: 100%;
+    height: 100dvh;
   }
 
   html {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
+    text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
   }
 
   body {
-    @apply bg-paper font-sans;
-    font-feature-settings:
-      'cv02',
-      'cv03',
-      'cv04',
-      'cv11';
+    @apply bg-paper font-sans text-ink-900;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+    overscroll-behavior-y: none;
+    overscroll-behavior: none;
+    touch-action: manipulation;
   }
 
-  /* Tamanhos de fonte do app (controlados pelo store) */
+  /* Tipografia escalável (controlada pela store) */
   html.font-sm  { font-size: 14px; }
   html.font-md  { font-size: 15px; }
   html.font-lg  { font-size: 17px; }
@@ -38,10 +40,10 @@
     color: #0d0d0c;
   }
 
-  /* Scrollbars minimalistas, premium */
+  /* Scrollbar minimal */
   ::-webkit-scrollbar {
-    width: 10px;
-    height: 10px;
+    width: 6px;
+    height: 6px;
   }
   ::-webkit-scrollbar-track {
     background: transparent;
@@ -49,16 +51,12 @@
   ::-webkit-scrollbar-thumb {
     background: rgba(0, 0, 0, 0.08);
     border-radius: 999px;
-    border: 2px solid transparent;
-    background-clip: padding-box;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: rgba(0, 0, 0, 0.16);
-    background-clip: padding-box;
-    border: 2px solid transparent;
+    background: rgba(0, 0, 0, 0.18);
   }
 
-  /* Modo escuro — caret suave */
+  /* Modo escuro */
   html.dark body {
     @apply bg-paper-dark text-ink-100;
   }
@@ -66,31 +64,55 @@
     background-color: rgba(220, 38, 38, 0.35);
     color: #f4f4f2;
   }
+
+  /* iOS: ajustar cor de fundo sob a status bar */
+  html.dark {
+    background-color: #15151a;
+  }
+}
+
+@layer utilities {
+  /* Safe-area helpers */
+  .pt-safe    { padding-top:    env(safe-area-inset-top, 0); }
+  .pb-safe    { padding-bottom: env(safe-area-inset-bottom, 0); }
+  .pl-safe    { padding-left:   env(safe-area-inset-left, 0); }
+  .pr-safe    { padding-right:  env(safe-area-inset-right, 0); }
+
+  .h-screen-safe { height: calc(100vh - env(safe-area-inset-top, 0) - env(safe-area-inset-bottom, 0)); }
+  .min-h-screen-safe { min-height: calc(100vh - env(safe-area-inset-top, 0) - env(safe-area-inset-bottom, 0)); }
+  .min-h-screen-dvh { min-height: 100dvh; }
+
+  .text-balance { text-wrap: balance; }
+  .text-pretty { text-wrap: pretty; }
+
+  /* Glassmorphism */
+  .glass {
+    background: rgba(255, 255, 255, 0.78);
+    backdrop-filter: saturate(180%) blur(20px);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+  }
+  html.dark .glass {
+    background: rgba(21, 21, 26, 0.78);
+  }
+
+  /* Touch target mínimo 44pt (Apple HIG) */
+  .touch {
+    min-height: 44px;
+    min-width: 44px;
+  }
 }
 
 @layer components {
-  /* Tiptap minimalista */
+  /* Tiptap */
   .tiptap {
     @apply outline-none min-h-[280px] leading-relaxed text-[17px];
   }
-  .tiptap p {
-    @apply my-3;
-  }
-  .tiptap h1 {
-    @apply text-3xl font-semibold mt-6 mb-3 tracking-tight;
-  }
-  .tiptap h2 {
-    @apply text-2xl font-semibold mt-5 mb-2 tracking-tight;
-  }
-  .tiptap h3 {
-    @apply text-xl font-semibold mt-4 mb-2;
-  }
-  .tiptap ul {
-    @apply list-disc pl-6 my-3;
-  }
-  .tiptap ol {
-    @apply list-decimal pl-6 my-3;
-  }
+  .tiptap p { @apply my-3; }
+  .tiptap h1 { @apply text-3xl font-semibold mt-6 mb-3 tracking-tight; }
+  .tiptap h2 { @apply text-2xl font-semibold mt-5 mb-2 tracking-tight; }
+  .tiptap h3 { @apply text-xl font-semibold mt-4 mb-2; }
+  .tiptap ul { @apply list-disc pl-6 my-3; }
+  .tiptap ol { @apply list-decimal pl-6 my-3; }
   .tiptap blockquote {
     @apply border-l-2 border-ink-300 pl-4 italic text-ink-700 my-4;
   }
@@ -105,7 +127,7 @@
     @apply text-ink-400 float-left pointer-events-none h-0;
   }
 
-  /* Marcador inteligente do Modo Púlpito */
+  /* Púlpito — marcador inteligente */
   .pulpit-line.marked {
     background-color: rgba(220, 38, 38, 0.18);
   }
@@ -117,38 +139,13 @@
     cursor: pointer;
   }
 
-  /* Botões minimalistas */
-  .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg
-      px-3.5 py-2 text-sm font-medium
-      transition-colors duration-150
-      focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink-400/40
-      disabled:opacity-50 disabled:pointer-events-none;
+  /* Bottom-nav iOS-style separator */
+  .ios-blur {
+    background: rgba(255, 255, 255, 0.72);
+    backdrop-filter: saturate(180%) blur(20px);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
   }
-  .btn-ghost {
-    @apply btn hover:bg-ink-100 text-ink-700;
-  }
-  .btn-primary {
-    @apply btn bg-ink-900 text-white hover:bg-ink-800;
-  }
-  .btn-danger {
-    @apply btn text-accent hover:bg-accent-soft;
-  }
-
-  /* Cards */
-  .card {
-    @apply rounded-xl border border-ink-200/70 bg-white shadow-soft
-      transition-shadow hover:shadow-ring;
-  }
-
-  /* Inputs */
-  .input {
-    @apply w-full rounded-lg border border-transparent bg-transparent
-      px-3 py-2 text-[15px] placeholder:text-ink-400
-      focus:outline-none focus:ring-0 focus:bg-ink-50/60
-      transition-colors duration-150;
-  }
-  .input-bordered {
-    @apply input border-ink-200/80 focus:border-ink-300;
+  html.dark .ios-blur {
+    background: rgba(21, 21, 26, 0.78);
   }
 }

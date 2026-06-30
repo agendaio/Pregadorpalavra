@@ -1,4 +1,4 @@
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import {
   Compass,
   Sparkles,
@@ -6,10 +6,6 @@ import {
   Library,
   Moon,
   Sun,
-  Download,
-  Trash2,
-  Tag,
-  History,
   Info,
   ChevronRight,
   Github,
@@ -31,14 +27,13 @@ interface Item {
 export function MorePage() {
   const tema = useUIStore((s) => s.tema);
   const alternarTema = useUIStore((s) => s.alternarTema);
-  const navigate = useNavigate();
 
   const grupos: { titulo: string; itens: Item[] }[] = [
     {
       titulo: 'Acesso rápido',
       itens: [
-        { to: '/estudo', icon: Compass, label: 'Modo Estudo', description: 'Personagens, mapas, cronologias, léxico' },
-        { to: '/analista', icon: Sparkles, label: 'Analista de Sermões', description: 'Avaliação estrutural de cada mensagem' },
+        { to: '/estudo',    icon: Compass,  label: 'Modo Estudo',         description: 'Personagens, mapas, cronologias, léxico' },
+        { to: '/analista',  icon: Sparkles, label: 'Analista de Sermões', description: 'Avaliação estrutural de cada mensagem' },
         { to: '/biblioteca', icon: Library, label: 'Biblioteca completa', description: 'Todas as mensagens com filtros' },
       ],
     },
@@ -53,22 +48,14 @@ export function MorePage() {
       ],
     },
     {
-      titulo: 'Dados',
-      itens: [
-        { to: '/configuracoes', icon: Download, label: 'Exportar backup', description: 'Backup JSON das suas mensagens' },
-        { to: '/configuracoes', icon: History, label: 'Histórico de versões', description: 'Veja versões anteriores de cada mensagem' },
-        { to: '/configuracoes', icon: Tag, label: 'Gerenciar tags', description: 'Organize com tags e categorias' },
-      ],
-    },
-    {
       titulo: 'Sistema',
       itens: [
         { to: '/configuracoes', icon: SettingsIcon, label: 'Configurações', description: 'API da IA, backup, limpeza' },
         {
           icon: Github,
-          label: 'Pregador OS',
+          label: 'Código-fonte',
           description: `v${APP_VERSION} · Mobile-first + PWA`,
-          onClick: () => window.open('https://github.com/agendaio/Pregadorpalavra', '_blank'),
+          onClick: () => window.open('https://github.com/solabrasil/solabrasil', '_blank'),
         },
         { to: '/sobre', icon: Info, label: 'Sobre', description: 'O sistema operacional para pregadores' },
       ],
@@ -76,36 +63,42 @@ export function MorePage() {
   ];
 
   return (
-    <div className="flex h-full flex-col bg-paper">
+    <div className="flex flex-col bg-paper text-ink-900 dark:bg-paper-dark dark:text-ink-100">
       <MobileHeader title="Mais" subtitle={`Pregador OS · v${APP_VERSION}`} back={false} />
 
-      <div className="flex-1 overflow-y-auto pb-24">
-        <div className="mx-auto max-w-2xl px-4 py-5 space-y-6">
+      <div className="flex-1 overflow-y-auto">
+        <div className="mx-auto max-w-2xl space-y-6 px-4 py-5">
           {grupos.map((g) => (
             <section key={g.titulo}>
-              <h2 className="mb-1.5 px-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-ink-500">
+              <h2 className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-500 dark:text-ink-400">
                 {g.titulo}
               </h2>
-              <div className="overflow-hidden rounded-2xl border border-ink-200/80 bg-white shadow-soft">
+              <div className="overflow-hidden rounded-2xl border border-ink-200/80 bg-white shadow-soft dark:border-ink-800 dark:bg-ink-900/40">
                 {g.itens.map((item, i) => {
                   const Icon = item.icon;
                   const content = (
-                    <div className="flex items-center gap-3 px-4 py-3">
+                    <div className="flex items-center gap-3 px-4 py-3.5">
                       <div
                         className={cn(
-                          'flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg',
-                          item.variant === 'danger' ? 'bg-red-50 text-red-600' : 'bg-ink-100 text-ink-700',
+                          'flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl',
+                          item.variant === 'danger'
+                            ? 'bg-red-50 text-red-600 dark:bg-red-500/20 dark:text-red-400'
+                            : 'bg-ink-100 text-ink-700 dark:bg-ink-800 dark:text-ink-200',
                         )}
                       >
-                        <Icon className="h-4 w-4" />
+                        <Icon className="h-[18px] w-[18px]" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <div className="truncate text-[14px] font-medium text-ink-900">{item.label}</div>
+                        <div className="truncate text-[14.5px] font-medium tracking-tight text-ink-900 dark:text-white">
+                          {item.label}
+                        </div>
                         {item.description && (
-                          <div className="truncate text-[11.5px] text-ink-500">{item.description}</div>
+                          <div className="truncate text-[12px] text-ink-500 dark:text-ink-400">
+                            {item.description}
+                          </div>
                         )}
                       </div>
-                      <ChevronRight className="h-4 w-4 flex-shrink-0 text-ink-300" />
+                      <ChevronRight className="h-4 w-4 flex-shrink-0 text-ink-300 dark:text-ink-600" />
                     </div>
                   );
 
@@ -115,8 +108,8 @@ export function MorePage() {
                         key={i}
                         to={item.to}
                         className={cn(
-                          'block transition-colors hover:bg-ink-50/60 active:bg-ink-100',
-                          i > 0 && 'border-t border-ink-100',
+                          'block transition-colors active:bg-ink-50 dark:active:bg-ink-800/40',
+                          i > 0 && 'border-t border-ink-100 dark:border-ink-800',
                         )}
                       >
                         {content}
@@ -128,8 +121,8 @@ export function MorePage() {
                       key={i}
                       onClick={item.onClick}
                       className={cn(
-                        'block w-full text-left transition-colors hover:bg-ink-50/60 active:bg-ink-100',
-                        i > 0 && 'border-t border-ink-100',
+                        'block w-full text-left transition-colors active:bg-ink-50 dark:active:bg-ink-800/40',
+                        i > 0 && 'border-t border-ink-100 dark:border-ink-800',
                       )}
                     >
                       {content}
@@ -140,7 +133,7 @@ export function MorePage() {
             </section>
           ))}
 
-          <div className="pb-4 text-center text-[11px] text-ink-400">
+          <div className="pb-4 text-center text-[11px] text-ink-400 dark:text-ink-500">
             Pregador OS · Sistema Operacional para Pregadores
           </div>
         </div>

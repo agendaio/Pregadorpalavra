@@ -16,10 +16,9 @@ import {
   Quote,
   StickyNote,
   ChevronRight,
-  Plus,
-  BookOpen,
   Cpu,
   Coins,
+  Plus,
 } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import {
@@ -43,21 +42,35 @@ import { useUIStore } from '@/stores/ui';
 import { MobileHeader } from '@/components/layout/MobileHeader';
 import { Button } from '@/components/ui/Button';
 import { cn, formatarRelogio } from '@/lib/utils';
+import { SPRING_IOS, EASE_OUT } from '@/lib/motion';
 
 const ACOES_RAPIDAS = [
-  { id: 'esboco', rotulo: 'Criar Esboço', emoji: '📖', cor: 'bg-amber-50 text-amber-700' },
-  { id: 'estudo', rotulo: 'Estudo Bíblico', emoji: '📚', cor: 'bg-blue-50 text-blue-700' },
-  { id: 'sermao_expositivo', rotulo: 'Sermão Expositivo', emoji: '🎤', cor: 'bg-purple-50 text-purple-700' },
-  { id: 'sermao_tematico', rotulo: 'Sermão Temático', emoji: '📝', cor: 'bg-pink-50 text-pink-700' },
-  { id: 'sermao_textual', rotulo: 'Sermão Textual', emoji: '📜', cor: 'bg-orange-50 text-orange-700' },
-  { id: 'versiculo', rotulo: 'Explicar Versículo', emoji: '🧠', cor: 'bg-teal-50 text-teal-700' },
-  { id: 'contexto', rotulo: 'Contexto Histórico', emoji: '🌍', cor: 'bg-green-50 text-green-700' },
-  { id: 'cruzamentos', rotulo: 'Ref. Cruzadas', emoji: '🔗', cor: 'bg-indigo-50 text-indigo-700' },
-  { id: 'aplicacoes', rotulo: 'Aplicações', emoji: '💡', cor: 'bg-yellow-50 text-yellow-700' },
-  { id: 'ilustracoes', rotulo: 'Ilustrações', emoji: '🎯', cor: 'bg-red-50 text-red-700' },
-  { id: 'celula', rotulo: 'Estudo p/ Célula', emoji: '👨‍👩‍👧', cor: 'bg-cyan-50 text-cyan-700' },
-  { id: 'serie', rotulo: 'Série Mensagens', emoji: '🎙', cor: 'bg-violet-50 text-violet-700' },
+  { id: 'esboco',           rotulo: 'Criar Esboço',       icon: ScrollTextIcon },
+  { id: 'estudo',           rotulo: 'Estudo Bíblico',     icon: BookOpenIcon },
+  { id: 'sermao_expositivo', rotulo: 'Sermão Expositivo', icon: MicIcon },
+  { id: 'sermao_tematico',  rotulo: 'Sermão Temático',    icon: ScrollTextIcon },
+  { id: 'sermao_textual',   rotulo: 'Sermão Textual',     icon: QuoteIcon },
+  { id: 'versiculo',        rotulo: 'Explicar Versículo', icon: LightbulbIcon },
+  { id: 'contexto',         rotulo: 'Contexto Histórico', icon: GlobeIcon },
+  { id: 'cruzamentos',      rotulo: 'Ref. Cruzadas',      icon: LinkIcon },
+  { id: 'aplicacoes',       rotulo: 'Aplicações',         icon: TargetIcon },
+  { id: 'ilustracoes',      rotulo: 'Ilustrações',        icon: ImageIconIcon },
+  { id: 'celula',           rotulo: 'Estudo p/ Célula',   icon: UsersIcon },
+  { id: 'serie',            rotulo: 'Série Mensagens',    icon: LayersIcon },
 ];
+
+// helper icons inline
+function ScrollTextIcon({ className }: { className?: string }) { return <ChevronRight className={className} />; }
+function BookOpenIcon  ({ className }: { className?: string }) { return <ChevronRight className={className} />; }
+function MicIcon       ({ className }: { className?: string }) { return <ChevronRight className={className} />; }
+function QuoteIcon     ({ className }: { className?: string }) { return <ChevronRight className={className} />; }
+function LightbulbIcon ({ className }: { className?: string }) { return <Lightbulb className={className} />; }
+function GlobeIcon     ({ className }: { className?: string }) { return <ChevronRight className={className} />; }
+function LinkIcon      ({ className }: { className?: string }) { return <ChevronRight className={className} />; }
+function TargetIcon    ({ className }: { className?: string }) { return <ChevronRight className={className} />; }
+function ImageIconIcon ({ className }: { className?: string }) { return <ImageIcon className={className} />; }
+function UsersIcon     ({ className }: { className?: string }) { return <ChevronRight className={className} />; }
+function LayersIcon    ({ className }: { className?: string }) { return <ChevronRight className={className} />; }
 
 // ─── MICROFONE ────────────────────────────────────────────────────────────────
 type ModoVoz = 'idle' | 'Ouvindo' | 'processando';
@@ -73,9 +86,7 @@ function useMicrofone(onFinal: (texto: string) => void) {
     ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window);
 
   const iniciar = useCallback(() => {
-    const SpeechRecognitionAPI =
-      window.SpeechRecognition ?? window.webkitSpeechRecognition;
-
+    const SpeechRecognitionAPI = window.SpeechRecognition ?? window.webkitSpeechRecognition;
     if (!SpeechRecognitionAPI) return;
 
     const recognition = new SpeechRecognitionAPI();
@@ -156,73 +167,62 @@ function AssistenteHome({
   const s = saudacoes[new Date().getDate() % saudacoes.length];
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-6">
-      {/* Saudação */}
+    <div className="mx-auto max-w-2xl px-4 py-7">
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        className="mb-6 text-center"
+        transition={{ duration: 0.32, ease: EASE_OUT }}
+        className="mb-7 text-center"
       >
-        <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-ink-900 to-ink-700 text-white shadow-soft">
+        <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-ink-900 to-ink-700 text-white shadow-soft dark:from-ink-800 dark:to-ink-700">
           <Sparkles className="h-6 w-6" />
         </div>
-        <h2 className="text-[18px] font-semibold tracking-tight text-ink-900">{s}</h2>
+        <h2 className="text-[19px] font-semibold tracking-tight text-ink-900 dark:text-white">{s}</h2>
         {temContexto && tituloMsg && (
-          <p className="mt-1.5 inline-flex items-center gap-1.5 rounded-full bg-ink-100 px-3 py-1 text-[12px] text-ink-600">
-            <BookOpen className="h-3.5 w-3.5" />
+          <p className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-ink-100 px-3 py-1 text-[12px] text-ink-700 dark:bg-ink-800 dark:text-ink-200">
+            <BookOpenIcon className="h-3.5 w-3.5" />
             Contexto: {tituloMsg}
           </p>
         )}
       </motion.div>
 
-      {/* Cartões inteligentes */}
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
+        transition={{ delay: 0.08, duration: 0.32, ease: EASE_OUT }}
       >
-        <p className="mb-3 px-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-ink-500">
+        <p className="mb-3 px-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-500 dark:text-ink-400">
           Ações rápidas
         </p>
         <div className="grid grid-cols-2 gap-2.5">
-          {ACOES_RAPIDAS.map((acao, i) => (
-            <motion.button
-              key={acao.id}
-              initial={{ opacity: 0, scale: 0.92 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.12 + i * 0.025, duration: 0.2 }}
-              onClick={() =>
-                onAcao(
-                  acaoParaTexto(acao.id, temContexto, tituloMsg),
-                  acao.id,
-                )
-              }
-              disabled={enviando}
-              className="group flex items-center gap-3 rounded-2xl border border-ink-200/80 bg-white p-3.5 text-left transition-all hover:border-ink-300 hover:shadow-soft active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl text-xl">
-                {acao.emoji}
-              </span>
-              <span className="text-[13px] font-medium leading-snug text-ink-800 group-hover:text-ink-900">
-                {acao.rotulo}
-              </span>
-              <ChevronRight className="ml-auto h-3.5 w-3.5 flex-shrink-0 text-ink-300 group-hover:text-ink-500" />
-            </motion.button>
-          ))}
+          {ACOES_RAPIDAS.map((acao, i) => {
+            const Icon = acao.icon;
+            return (
+              <motion.button
+                key={acao.id}
+                initial={{ opacity: 0, scale: 0.94 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.1 + i * 0.022, duration: 0.22, ease: EASE_OUT }}
+                onClick={() =>
+                  onAcao(
+                    acaoParaTexto(acao.id, temContexto, tituloMsg),
+                    acao.id,
+                  )
+                }
+                disabled={enviando}
+                className="group flex items-center gap-3 rounded-2xl border border-ink-200/80 bg-white p-3.5 text-left transition-all hover:border-ink-300 hover:shadow-soft active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50 dark:border-ink-800 dark:bg-ink-900/40"
+              >
+                <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-ink-900 to-ink-700 text-white dark:from-white dark:to-ink-100 dark:text-ink-950">
+                  <Icon className="h-4 w-4" />
+                </span>
+                <span className="text-[13.5px] font-medium leading-snug text-ink-800 group-hover:text-ink-900 dark:text-ink-100 dark:group-hover:text-white">
+                  {acao.rotulo}
+                </span>
+                <ChevronRight className="ml-auto h-3.5 w-3.5 flex-shrink-0 text-ink-300 transition-transform group-hover:translate-x-0.5 dark:text-ink-600" />
+              </motion.button>
+            );
+          })}
         </div>
-      </motion.div>
-
-      {/* Dicas */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.5 }}
-        className="mt-6 rounded-2xl border border-dashed border-ink-200 bg-ink-50/50 p-4 text-center"
-      >
-        <p className="text-[12px] leading-relaxed text-ink-500">
-          <Sparkles className="mr-1 inline h-3.5 w-3.5" />
-          Dica: abra uma mensagem pelo editor para o assistente trabalhar com contexto completo.
-        </p>
       </motion.div>
     </div>
   );
@@ -248,7 +248,7 @@ function BlocoIA({
         animate={{ opacity: 1, y: 0 }}
         className="flex flex-row-reverse gap-2.5"
       >
-        <div className="max-w-[88%] rounded-2xl rounded-tr-sm bg-ink-900 px-4 py-3 text-[14px] leading-relaxed text-white">
+        <div className="max-w-[88%] rounded-2xl rounded-tr-sm bg-ink-900 px-4 py-3 text-[14px] leading-relaxed text-white dark:bg-white dark:text-ink-950">
           {m.content}
         </div>
       </motion.div>
@@ -256,14 +256,14 @@ function BlocoIA({
   }
 
   const acoes = [
-    { id: 'adicionar_esboco', rotulo: 'Adicionar ao Esboço', icon: Plus, cor: 'text-amber-600' },
-    { id: 'fixar', rotulo: 'Fixar', icon: BookmarkPlus, cor: 'text-blue-600' },
-    { id: 'copiar', rotulo: 'Copiar', icon: Copy, cor: 'text-ink-600' },
-    { id: 'reescrever', rotulo: 'Reescrever', icon: RefreshCw, cor: 'text-purple-600' },
-    { id: 'aplicacao', rotulo: 'Transformar em Aplicação', icon: Lightbulb, cor: 'text-yellow-600' },
-    { id: 'ilustracao', rotulo: 'Transformar em Ilustração', icon: ImageIcon, cor: 'text-pink-600' },
-    { id: 'texto_base', rotulo: 'Definir como Texto Base', icon: Quote, cor: 'text-teal-600' },
-    { id: 'observacao', rotulo: 'Salvar como Observação', icon: StickyNote, cor: 'text-orange-600' },
+    { id: 'adicionar_esboco', rotulo: 'Esboço', icon: Plus,       cor: 'text-amber-600' },
+    { id: 'fixar',           rotulo: 'Fixar',  icon: BookmarkPlus, cor: 'text-blue-600' },
+    { id: 'copiar',          rotulo: 'Copiar', icon: Copy,       cor: 'text-ink-600' },
+    { id: 'reescrever',      rotulo: 'Reescrever', icon: RefreshCw, cor: 'text-purple-600' },
+    { id: 'aplicacao',       rotulo: 'Aplicação', icon: Lightbulb, cor: 'text-yellow-600' },
+    { id: 'ilustracao',      rotulo: 'Ilustração', icon: ImageIcon, cor: 'text-pink-600' },
+    { id: 'texto_base',      rotulo: 'Texto-base', icon: Quote,    cor: 'text-teal-600' },
+    { id: 'observacao',      rotulo: 'Observação', icon: StickyNote, cor: 'text-orange-600' },
   ];
 
   return (
@@ -272,24 +272,22 @@ function BlocoIA({
       animate={{ opacity: 1, y: 0 }}
       className="flex gap-2.5"
     >
-      <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-ink-900 to-ink-700 text-white">
+      <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-ink-900 to-ink-700 text-white dark:from-white dark:to-ink-100 dark:text-ink-950">
         <Sparkles className="h-3.5 w-3.5" />
       </div>
 
       <div className="min-w-0 max-w-[88%] flex-1">
-        {/* Conteúdo */}
         <div
           className={cn(
-            'rounded-2xl rounded-tl-sm border border-ink-200/80 bg-white px-4 py-3',
+            'rounded-2xl rounded-tl-sm border border-ink-200/80 bg-white px-4 py-3 dark:border-ink-800 dark:bg-ink-900/40',
             m.resposta && 'rounded-br-sm',
           )}
         >
-          <pre className="whitespace-pre-wrap font-sans text-[14px] leading-relaxed text-ink-800">
+          <pre className="whitespace-pre-wrap break-words font-sans text-[14px] leading-relaxed text-ink-800 dark:text-ink-100">
             {m.content}
           </pre>
         </div>
 
-        {/* Ações rápidas do bloco */}
         <div className="mt-1.5 flex flex-wrap items-center gap-1">
           {acoes.map((acao) => {
             const Icon = acao.icon;
@@ -326,10 +324,10 @@ function BlocoIA({
                     setBlocoAberto(aberto ? null : acao.id);
                   }}
                   className={cn(
-                    'inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10.5px] font-medium transition-colors',
+                    'inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors active:scale-95',
                     aberto
-                      ? 'bg-ink-900 text-white'
-                      : 'bg-ink-100 text-ink-600 hover:bg-ink-200',
+                      ? 'bg-ink-900 text-white dark:bg-white dark:text-ink-950'
+                      : 'bg-ink-100 text-ink-600 hover:bg-ink-200 dark:bg-ink-800 dark:text-ink-300 dark:hover:bg-ink-700',
                   )}
                 >
                   <Icon className={cn('h-3 w-3', acao.cor && !aberto && acao.cor)} />
@@ -340,19 +338,18 @@ function BlocoIA({
           })}
         </div>
 
-        {/* Stats do modelo */}
         {m.resposta && (
-          <div className="mt-2 flex flex-wrap items-center gap-2 border-t border-ink-100 pt-1.5 text-[10.5px] text-ink-500">
+          <div className="mt-2 flex flex-wrap items-center gap-2 border-t border-ink-100 pt-1.5 text-[10.5px] text-ink-500 dark:border-ink-800 dark:text-ink-400">
             <span className="inline-flex items-center gap-1">
               <Cpu className="h-3 w-3" />
               {m.resposta.provider}
             </span>
             <span>·</span>
-            <span>{m.resposta.tokensTotal} tok</span>
+            <span className="tabular-nums">{m.resposta.tokensTotal} tok</span>
             <span>·</span>
-            <span>${m.resposta.custoUSD.toFixed(5)}</span>
+            <span className="tabular-nums">${m.resposta.custoUSD.toFixed(5)}</span>
             <span>·</span>
-            <span>{(m.resposta.duracaoMs / 1000).toFixed(1)}s</span>
+            <span className="tabular-nums">{(m.resposta.duracaoMs / 1000).toFixed(1)}s</span>
             <span className="ml-auto">{formatarRelogio(m.timestamp ?? Date.now())}</span>
           </div>
         )}
@@ -384,7 +381,6 @@ export function AssistantPage() {
     [sessaoId],
   );
 
-  // Microfone
   const { modoVoz, transcricao, setTranscricao, iniciar, parar, suportado } = useMicrofone((texto) => {
     setInput((prev) => prev + (prev ? ' ' : '') + texto);
     inputRef.current?.focus();
@@ -392,7 +388,6 @@ export function AssistantPage() {
 
   const temConversa = mensagens.length > 0;
 
-  // Cria ou recupera sessão
   useEffect(() => {
     let cancelado = false;
     (async () => {
@@ -415,7 +410,6 @@ export function AssistantPage() {
     fimRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
   }, [mensagens.length, streamAtual]);
 
-  // Auto-resize textarea
   useEffect(() => {
     const ta = inputRef.current;
     if (!ta) return;
@@ -423,11 +417,8 @@ export function AssistantPage() {
     ta.style.height = Math.min(ta.scrollHeight, 200) + 'px';
   }, [input]);
 
-  // Atualiza transcrição em tempo real
   useEffect(() => {
-    if (transcricao) {
-      setInput(transcricao);
-    }
+    if (transcricao) setInput(transcricao);
   }, [transcricao]);
 
   const enviar = useCallback(
@@ -606,63 +597,50 @@ export function AssistantPage() {
   const temContexto = !!mensagem;
 
   return (
-    <div className="flex h-full flex-col bg-paper">
-      {/* Header */}
+    <div className="flex flex-col bg-paper text-ink-900 dark:bg-paper-dark dark:text-ink-100">
       <MobileHeader
         title={temConversa ? (sessao?.titulo ?? 'Assistente') : 'Assistente Ministerial'}
         subtitle={temContexto ? mensagem!.titulo || 'Com contexto' : 'Sem contexto'}
         right={
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-0.5">
             {temConversa && (
               <Button
                 variant="ghost"
-                size="icon"
+                size="icon-sm"
                 onClick={handleLimpar}
                 aria-label="Limpar conversa"
               >
                 <Trash2 className="h-4 w-4" />
               </Button>
             )}
-            {temConversa && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => {
-                  setMensagens([]);
-                  handleLimpar();
-                }}
-                aria-label="Nova conversa"
-              >
-                <Sparkles className="h-4 w-4" />
-              </Button>
-            )}
           </div>
         }
       />
 
-      {/* Status minimal */}
-      <div className="flex flex-shrink-0 items-center gap-2 border-b border-ink-200/70 bg-paper px-4 py-1.5 text-[11px]">
-        <div className="flex items-center gap-1.5 text-ink-500">
-          {providerAtivo === 'openai' ? (
+      <div className="ios-blur flex flex-shrink-0 items-center gap-2 border-b border-ink-200/70 bg-paper/80 px-4 py-2 text-[11px] dark:border-ink-800 dark:bg-paper-dark/80">
+        <div className="flex items-center gap-1.5">
+          {providerAtivo === 'openai' || providerAtivo === 'anthropic' ? (
             <>
               <span className="relative flex h-2 w-2">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
                 <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
               </span>
-              <span className="font-medium text-emerald-700">Assistente Ministerial</span>
+              <span className="font-semibold text-emerald-700 dark:text-emerald-400">
+                Assistente Ministerial
+              </span>
             </>
           ) : (
             <>
               <span className="h-2 w-2 rounded-full bg-amber-400" />
-              <span className="font-medium text-amber-700">
+              <span className="font-semibold text-amber-700 dark:text-amber-400">
                 {providerAtivo === 'local' ? 'Respostas locais' : providerAtivo}
               </span>
             </>
           )}
           {temContexto && (
             <>
-              <span className="text-ink-300">·</span>
-              <span className="text-emerald-600">contexto ativo</span>
+              <span className="text-ink-300 dark:text-ink-600">·</span>
+              <span className="text-emerald-600 dark:text-emerald-400">contexto ativo</span>
             </>
           )}
         </div>
@@ -672,7 +650,6 @@ export function AssistantPage() {
         </div>
       </div>
 
-      {/* Área de mensagens / Home */}
       <div className="flex-1 overflow-y-auto pb-32">
         {!temConversa ? (
           <AssistenteHome
@@ -683,12 +660,10 @@ export function AssistantPage() {
           />
         ) : (
           <div className="mx-auto max-w-2xl space-y-4 px-4 py-4">
-            {/* Histórico de mensagens */}
             {mensagens.map((m) => (
               <BlocoIA key={m.id} m={m} onAcaoBloco={handleAcaoBloco} />
             ))}
 
-            {/* Streaming */}
             {enviando && streamAtual && (
               <BlocoIA
                 m={{
@@ -703,26 +678,19 @@ export function AssistantPage() {
             )}
             {enviando && !streamAtual && (
               <div className="flex items-center gap-2.5">
-                <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-ink-900 to-ink-700 text-white">
+                <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-ink-900 to-ink-700 text-white dark:from-white dark:to-ink-100 dark:text-ink-950">
                   <Sparkles className="h-3.5 w-3.5" />
                 </div>
-                <div className="flex items-center gap-2 rounded-2xl border border-ink-200/80 bg-white px-4 py-3 text-[13px] text-ink-500">
-                  <motion.span
-                    animate={{ opacity: [0.4, 1, 0.4] }}
-                    transition={{ duration: 1.5, repeat: Infinity }}
-                    className="flex items-center gap-2"
-                  >
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    Pensando…
-                  </motion.span>
+                <div className="flex items-center gap-2 rounded-2xl border border-ink-200/80 bg-white px-4 py-3 text-[13px] text-ink-500 dark:border-ink-800 dark:bg-ink-900/40 dark:text-ink-400">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  Pensando…
                 </div>
               </div>
             )}
 
-            {/* Aviso de contexto limitado */}
             {fallbackAviso && (
-              <div className="flex items-start gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-[12px] text-amber-900">
-                <AlertCircle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-amber-600" />
+              <div className="flex items-start gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-[12.5px] text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
+                <AlertCircle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-amber-600 dark:text-amber-400" />
                 <div>{fallbackAviso}</div>
               </div>
             )}
@@ -732,45 +700,45 @@ export function AssistantPage() {
         )}
       </div>
 
-      {/* Input fixo — estilo ChatGPT, responsivo */}
-      <div className="fixed bottom-0 left-0 right-0 z-30 bg-paper/95 pb-[calc(env(safe-area-inset-bottom)+8px)]">
-        <div className="mx-auto max-w-2xl px-3 py-2">
-
-          {/* Transcrição voz */}
+      <div className="fixed bottom-0 left-0 right-0 z-30 bg-paper/95 pb-[calc(env(safe-area-inset-bottom)+8px)] ios-blur">
+        <div className="mx-auto max-w-2xl px-3 pt-2">
           <AnimatePresence>
             {modoVoz === 'Ouvindo' && (
               <motion.div
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
                 exit={{ opacity: 0, height: 0 }}
-                className="mb-2 flex items-center gap-2 overflow-hidden rounded-2xl border border-red-200 bg-red-50 px-3 py-2"
+                className="mb-2 flex items-center gap-2 overflow-hidden rounded-2xl border border-red-200 bg-red-50 px-3 py-2 dark:border-red-500/30 dark:bg-red-500/10"
               >
                 <motion.span
                   animate={{ scale: [1, 1.2, 1] }}
                   transition={{ duration: 0.8, repeat: Infinity }}
                   className="h-2 w-2 flex-shrink-0 rounded-full bg-red-500"
                 />
-                <span className="flex-1 text-[12.5px] text-red-700">{transcricao || 'Ouvindo…'}</span>
-                <button onClick={parar} className="flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-[11px] font-medium text-red-700">
+                <span className="flex-1 text-[12.5px] text-red-700 dark:text-red-300">
+                  {transcricao || 'Ouvindo…'}
+                </span>
+                <button
+                  onClick={parar}
+                  className="flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-[11px] font-medium text-red-700 dark:bg-red-500/20 dark:text-red-200"
+                >
                   <MicOff className="h-3 w-3" /> Parar
                 </button>
               </motion.div>
             )}
           </AnimatePresence>
 
-          {/* Barra de input estilo ChatGPT */}
           <div className="relative flex items-end gap-2">
-            {/* Microfone — esquerda */}
             {suportado && (
               <button
                 onClick={modoVoz === 'Ouvindo' ? parar : iniciar}
                 disabled={enviando && modoVoz !== 'Ouvindo'}
                 aria-label={modoVoz === 'Ouvindo' ? 'Parar gravação' : 'Gravar com voz'}
                 className={cn(
-                  'flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full transition-all',
+                  'flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full transition-all active:scale-95',
                   modoVoz === 'Ouvindo'
                     ? 'bg-red-500 text-white shadow-lg'
-                    : 'text-ink-400 hover:bg-ink-100 hover:text-ink-700',
+                    : 'text-ink-400 hover:bg-ink-100 hover:text-ink-700 dark:hover:bg-ink-800/60 dark:hover:text-ink-200',
                   enviando && modoVoz !== 'Ouvindo' && 'opacity-40 cursor-not-allowed',
                 )}
               >
@@ -784,8 +752,7 @@ export function AssistantPage() {
               </button>
             )}
 
-            {/* Textarea pill */}
-            <div className="relative flex-1 overflow-hidden rounded-full border border-ink-200/80 bg-white shadow-sm focus-within:border-ink-300 focus-within:shadow-md">
+            <div className="relative flex-1 overflow-hidden rounded-full border border-ink-200/80 bg-white shadow-sm transition-all focus-within:border-ink-300 focus-within:shadow-md dark:border-ink-800 dark:bg-ink-900/40">
               <textarea
                 ref={inputRef}
                 value={input}
@@ -803,21 +770,19 @@ export function AssistantPage() {
                 }
                 rows={1}
                 disabled={enviando}
-                className="max-h-48 w-full resize-none bg-transparent px-4 py-2.5 pr-14 text-[14.5px] leading-relaxed text-ink-900 outline-none placeholder:text-ink-400 disabled:opacity-50"
+                className="max-h-48 w-full resize-none bg-transparent px-4 py-2.5 pr-14 text-[14.5px] leading-relaxed text-ink-900 outline-none placeholder:text-ink-400 disabled:opacity-50 dark:text-white dark:placeholder:text-ink-500"
               />
 
-              {/* Contador de linhas / indicadores */}
               <div className="absolute bottom-1.5 right-1.5 flex items-center gap-1">
-                {/* Enviar */}
                 <button
                   onClick={() => enviar(input)}
                   disabled={(!input.trim() && modoVoz === 'idle') || enviando}
                   aria-label="Enviar mensagem"
                   className={cn(
-                    'flex h-8 w-8 items-center justify-center rounded-full transition-all',
+                    'flex h-9 w-9 items-center justify-center rounded-full transition-all active:scale-90',
                     input.trim() && !enviando
-                      ? 'bg-ink-900 text-white hover:bg-ink-700 active:scale-95'
-                      : 'bg-ink-100 text-ink-400',
+                      ? 'bg-ink-900 text-white hover:bg-ink-700 dark:bg-white dark:text-ink-950'
+                      : 'bg-ink-100 text-ink-400 dark:bg-ink-800 dark:text-ink-500',
                   )}
                 >
                   {enviando ? (
@@ -830,8 +795,7 @@ export function AssistantPage() {
             </div>
           </div>
 
-          {/* Dica de atalhos */}
-          <p className="mt-1 text-center text-[10px] text-ink-400">
+          <p className="mb-1 mt-1.5 text-center text-[10px] text-ink-400 dark:text-ink-500">
             <span className="hidden sm:inline">
               Enter envia · Shift+Enter nova linha
               {suportado && ' · Microfone ativado'}
@@ -846,22 +810,21 @@ export function AssistantPage() {
   );
 }
 
-// ─── HELPERS ──────────────────────────────────────────────────────────────────
 function acaoParaTexto(acao: string, temContexto: boolean, tituloMsg?: string): string {
   const ref = temContexto && tituloMsg ? ` para "${tituloMsg}"` : '';
   const map: Record<string, string> = {
     esboco: `Monte um esboço completo e estruturado${ref}. Inclua: introdução, pontos principais com subpontos, aplicações e conclusão.`,
-    estudo: `Faça um estudo bíblico profundo${ref}. Analise: contexto histórico,hebraico/grego ключевых слов, cruzamentos, aplicações e perguntas para reflexão.`,
+    estudo: `Faça um estudo bíblico profundo${ref}. Analise: contexto histórico, hebraico/grego de palavras-chave, cruzamentos, aplicações e perguntas para reflexão.`,
     sermao_expositivo: `Crie um sermão expositivo completo${ref}. Estrutura: texto-base, contexto histórico, divisão em pontos expositivos, aplicações práticas e conclusão.`,
-    sermao_tematico: `Elabore um sermão temático estruturado${ref}. Estrutura: tema, texto-base, 3 pontos desenvolvida, ilustrações, aplicações e apelo.`,
+    sermao_tematico: `Elabore um sermão temático estruturado${ref}. Estrutura: tema, texto-base, 3 pontos desenvolvidos, ilustrações, aplicações e apelo.`,
     sermao_textual: `Prepare um sermão textual${ref}. Análise: passagem, contexto, significado original, aplicação contemporânea e esboço.`,
     versiculo: `Explique este versículo em profundidade${ref}: significado original, contexto, aplicações para hoje e como pregá-lo.`,
     contexto: `Descreva o contexto histórico-cultural desta passagem${ref}. Inclua: época, geografia, costumes, personagens envolvidos e relevância.`,
     cruzamentos: `Liste referências bíblicas cruzadas${ref}: passagens paralelas, profecias, tipo/antítipo, eco no Novo Testamento e conexões temáticas.`,
     aplicacoes: `Sugira aplicações práticas${ref}: como esta verdade pode ser vivida no cotidiano, na família, no trabalho e na igreja.`,
-    ilustracoes: `Sugira ilustrações concretas e memoráveis${ref}: histórias reais, analogias, ejemplos do cotidiano e experiências.`,
+    ilustracoes: `Sugira ilustrações concretas e memoráveis${ref}: histórias reais, analogias, exemplos do cotidiano e experiências.`,
     celular: `Crie perguntas para estudo em célula${ref}: abertura, estudo bíblico, aplicação e oração. Para 8-12 pessoas.`,
-    serie: `Planeje uma série de mensagens${ref}: tema geral, número de mensagens, título de cada uma eProgressão teológica.`,
+    serie: `Planeje uma série de mensagens${ref}: tema geral, número de mensagens, título de cada uma e progressão teológica.`,
   };
   return map[acao] ?? acao;
 }
