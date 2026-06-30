@@ -21,7 +21,7 @@ export type {
 export { AIError } from './provider';
 
 // Providers
-export { openaiProvider, OpenAIProvider, MODELOS as OPENAI_MODELOS, CHAVE_STORAGE, MODELO_STORAGE } from './openai';
+export { openaiProvider, OpenAIProvider, MODELOS as OPENAI_MODELOS } from './openai';
 export { localProvider, LocalProvider } from './local';
 
 // Roteamento

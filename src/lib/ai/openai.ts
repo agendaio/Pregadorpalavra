@@ -6,17 +6,16 @@ import type {
   ModeloInfo,
 } from './provider';
 import { AIError } from './provider';
+import { supabase, SUPABASE_CONFIGURED } from '@/lib/supabase';
 
 /**
- * Provider OpenAI / ChatGPT.
+ * Provider que chama a Edge Function "ai-chat" no Supabase.
  *
- * Acesso direto via API REST. Em produção ideal, isso deveria passar por
- * uma Edge Function (Supabase) para não expor a chave ao cliente. Por
- * enquanto (MVP), a chave fica em localStorage + env var e o usuário é
- * avisado na Settings.
+ * A Edge Function é server-side e lê a API key da tabela api_keys
+ * no banco — o usuário final NUNCA vê ou fornece a chave.
+ *
+ * O JWT do usuário autenticado é passado no Authorization header.
  */
-
-const OPENAI_URL = 'https://api.openai.com/v1/chat/completions';
 
 const MODELOS: ModeloInfo[] = [
   {
@@ -25,7 +24,7 @@ const MODELOS: ModeloInfo[] = [
     contexto: 128_000,
     custoInput: 0.00015,
     custoOutput: 0.0006,
-    descricao: 'Rápido, barato, bom pra 90% das tarefas ministeriais.',
+    descricao: 'Rápido e barato. Ideal para 90% das tarefas ministeriais.',
   },
   {
     id: 'gpt-4o',
@@ -33,7 +32,7 @@ const MODELOS: ModeloInfo[] = [
     contexto: 128_000,
     custoInput: 0.0025,
     custoOutput: 0.01,
-    descricao: 'Modelo completo. Melhor raciocínio teológico, contexto longo.',
+    descricao: 'Modelo completo. Melhor raciocínio teológico e contexto longo.',
   },
   {
     id: 'gpt-4-turbo',
@@ -41,187 +40,138 @@ const MODELOS: ModeloInfo[] = [
     contexto: 128_000,
     custoInput: 0.01,
     custoOutput: 0.03,
-    descricao: 'Top de linha pra exegese profunda e séries longas.',
-  },
-  {
-    id: 'gpt-3.5-turbo',
-    nome: 'GPT-3.5 Turbo',
-    contexto: 16_385,
-    custoInput: 0.0005,
-    custoOutput: 0.0015,
-    descricao: 'Econômico, contexto curto. Pra textos pequenos.',
+    descricao: 'Top de linha para exegese profunda e séries longas.',
   },
 ];
-
-const CHAVE_STORAGE = 'pregador.openai.key';
-const MODELO_STORAGE = 'pregador.openai.model';
 
 export class OpenAIProvider implements AIProvider {
   info(): ProviderInfo {
     return {
       id: 'openai',
-      nome: 'ChatGPT (OpenAI)',
-      descricao: 'Modelos GPT-4o e GPT-4o mini. Requer chave de API.',
+      nome: 'Assistente Ministerial',
+      descricao: 'IA real via Edge Function. Chave centralizada pelo administrador — usuário não configura nada.',
       modelos: MODELOS,
-      requerChave: true,
+      requerChave: false,
       offline: false,
     };
   }
 
   async pronto(): Promise<{ ok: boolean; motivo?: string }> {
-    const chave = this.obterChave();
-    if (!chave) return { ok: false, motivo: 'Chave da API não configurada. Vá em Configurações > IA.' };
-    if (!chave.startsWith('sk-')) return { ok: false, motivo: 'Chave da API inválida (esperado prefixo sk-).' };
-    return { ok: true };
-  }
+    if (!SUPABASE_CONFIGURED) {
+      return {
+        ok: false,
+        motivo: 'Conexão Supabase não disponível. '
+          + 'Verifique se o app está online e o Supabase está configurado.',
+      };
+    }
+    const sb = supabase();
+    if (!sb) return { ok: false, motivo: 'Cliente Supabase não disponível.' };
 
-  obterChave(): string | null {
-    return (
-      (import.meta.env.VITE_OPENAI_API_KEY as string | undefined) ||
-      localStorage.getItem(CHAVE_STORAGE) ||
-      null
-    );
-  }
+    // Testa se a Edge Function responde
+    try {
+      const { data, error } = await sb.functions.invoke('ai-chat', {
+        body: {
+          messages: [{ role: 'user', content: 'teste' }],
+          maxTokens: 5,
+        },
+      });
 
-  obterModelo(): string {
-    return localStorage.getItem(MODELO_STORAGE) || 'gpt-4o-mini';
+      if (error) {
+        const errStr = String(error);
+        // Erro de API key não configurada pelo admin
+        if (errStr.includes('no_api_key')) {
+          return {
+            ok: false,
+            motivo: 'IA não configurada pelo administrador. '
+              + 'Acesse /admin/api-keys para cadastrar uma chave OpenAI.',
+          };
+        }
+        return { ok: false, motivo: 'Erro na Edge Function: ' + errStr.slice(0, 200) };
+      }
+
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, motivo: 'Falha de conexão com o servidor: ' + (e as Error).message };
+    }
   }
 
   async enviar(req: AIRequest): Promise<AIResponse> {
-    const pr = await this.pronto();
-    if (!pr.ok) {
-      throw new AIError(pr.motivo ?? 'Provedor indisponível', 'sem-chave', 'openai');
+    const sb = supabase();
+    if (!sb) {
+      throw new AIError('Supabase não disponível', 'rede', 'openai');
     }
 
     const inicioMs = Date.now();
-    const modelo = this.obterModelo();
-    const infoModelo = MODELOS.find((m) => m.id === modelo) ?? MODELOS[0];
 
-    const body = {
-      model: modelo,
-      messages: req.messages.map((m) => ({ role: m.role, content: m.content })),
-      max_tokens: req.maxTokens ?? 2000,
-      temperature: req.temperature ?? 0.7,
-      stream: !!req.stream,
-    };
-
-    let response: Response;
     try {
-      response = await fetch(OPENAI_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${this.obterChave()}`,
+      const { data, error } = await sb.functions.invoke('ai-chat', {
+        body: {
+          messages: req.messages.map((m) => ({ role: m.role, content: m.content })),
+          systemAppend: req.systemAppend ?? '',
+          maxTokens: req.maxTokens ?? 2500,
+          temperature: req.temperature ?? 0.7,
+          stream: false,
         },
-        body: JSON.stringify(req.stream ? { ...body, stream: true } : body),
-        signal: req.signal,
       });
-    } catch (e) {
-      if ((e as Error).name === 'AbortError') {
-        throw new AIError('Requisição cancelada pelo usuário', 'cancelado', 'openai');
-      }
-      throw new AIError(`Falha de rede: ${(e as Error).message}`, 'rede', 'openai');
-    }
 
-    if (!response.ok) {
-      let mensagem = `HTTP ${response.status}`;
-      try {
-        const errBody = await response.json();
-        mensagem = errBody.error?.message ?? mensagem;
-      } catch {
-        // corpo vazio
-      }
-
-      if (response.status === 401) throw new AIError('Chave da API inválida ou expirada', 'sem-chave', 'openai');
-      if (response.status === 429) throw new AIError('Limite de requisições atingido. Tente em alguns segundos.', 'rate-limit', 'openai');
-      if (response.status === 402) throw new AIError('Créditos esgotados na OpenAI', 'sem-chave', 'openai');
-      throw new AIError(mensagem, 'desconhecido', 'openai');
-    }
-
-    if (req.stream && req.onChunk) {
-      return this.consumirStream(response, req, infoModelo, inicioMs);
-    }
-
-    const data = await response.json();
-    const choice = data.choices?.[0];
-    if (!choice?.message?.content) {
-      throw new AIError('Resposta vazia do provedor', 'resposta-invalida', 'openai');
-    }
-
-    const tokensInput = data.usage?.prompt_tokens ?? this.estimarTokens(req.messages.map((m) => m.content).join('\n'));
-    const tokensOutput = data.usage?.completion_tokens ?? this.estimarTokens(choice.message.content);
-
-    return {
-      content: choice.message.content,
-      tokensTotal: tokensInput + tokensOutput,
-      tokensInput,
-      tokensOutput,
-      model: modelo,
-      provider: 'openai',
-      custoUSD: (tokensInput / 1000) * infoModelo.custoInput + (tokensOutput / 1000) * infoModelo.custoOutput,
-      fimEm: Date.now(),
-      duracaoMs: Date.now() - inicioMs,
-    };
-  }
-
-  private async consumirStream(
-    response: Response,
-    req: AIRequest,
-    infoModelo: ModeloInfo,
-    inicioMs: number,
-  ): Promise<AIResponse> {
-    if (!response.body) throw new AIError('Stream vazio', 'resposta-invalida', 'openai');
-
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = '';
-    let acumulado = '';
-    let tokensEstimadosOutput = 0;
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
-
-      // OpenAI envia SSE: linhas "data: {...}" separadas por \n\n
-      const linhas = buffer.split('\n');
-      buffer = linhas.pop() ?? '';
-
-      for (const linha of linhas) {
-        const t = linha.trim();
-        if (!t.startsWith('data:')) continue;
-        const data = t.slice(5).trim();
-        if (data === '[DONE]') continue;
-        try {
-          const obj = JSON.parse(data);
-          const delta = obj.choices?.[0]?.delta?.content ?? '';
-          if (delta) {
-            acumulado += delta;
-            tokensEstimadosOutput += this.estimarTokens(delta);
-            req.onChunk?.(acumulado);
-          }
-        } catch {
-          // linha inválida, ignora
+      if (error) {
+        const errStr = String(error);
+        if (errStr.includes('no_api_key')) {
+          throw new AIError(
+            'IA não configurada. Solicite ao administrador que cadastre uma chave OpenAI em /admin/api-keys.',
+            'sem-chave',
+            'openai',
+          );
         }
+        if (errStr.includes('limit_reached')) {
+          throw new AIError(
+            'Limite mensal de IA atingido. Faça upgrade do plano para continuar.',
+            'tokens-excedidos',
+            'openai',
+          );
+        }
+        if (errStr.includes('invalid_token')) {
+          throw new AIError('Sessão expirada. Faça login novamente.', 'sem-chave', 'openai');
+        }
+        throw new AIError('Erro na Edge Function: ' + errStr.slice(0, 200), 'desconhecido', 'openai');
       }
+
+      // A Edge Function retorna { content, provider, model, tokensInput, tokensOutput, tokensTotal, custoUSD, duracaoMs }
+      const result = data as {
+        content: string;
+        provider: string;
+        model: string;
+        tokensInput: number;
+        tokensOutput: number;
+        tokensTotal: number;
+        custoUSD: number;
+        duracaoMs: number;
+      };
+
+      if (!result?.content) {
+        throw new AIError('Resposta vazia do servidor de IA', 'resposta-invalida', 'openai');
+      }
+
+      return {
+        content: result.content,
+        tokensTotal: result.tokensTotal ?? result.tokensInput + result.tokensOutput,
+        tokensInput: result.tokensInput ?? 0,
+        tokensOutput: result.tokensOutput ?? 0,
+        model: result.model ?? 'gpt-4o-mini',
+        provider: result.provider ?? 'openai',
+        custoUSD: result.custoUSD ?? 0,
+        fimEm: Date.now(),
+        duracaoMs: result.duracaoMs ?? (Date.now() - inicioMs),
+      };
+    } catch (e) {
+      if (e instanceof AIError) throw e;
+      if ((e as Error).name === 'AbortError') {
+        throw new AIError('Requisição cancelada', 'cancelado', 'openai');
+      }
+      throw new AIError((e as Error).message, 'rede', 'openai');
     }
-
-    const tokensInput = this.estimarTokens(req.messages.map((m) => m.content).join('\n'));
-
-    return {
-      content: acumulado,
-      tokensTotal: tokensInput + tokensEstimadosOutput,
-      tokensInput,
-      tokensOutput: tokensEstimadosOutput,
-      model: infoModelo.id,
-      provider: 'openai',
-      custoUSD: (tokensInput / 1000) * infoModelo.custoInput + (tokensEstimadosOutput / 1000) * infoModelo.custoOutput,
-      fimEm: Date.now(),
-      duracaoMs: Date.now() - inicioMs,
-    };
   }
 
-  /** Estimativa simples: ~4 chars por token em inglês, ~3 em PT. */
   estimarTokens(texto: string): number {
     if (!texto) return 0;
     return Math.ceil(texto.length / 3.2);
@@ -229,5 +179,4 @@ export class OpenAIProvider implements AIProvider {
 }
 
 export const openaiProvider = new OpenAIProvider();
-export { CHAVE_STORAGE, MODELO_STORAGE };
 export { MODELOS };

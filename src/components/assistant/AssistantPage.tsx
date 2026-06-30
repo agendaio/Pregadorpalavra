@@ -640,26 +640,35 @@ export function AssistantPage() {
         }
       />
 
-      {/* Provider banner */}
-      <div className="flex flex-shrink-0 items-center justify-between border-b border-ink-200/70 bg-paper px-4 py-1.5 text-[11px]">
-        <div className="flex items-center gap-1.5 text-ink-600">
-          <Cpu className="h-3 w-3" />
-          <span className="font-medium">
-            {providerAtivo === 'openai' ? 'ChatGPT' : providerAtivo === 'local' ? 'Modo Local' : providerAtivo}
-          </span>
-          {temContexto && (
+      {/* Status minimal */}
+      <div className="flex flex-shrink-0 items-center gap-2 border-b border-ink-200/70 bg-paper px-4 py-1.5 text-[11px]">
+        <div className="flex items-center gap-1.5 text-ink-500">
+          {providerAtivo === 'openai' ? (
             <>
-              <span className="text-ink-300">·</span>
-              <span className="inline-flex items-center gap-1 text-emerald-600">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                contexto ativo
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+              </span>
+              <span className="font-medium text-emerald-700">Assistente Ministerial</span>
+            </>
+          ) : (
+            <>
+              <span className="h-2 w-2 rounded-full bg-amber-400" />
+              <span className="font-medium text-amber-700">
+                {providerAtivo === 'local' ? 'Respostas locais' : providerAtivo}
               </span>
             </>
           )}
+          {temContexto && (
+            <>
+              <span className="text-ink-300">·</span>
+              <span className="text-emerald-600">contexto ativo</span>
+            </>
+          )}
         </div>
-        <div className="flex items-center gap-1.5 text-ink-500 tabular-nums">
+        <div className="ml-auto flex items-center gap-1.5 text-ink-400 tabular-nums">
           <Coins className="h-3 w-3" />
-          {stats?.requisicoes ?? 0} req · ${((stats?.custoTotalUSD ?? 0)).toFixed(4)}
+          <span>{stats?.requisicoes ?? 0} req</span>
         </div>
       </div>
 
@@ -710,7 +719,7 @@ export function AssistantPage() {
               </div>
             )}
 
-            {/* Aviso fallback */}
+            {/* Aviso de contexto limitado */}
             {fallbackAviso && (
               <div className="flex items-start gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-[12px] text-amber-900">
                 <AlertCircle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-amber-600" />
@@ -723,17 +732,18 @@ export function AssistantPage() {
         )}
       </div>
 
-      {/* Input fixo com microfone */}
-      <div className="fixed bottom-[calc(env(safe-area-inset-bottom)+64px)] left-0 right-0 z-30 border-t border-ink-200/80 bg-white/95 backdrop-blur-md">
-        <div className="mx-auto max-w-2xl px-3 py-2.5">
-          {/* Transcrição em tempo real */}
+      {/* Input fixo — estilo ChatGPT, responsivo */}
+      <div className="fixed bottom-0 left-0 right-0 z-30 bg-paper/95 pb-[calc(env(safe-area-inset-bottom)+8px)]">
+        <div className="mx-auto max-w-2xl px-3 py-2">
+
+          {/* Transcrição voz */}
           <AnimatePresence>
             {modoVoz === 'Ouvindo' && (
               <motion.div
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
                 exit={{ opacity: 0, height: 0 }}
-                className="mb-2 flex items-center gap-2 overflow-hidden rounded-xl border border-red-200 bg-red-50 px-3 py-2"
+                className="mb-2 flex items-center gap-2 overflow-hidden rounded-2xl border border-red-200 bg-red-50 px-3 py-2"
               >
                 <motion.span
                   animate={{ scale: [1, 1.2, 1] }}
@@ -741,37 +751,31 @@ export function AssistantPage() {
                   className="h-2 w-2 flex-shrink-0 rounded-full bg-red-500"
                 />
                 <span className="flex-1 text-[12.5px] text-red-700">{transcricao || 'Ouvindo…'}</span>
-                <button
-                  onClick={parar}
-                  className="flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-[11px] font-medium text-red-700"
-                >
+                <button onClick={parar} className="flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-[11px] font-medium text-red-700">
                   <MicOff className="h-3 w-3" /> Parar
                 </button>
               </motion.div>
             )}
           </AnimatePresence>
 
-          {/* Campo de input */}
-          <div className="flex items-end gap-2 rounded-2xl border border-ink-200 bg-white p-1.5 shadow-soft focus-within:border-ink-300">
-            {/* Botão microfone (estilo ChatGPT) */}
+          {/* Barra de input estilo ChatGPT */}
+          <div className="relative flex items-end gap-2">
+            {/* Microfone — esquerda */}
             {suportado && (
               <button
                 onClick={modoVoz === 'Ouvindo' ? parar : iniciar}
                 disabled={enviando && modoVoz !== 'Ouvindo'}
                 aria-label={modoVoz === 'Ouvindo' ? 'Parar gravação' : 'Gravar com voz'}
                 className={cn(
-                  'flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl transition-all',
+                  'flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full transition-all',
                   modoVoz === 'Ouvindo'
-                    ? 'bg-red-500 text-white shadow-md'
+                    ? 'bg-red-500 text-white shadow-lg'
                     : 'text-ink-400 hover:bg-ink-100 hover:text-ink-700',
                   enviando && modoVoz !== 'Ouvindo' && 'opacity-40 cursor-not-allowed',
                 )}
               >
                 {modoVoz === 'Ouvindo' ? (
-                  <motion.div
-                    animate={{ scale: [1, 0.85, 1] }}
-                    transition={{ duration: 0.6, repeat: Infinity }}
-                  >
+                  <motion.div animate={{ scale: [1, 0.85, 1] }} transition={{ duration: 0.6, repeat: Infinity }}>
                     <MicOff className="h-4 w-4" />
                   </motion.div>
                 ) : (
@@ -780,61 +784,62 @@ export function AssistantPage() {
               </button>
             )}
 
-            <textarea
-              ref={inputRef}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  enviar(input);
+            {/* Textarea pill */}
+            <div className="relative flex-1 overflow-hidden rounded-full border border-ink-200/80 bg-white shadow-sm focus-within:border-ink-300 focus-within:shadow-md">
+              <textarea
+                ref={inputRef}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    enviar(input);
+                  }
+                }}
+                placeholder={
+                  temContexto
+                    ? 'Digite sua pergunta…'
+                    : 'Abra uma mensagem para contexto completo'
                 }
-              }}
-              placeholder={
-                temContexto
-                  ? 'Pergunte sobre a mensagem…'
-                  : 'Abra uma mensagem para contexto completo'
-              }
-              rows={1}
-              disabled={enviando}
-              className="flex-1 resize-none bg-transparent px-2 py-1.5 text-[14.5px] outline-none placeholder:text-ink-400 disabled:opacity-50"
-              style={{ maxHeight: 200 }}
-            />
+                rows={1}
+                disabled={enviando}
+                className="max-h-48 w-full resize-none bg-transparent px-4 py-2.5 pr-14 text-[14.5px] leading-relaxed text-ink-900 outline-none placeholder:text-ink-400 disabled:opacity-50"
+              />
 
-            {/* Botão enviar */}
-            <button
-              onClick={() => enviar(input)}
-              disabled={(!input.trim() && modoVoz === 'idle') || enviando}
-              aria-label="Enviar"
-              className={cn(
-                'flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl transition-colors',
-                input.trim() && !enviando
-                  ? 'bg-ink-900 text-white hover:bg-ink-800'
-                  : 'bg-ink-100 text-ink-400',
-              )}
-            >
-              {enviando ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Send className="h-4 w-4" />
-              )}
-            </button>
+              {/* Contador de linhas / indicadores */}
+              <div className="absolute bottom-1.5 right-1.5 flex items-center gap-1">
+                {/* Enviar */}
+                <button
+                  onClick={() => enviar(input)}
+                  disabled={(!input.trim() && modoVoz === 'idle') || enviando}
+                  aria-label="Enviar mensagem"
+                  className={cn(
+                    'flex h-8 w-8 items-center justify-center rounded-full transition-all',
+                    input.trim() && !enviando
+                      ? 'bg-ink-900 text-white hover:bg-ink-700 active:scale-95'
+                      : 'bg-ink-100 text-ink-400',
+                  )}
+                >
+                  {enviando ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Send className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
+            </div>
           </div>
 
-          <div className="mt-1 flex items-center justify-center gap-3 text-[10px] text-ink-400">
-            <span>Enter envia</span>
-            <span className="text-ink-300">·</span>
-            <span>Shift+Enter nova linha</span>
-            {suportado && (
-              <>
-                <span className="text-ink-300">·</span>
-                <span className="flex items-center gap-1">
-                  <Mic className="h-3 w-3" />
-                  microfone
-                </span>
-              </>
-            )}
-          </div>
+          {/* Dica de atalhos */}
+          <p className="mt-1 text-center text-[10px] text-ink-400">
+            <span className="hidden sm:inline">
+              Enter envia · Shift+Enter nova linha
+              {suportado && ' · Microfone ativado'}
+            </span>
+            <span className="sm:hidden">
+              Enter envia{suportado && ' · Mic ativado'}
+            </span>
+          </p>
         </div>
       </div>
     </div>

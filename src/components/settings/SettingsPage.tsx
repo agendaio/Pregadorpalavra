@@ -4,15 +4,13 @@ import {
   Download,
   Upload,
   Trash2,
-  Eye,
-  EyeOff,
   CheckCircle2,
   AlertCircle,
-  Key,
   Cpu,
   Coins,
   Sparkles,
-  ExternalLink,
+  RefreshCw,
+  Loader2,
 } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -24,13 +22,12 @@ import { semearExemplos } from '@/db/seed';
 import { APP_VERSION } from '../../../v.config';
 import {
   aiDB,
-  CHAVE_STORAGE,
-  MODELO_STORAGE,
   definirProviderAtivo,
   listarProviders,
   obterProviderAtivoId,
   obterProvider,
   obterStats,
+  openaiProvider,
   type StatsIA,
   type ProviderInfo,
 } from '@/lib/ai';
@@ -44,58 +41,33 @@ export function SettingsPage() {
   const total = useLiveQuery(() => db.mensagens.count(), []);
   const [stats, setStats] = useState<StatsIA | null>(null);
 
-  const [chave, setChave] = useState('');
-  const [mostrarChave, setMostrarChave] = useState(false);
   const [providerAtivo, setProviderAtivo] = useState(obterProviderAtivoId());
-  const [modelo, setModelo] = useState(localStorage.getItem(MODELO_STORAGE) || 'gpt-4o-mini');
-  const [status, setStatus] = useState<{ tipo: 'ok' | 'erro'; msg: string } | null>(null);
+  const [iaStatus, setIaStatus] = useState<{ tipo: 'ok' | 'erro' | 'loading'; msg: string }>({ tipo: 'loading', msg: 'Verificando…' });
 
   useEffect(() => {
     obterStats().then(setStats);
   }, []);
 
   useEffect(() => {
-    const c = localStorage.getItem(CHAVE_STORAGE) ?? '';
-    setChave(c);
+    void verificarIA();
   }, []);
 
   const providers = listarProviders();
   const provAtivo = obterProvider(providerAtivo);
 
-  const handleSalvarChave = () => {
-    localStorage.setItem(CHAVE_STORAGE, chave);
-    mostrarToast('Chave salva', 'sucesso');
-    setStatus(null);
-    void testarChave();
-  };
-
-  const handleLimparChave = () => {
-    localStorage.removeItem(CHAVE_STORAGE);
-    setChave('');
-    mostrarToast('Chave removida', 'info');
-    setStatus({ tipo: 'ok', msg: 'Chave removida. O assistente usará o modo local.' });
-  };
-
-  const testarChave = async () => {
-    setStatus(null);
-    const pr = await provAtivo.pronto();
+  const verificarIA = async () => {
+    const pr = await openaiProvider.pronto();
     if (pr.ok) {
-      setStatus({ tipo: 'ok', msg: `Pronto! ${provAtivo.info().nome} está configurado.` });
+      setIaStatus({ tipo: 'ok', msg: `Assistente Ministerial ativo — respostas completas via IA.` });
     } else {
-      setStatus({ tipo: 'erro', msg: pr.motivo ?? 'Indisponível' });
+      setIaStatus({ tipo: 'erro', msg: pr.motivo ?? 'Indisponível' });
     }
   };
 
   const handleProviderChange = (id: string) => {
     definirProviderAtivo(id as 'openai' | 'local');
     setProviderAtivo(id as 'openai' | 'local');
-    mostrarToast(`Provider: ${id}`, 'info');
-  };
-
-  const handleModeloChange = (id: string) => {
-    localStorage.setItem(MODELO_STORAGE, id);
-    setModelo(id);
-    mostrarToast(`Modelo: ${id}`, 'info');
+    mostrarToast(`Modo: ${id}`, 'info');
   };
 
   const exportar = async () => {
@@ -200,104 +172,42 @@ export function SettingsPage() {
                 </div>
               </div>
 
-              {/* Chave API — só para OpenAI */}
+              {/* Status da IA — centralizado pelo admin */}
               {providerAtivo === 'openai' && (
                 <div className="border-b border-ink-100 p-4">
                   <div className="mb-2 flex items-center gap-2">
-                    <Key className="h-4 w-4 text-ink-700" />
-                    <span className="text-[13px] font-semibold text-ink-900">Chave da API</span>
+                    <Sparkles className="h-4 w-4 text-ink-700" />
+                    <span className="text-[13px] font-semibold text-ink-900">Assistente Ministerial</span>
                   </div>
-                  <p className="mb-2.5 text-[11.5px] leading-relaxed text-ink-500">
-                    Sua chave fica salva apenas no seu navegador. Para uso em produção, a Onda 2 vai mover isso para Edge Functions (chave nunca exposta ao cliente).
-                  </p>
-                  <div className="flex items-center gap-2 rounded-2xl border border-ink-200 bg-white p-1.5">
-                    <input
-                      type={mostrarChave ? 'text' : 'password'}
-                      value={chave}
-                      onChange={(e) => setChave(e.target.value)}
-                      placeholder="sk-…"
-                      className="flex-1 bg-transparent px-2 py-1 font-mono text-[12.5px] outline-none placeholder:text-ink-400"
-                    />
-                    <Button variant="ghost" size="icon" onClick={() => setMostrarChave(!mostrarChave)} aria-label="Mostrar/ocultar">
-                      {mostrarChave ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </Button>
-                  </div>
-                  <div className="mt-2.5 flex flex-wrap gap-2">
-                    <Button variant="primary" onClick={handleSalvarChave} className="h-8 text-[12px]">
-                      Salvar chave
-                    </Button>
-                    <Button variant="outline" onClick={testarChave} className="h-8 text-[12px]">
-                      Testar conexão
-                    </Button>
-                    <Button variant="ghost" onClick={handleLimparChave} className="h-8 text-[12px]">
-                      Remover
-                    </Button>
-                  </div>
-
-                  {status && (
-                    <div
-                      className={
-                        'mt-3 flex items-start gap-2 rounded-lg p-2.5 text-[11.5px] ' +
-                        (status.tipo === 'ok' ? 'bg-emerald-50 text-emerald-900' : 'bg-red-50 text-red-900')
-                      }
-                    >
-                      {status.tipo === 'ok' ? (
-                        <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
-                      ) : (
-                        <AlertCircle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
-                      )}
-                      <span>{status.msg}</span>
-                    </div>
-                  )}
-
-                  <a
-                    href="https://platform.openai.com/api-keys"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="mt-2 inline-flex items-center gap-1 text-[11px] text-ink-600 underline-offset-2 hover:underline"
+                  <div
+                    className={
+                      'mb-2 flex items-start gap-2 rounded-xl p-3 text-[11.5px] ' +
+                      (iaStatus.tipo === 'ok'
+                        ? 'bg-emerald-50 text-emerald-900'
+                        : iaStatus.tipo === 'loading'
+                        ? 'bg-ink-50 text-ink-700'
+                        : 'bg-red-50 text-red-900')
+                    }
                   >
-                    Obter chave na OpenAI <ExternalLink className="h-3 w-3" />
-                  </a>
-                </div>
-              )}
-
-              {/* Modelo */}
-              {providerAtivo === 'openai' && (
-                <div className="p-4">
-                  <div className="mb-2 flex items-center gap-2">
-                    <Cpu className="h-4 w-4 text-ink-700" />
-                    <span className="text-[13px] font-semibold text-ink-900">Modelo</span>
+                    {iaStatus.tipo === 'ok' ? (
+                      <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-emerald-600" />
+                    ) : iaStatus.tipo === 'loading' ? (
+                      <Loader2 className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 animate-spin" />
+                    ) : (
+                      <AlertCircle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-red-600" />
+                    )}
+                    <span>{iaStatus.msg}</span>
                   </div>
-                  <div className="space-y-1.5">
-                    {modelos.map((m: { id: string; nome: string; descricao?: string; contexto: number; custoInput: number; custoOutput: number }) => {
-                      const ativo = modelo === m.id;
-                      return (
-                        <button
-                          key={m.id}
-                          onClick={() => handleModeloChange(m.id)}
-                          className={
-                            'flex w-full items-start gap-3 rounded-xl border p-3 text-left transition-all ' +
-                            (ativo ? 'border-ink-900 bg-ink-50' : 'border-ink-200 bg-white hover:border-ink-300')
-                          }
-                        >
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-2">
-                              <span className="text-[13px] font-semibold text-ink-900">{m.nome}</span>
-                              {ativo && <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />}
-                            </div>
-                            {m.descricao && (
-                              <p className="mt-0.5 text-[11.5px] text-ink-600">{m.descricao}</p>
-                            )}
-                            <div className="mt-1.5 flex items-center gap-3 text-[10.5px] text-ink-500 tabular-nums">
-                              <span>{(m.contexto / 1000).toFixed(0)}k contexto</span>
-                              <span>${m.custoInput.toFixed(5)}/1k in</span>
-                              <span>${m.custoOutput.toFixed(5)}/1k out</span>
-                            </div>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
+                  <Button variant="outline" onClick={() => void verificarIA()} className="h-8 text-[12px]">
+                    <RefreshCw className="h-3.5 w-3.5" /> Verificar status
+                  </Button>
+                  <p className="mt-2.5 text-[10.5px] text-ink-500">
+                    A IA é configurada pelo administrador em{' '}
+                    <a href="/admin/api-keys" className="font-medium underline underline-offset-2">
+                      /admin/api-keys
+                    </a>
+                    . Você não precisa configurar nada.
+                  </p>
                 </div>
               )}
             </Card>
