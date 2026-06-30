@@ -1,5 +1,6 @@
 import { BookOpen, Map, Users, Languages, ScrollText, Library } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
+import { MobileHeader } from '@/components/layout/MobileHeader';
 
 const RECURSOS = [
   {
@@ -42,44 +43,39 @@ const RECURSOS = [
 
 export function StudyPage() {
   return (
-    <div className="flex h-full flex-col overflow-y-auto">
-      <header className="border-b border-ink-200/70 bg-paper px-8 py-6">
-        <div className="mx-auto max-w-5xl">
-          <h1 className="text-2xl font-semibold tracking-tight text-ink-900">Modo Estudo</h1>
-          <p className="mt-0.5 text-[13px] text-ink-500">
-            Recursos exegéticos, históricos e lexicais para a preparação.
-          </p>
-        </div>
-      </header>
+    <div className="flex h-full flex-col bg-paper">
+      <MobileHeader title="Modo Estudo" subtitle="Recursos exegéticos para preparação" />
 
-      <div className="mx-auto w-full max-w-5xl px-8 py-10">
-        <div className="mb-8 rounded-2xl border border-ink-200/70 bg-white p-6 shadow-soft">
-          <h2 className="text-[15px] font-semibold tracking-tight text-ink-900">
-            Em construção — Onda 2
-          </h2>
-          <p className="mt-1.5 text-[13px] text-ink-600 leading-relaxed">
-            Os recursos de Estudo Profundo entram na próxima onda, depois da Onda 1 aprovada.
-            O esqueleto já está pronto — você conseguirá abrir cada recurso a partir desta tela.
-            <br />
-            <span className="text-ink-500">
-              Enquanto isso, a IA no editor já cobre a maior parte dessas consultas de forma contextual.
-            </span>
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
-          {RECURSOS.map((r) => (
-            <Card key={r.titulo} className="p-5 opacity-80">
-              <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-lg bg-ink-100 text-ink-700">
-                <r.icon className="h-4 w-4" />
-              </div>
-              <h3 className="text-[14px] font-semibold tracking-tight text-ink-900">{r.titulo}</h3>
-              <p className="mt-1 text-[12.5px] leading-relaxed text-ink-600">{r.descricao}</p>
-              <span className="mt-3 inline-flex items-center gap-1 rounded-full bg-ink-100 px-2 py-0.5 text-[10.5px] font-medium uppercase tracking-wide text-ink-600">
-                {r.status}
+      <div className="flex-1 overflow-y-auto pb-28">
+        <div className="mx-auto max-w-2xl px-4 py-4">
+          <div className="mb-5 rounded-2xl border border-ink-200/80 bg-white p-5 shadow-soft">
+            <h2 className="text-[14px] font-semibold tracking-tight text-ink-900">
+              Em construção — Onda 2
+            </h2>
+            <p className="mt-1.5 text-[12.5px] leading-relaxed text-ink-600">
+              Os recursos de Estudo Profundo entram na próxima onda.
+              O esqueleto já está pronto — cada recurso abrirá a partir desta tela.
+              <br />
+              <span className="text-ink-500">
+                Enquanto isso, a IA no editor e no Assistente cobre a maior parte dessas consultas.
               </span>
-            </Card>
-          ))}
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2">
+            {RECURSOS.map((r) => (
+              <Card key={r.titulo} className="p-4">
+                <div className="mb-2.5 flex h-9 w-9 items-center justify-center rounded-lg bg-ink-100 text-ink-700">
+                  <r.icon className="h-4 w-4" />
+                </div>
+                <h3 className="text-[13.5px] font-semibold tracking-tight text-ink-900">{r.titulo}</h3>
+                <p className="mt-1 text-[11.5px] leading-relaxed text-ink-600">{r.descricao}</p>
+                <span className="mt-2.5 inline-flex items-center gap-1 rounded-full bg-ink-100 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-ink-600">
+                  {r.status}
+                </span>
+              </Card>
+            ))}
+          </div>
         </div>
       </div>
     </div>
