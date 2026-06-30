@@ -19,6 +19,16 @@ import {
   Cpu,
   Coins,
   Plus,
+  ScrollText,
+  BookOpen,
+  FileText,
+  Mic2,
+  Globe,
+  Link2,
+  Target,
+  Users,
+  Layers,
+  Hash,
 } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import {
@@ -44,33 +54,36 @@ import { Button } from '@/components/ui/Button';
 import { cn, formatarRelogio } from '@/lib/utils';
 import { SPRING_IOS, EASE_OUT } from '@/lib/motion';
 
-const ACOES_RAPIDAS = [
-  { id: 'esboco',           rotulo: 'Criar Esboço',       icon: ScrollTextIcon },
-  { id: 'estudo',           rotulo: 'Estudo Bíblico',     icon: BookOpenIcon },
-  { id: 'sermao_expositivo', rotulo: 'Sermão Expositivo', icon: MicIcon },
-  { id: 'sermao_tematico',  rotulo: 'Sermão Temático',    icon: ScrollTextIcon },
-  { id: 'sermao_textual',   rotulo: 'Sermão Textual',     icon: QuoteIcon },
-  { id: 'versiculo',        rotulo: 'Explicar Versículo', icon: LightbulbIcon },
-  { id: 'contexto',         rotulo: 'Contexto Histórico', icon: GlobeIcon },
-  { id: 'cruzamentos',      rotulo: 'Ref. Cruzadas',      icon: LinkIcon },
-  { id: 'aplicacoes',       rotulo: 'Aplicações',         icon: TargetIcon },
-  { id: 'ilustracoes',      rotulo: 'Ilustrações',        icon: ImageIconIcon },
-  { id: 'celula',           rotulo: 'Estudo p/ Célula',   icon: UsersIcon },
-  { id: 'serie',            rotulo: 'Série Mensagens',    icon: LayersIcon },
-];
+// Gradientes por ação — cada uma com cor distinta e profissional
+const GRADIENTES: Record<string, string> = {
+  esboco:            'from-violet-500 to-purple-600',
+  estudo:            'from-emerald-500 to-teal-600',
+  sermao_expositivo: 'from-rose-500 to-pink-600',
+  sermao_tematico:   'from-amber-500 to-orange-500',
+  sermao_textual:    'from-sky-500 to-blue-600',
+  versiculo:         'from-yellow-400 to-amber-500',
+  contexto:          'from-cyan-500 to-blue-500',
+  cruzamentos:       'from-indigo-500 to-violet-600',
+  aplicacoes:        'from-orange-500 to-red-500',
+  ilustracoes:       'from-pink-500 to-rose-500',
+  celula:            'from-lime-500 to-green-500',
+  serie:             'from-fuchsia-500 to-purple-600',
+};
 
-// helper icons inline
-function ScrollTextIcon({ className }: { className?: string }) { return <ChevronRight className={className} />; }
-function BookOpenIcon  ({ className }: { className?: string }) { return <ChevronRight className={className} />; }
-function MicIcon       ({ className }: { className?: string }) { return <ChevronRight className={className} />; }
-function QuoteIcon     ({ className }: { className?: string }) { return <ChevronRight className={className} />; }
-function LightbulbIcon ({ className }: { className?: string }) { return <Lightbulb className={className} />; }
-function GlobeIcon     ({ className }: { className?: string }) { return <ChevronRight className={className} />; }
-function LinkIcon      ({ className }: { className?: string }) { return <ChevronRight className={className} />; }
-function TargetIcon    ({ className }: { className?: string }) { return <ChevronRight className={className} />; }
-function ImageIconIcon ({ className }: { className?: string }) { return <ImageIcon className={className} />; }
-function UsersIcon     ({ className }: { className?: string }) { return <ChevronRight className={className} />; }
-function LayersIcon    ({ className }: { className?: string }) { return <ChevronRight className={className} />; }
+const ACOES_RAPIDAS = [
+  { id: 'esboco',            rotulo: 'Criar Esboço',       icon: ScrollText,  idAcao: 'esboco'            },
+  { id: 'estudo',            rotulo: 'Estudo Bíblico',     icon: BookOpen,   idAcao: 'estudo'            },
+  { id: 'sermao_expositivo', rotulo: 'Sermão Expositivo', icon: Mic2,       idAcao: 'sermao_expositivo' },
+  { id: 'sermao_tematico',  rotulo: 'Sermão Temático',    icon: FileText,   idAcao: 'sermao_tematico'  },
+  { id: 'sermao_textual',   rotulo: 'Sermão Textual',     icon: Quote,      idAcao: 'sermao_textual'   },
+  { id: 'versiculo',        rotulo: 'Explicar Versículo', icon: Lightbulb,  idAcao: 'versiculo'        },
+  { id: 'contexto',         rotulo: 'Contexto Histórico', icon: Globe,      idAcao: 'contexto'         },
+  { id: 'cruzamentos',       rotulo: 'Ref. Cruzadas',      icon: Hash,       idAcao: 'cruzamentos'       },
+  { id: 'aplicacoes',       rotulo: 'Aplicações',         icon: Target,     idAcao: 'aplicacoes'       },
+  { id: 'ilustracoes',      rotulo: 'Ilustrações',        icon: ImageIcon,  idAcao: 'ilustracoes'      },
+  { id: 'celula',           rotulo: 'Estudo p/ Célula',   icon: Users,      idAcao: 'celula'           },
+  { id: 'serie',            rotulo: 'Série Mensagens',    icon: Layers,     idAcao: 'serie'            },
+];
 
 // ─── MICROFONE ────────────────────────────────────────────────────────────────
 type ModoVoz = 'idle' | 'Ouvindo' | 'processando';
@@ -180,7 +193,7 @@ function AssistenteHome({
         <h2 className="text-[19px] font-semibold tracking-tight text-ink-900 dark:text-white">{s}</h2>
         {temContexto && tituloMsg && (
           <p className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-ink-100 px-3 py-1 text-[12px] text-ink-700 dark:bg-ink-800 dark:text-ink-200">
-            <BookOpenIcon className="h-3.5 w-3.5" />
+            <BookOpen className="h-3.5 w-3.5" />
             Contexto: {tituloMsg}
           </p>
         )}
@@ -197,6 +210,7 @@ function AssistenteHome({
         <div className="grid grid-cols-2 gap-2.5">
           {ACOES_RAPIDAS.map((acao, i) => {
             const Icon = acao.icon;
+            const gradiente = GRADIENTES[acao.idAcao] ?? 'from-ink-600 to-ink-800';
             return (
               <motion.button
                 key={acao.id}
@@ -205,14 +219,14 @@ function AssistenteHome({
                 transition={{ delay: 0.1 + i * 0.022, duration: 0.22, ease: EASE_OUT }}
                 onClick={() =>
                   onAcao(
-                    acaoParaTexto(acao.id, temContexto, tituloMsg),
-                    acao.id,
+                    acaoParaTexto(acao.idAcao, temContexto, tituloMsg),
+                    acao.idAcao,
                   )
                 }
                 disabled={enviando}
                 className="group flex items-center gap-3 rounded-2xl border border-ink-200/80 bg-white p-3.5 text-left transition-all hover:border-ink-300 hover:shadow-soft active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50 dark:border-ink-800 dark:bg-ink-900/40"
               >
-                <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-ink-900 to-ink-700 text-white dark:from-white dark:to-ink-100 dark:text-ink-950">
+                <span className={cn('flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-white shadow-sm', gradiente)}>
                   <Icon className="h-4 w-4" />
                 </span>
                 <span className="text-[13.5px] font-medium leading-snug text-ink-800 group-hover:text-ink-900 dark:text-ink-100 dark:group-hover:text-white">
