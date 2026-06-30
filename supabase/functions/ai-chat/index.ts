@@ -506,7 +506,15 @@ Sua missão é apoiar pregadores, líderes e estudiosos da Bíblia de forma resp
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return json(null, 204);
+    return new Response(null, {
+      status: 204,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'authorization, content-type',
+        'Access-Control-Max-Age': '86400',
+      },
+    });
   }
 
   if (req.method !== 'POST') {
@@ -552,6 +560,8 @@ serve(async (req) => {
       model = 'gpt-4o-mini',
       provider = 'openai',
       stream = false,
+      agente_id = null,       // ID do agente IA específico
+      modo = 'chat',          // 'chat' | 'test'
     } = body;
 
     if (!Array.isArray(messages) || messages.length === 0) {
@@ -577,8 +587,36 @@ serve(async (req) => {
       return jsonError(500, 'no_api_key', `Nenhuma chave ${provider} configurada. Solicite ao administrador que cadastre uma chave na aba API Keys do painel admin.`);
     }
 
+    // ── Carregar agente se especificado ──
+    let agentInfo: { id: string; nome: string; icon: string } | null = null;
+    let agentPrompt = '';
+    let agentTemp = temperature;
+    let agentMaxTokens = maxTokens;
+    let agentModelOverride: string | null = null;
+
+    if (agente_id && modo !== 'test') {
+      const { data: agentData } = await sbAdmin
+        .from('ia_agents')
+        .select('id, nome, icon, prompt_sistema, temperatura, max_tokens, modelo, ativo')
+        .eq('id', agente_id)
+        .maybeSingle();
+
+      if (!agentData) {
+        return jsonError(404, 'agent_not_found', 'Agente não encontrado.');
+      }
+      if (!agentData.ativo) {
+        return jsonError(400, 'agent_inactive', 'Este agente está desativado.');
+      }
+
+      agentInfo = { id: agentData.id, nome: agentData.nome, icon: agentData.icon };
+      agentPrompt = agentData.prompt_sistema ?? '';
+      agentTemp = agentData.temperatura ?? temperature;
+      agentMaxTokens = agentData.max_tokens ?? maxTokens;
+      agentModelOverride = agentData.modelo;
+    }
+
     const effectiveProvider = keyData?.provider ?? provider;
-    const effectiveModel = model || keyData?.modelo_padrao || 'gpt-4o-mini';
+    const effectiveModel = agentModelOverride || model || keyData?.modelo_padrao || 'gpt-4o-mini';
 
     // Verificar limites (admin é ilimitado)
     if (!isAdmin) {
@@ -611,13 +649,22 @@ serve(async (req) => {
       }
     }
 
-    const systemContent = systemAppend
-      ? `${SYSTEM_BASE}\n\n${systemAppend}`
-      : SYSTEM_BASE;
+    // Montar prompt do sistema
+    const promptParts: string[] = [];
+    if (agentPrompt) {
+      promptParts.push(agentPrompt);
+    }
+    if (systemAppend) {
+      promptParts.push(systemAppend);
+    }
+    if (promptParts.length === 0) {
+      promptParts.push(SYSTEM_BASE);
+    }
+    const systemContent = promptParts.join('\n\n');
 
     const start = Date.now();
 
-    // Chamar provider
+    // Chamar provider com configs do agente
     const result = await callProvider({
       provider: effectiveProvider,
       apiKey,
@@ -627,8 +674,8 @@ serve(async (req) => {
         content: m.content,
       })),
       systemContent,
-      maxTokens,
-      temperature,
+      maxTokens: agentMaxTokens,
+      temperature: agentTemp,
       streaming: stream,
     });
 
@@ -658,20 +705,39 @@ serve(async (req) => {
     const duracaoMs = Date.now() - start;
     const custoUSD = estimarCusto(effectiveProvider, effectiveModel, tokensInput, tokensOutput);
 
-    // Log assíncrono
+    // Log assíncrono (uso geral)
     sbAdmin.from('usage_log').insert({
       user_id: userId,
       tipo: 'ia_request',
-      acao: 'chat',
+      acao: agente_id ? `chat_agent_${agente_id.slice(0, 8)}` : 'chat',
       provider: effectiveProvider,
       tokens_input: tokensInput,
       tokens_output: tokensOutput,
       custo_usd: custoUSD,
       duracao_ms: duracaoMs,
-      meta: { model: effectiveModel },
+      meta: { model: effectiveModel, agente_id, agente_nome: agentInfo?.nome },
       ip: req.headers.get('x-forwarded-for') ?? null,
       user_agent: req.headers.get('user-agent') ?? null,
     }).then(() => {}).catch(() => {});
+
+    // Log específico do agente (se for agente)
+    if (agente_id && modo !== 'test') {
+      sbAdmin.from('ia_agent_logs').insert({
+        agent_id: agente_id,
+        user_id: userId,
+        mensagem: messages[messages.length - 1]?.content?.slice(0, 500) ?? '',
+        resposta: content.slice(0, 2000),
+        tokens_input: tokensInput,
+        tokens_output: tokensOutput,
+        duracao_ms: duracaoMs,
+        custo_usd: custoUSD,
+        modelo: effectiveModel,
+        sucesso: true,
+      }).then(() => {}).catch(() => {});
+
+      // Incrementar stats do agente
+      sbAdmin.rpc('increment_agent_stats', { p_agent_id: agente_id, p_tokens: tokensTotal }).then(() => {}).catch(() => {});
+    }
 
     return json({
       content,
@@ -683,6 +749,7 @@ serve(async (req) => {
       custoUSD,
       duracaoMs,
       isAdmin,
+      agente: agentInfo,
     });
   } catch (err) {
     console.error('ai-chat error:', err);

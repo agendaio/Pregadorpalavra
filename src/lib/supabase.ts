@@ -142,6 +142,27 @@ export interface FeatureFlag {
   metadata: Record<string, unknown> | null;
 }
 
+export interface IAAgent {
+  id: string; nome: string; slug: string; descricao: string | null;
+  objetivo: string | null; especialidade: string | null;
+  icon: string; cor: string; ativo: boolean;
+  prompt_sistema: string | null; temperatura: number; modelo: string | null;
+  max_tokens: number; contexto_max_tokens: number;
+  ferramentas: string[] | null; memoria_tipo: string;
+  versao: number; stats_uso: number; stats_tokens: number;
+  admin_responsavel: string | null;
+  criado_em: string; atualizado_em: string; ultima_uso_em: string | null;
+}
+
+export interface IAAgentLog {
+  id: string; agent_id: string; user_id: string | null;
+  mensagem: string; resposta: string | null;
+  tokens_input: number | null; tokens_output: number | null;
+  duracao_ms: number | null; custo_usd: number | null;
+  modelo: string | null; ferramentas_usadas: string[] | null;
+  sucesso: boolean; erro: string | null; criado_em: string;
+}
+
 export interface AuditLog {
   id: string;
   admin_id: string | null;

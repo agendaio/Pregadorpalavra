@@ -1,9 +1,16 @@
 ﻿import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
 
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Authorization, Content-Type, X-Client-Info',
+  'Access-Control-Max-Age': '86400',
+};
+
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
-    headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+    headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },
   });
 }
 
@@ -212,7 +219,9 @@ async function runTests(
 }
 
 serve(async (req) => {
-  if (req.method === 'OPTIONS') return json(null, 204);
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { status: 204, headers: CORS_HEADERS });
+  }
   if (req.method !== 'POST') return json({ error: 'method_not_allowed' }, 405);
 
   try {
