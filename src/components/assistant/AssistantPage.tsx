@@ -49,6 +49,7 @@ import {
 } from '@/lib/ai';
 import { useMensagensStore } from '@/stores/mensagens';
 import { useUIStore } from '@/stores/ui';
+import { useAuthAdminStore } from '@/stores/authAdmin';
 import { MobileHeader } from '@/components/layout/MobileHeader';
 import { Button } from '@/components/ui/Button';
 import { cn, formatarRelogio } from '@/lib/utils';
@@ -394,6 +395,7 @@ export function AssistantPage() {
   const [fallbackAviso, setFallbackAviso] = useState<string | null>(null);
   const [stats, setStats] = useState<StatsIA | null>(null);
   const [providerAtivo, setProviderAtivo] = useState<string>(obterProviderAtivoId());
+  const admin = useAuthAdminStore((s) => s.admin);
 
   const fimRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -505,12 +507,16 @@ export function AssistantPage() {
           temperature: 0.75,
         });
 
-        if (fallbackUsado) {
+        if (fallbackUsado && admin) {
+          // Só mostra aviso pro admin — usuário comum não pode fazer nada sobre a chave da API
           setFallbackAviso(
             providerUsado === 'local'
-              ? 'Modo local ativo — configure a OpenAI em Configurações para respostas completas.'
+              ? 'Modo local ativo — a IA real não está configurada. Acesse /admin/api-keys para cadastrar uma chave OpenAI.'
               : `Provedor principal indisponível. Usando ${providerUsado}.`,
           );
+        } else if (fallbackUsado && !admin) {
+          // Modo local funciona silenciosamente — sem panic pro usuário comum
+          setFallbackAviso(null);
         }
 
         setProviderAtivo(providerUsado);
