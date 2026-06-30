@@ -6,12 +6,13 @@ import {
   Trash2,
   CheckCircle2,
   AlertCircle,
-  Cpu,
   Coins,
-  Sparkles,
   RefreshCw,
   Loader2,
+  Cpu,
+  Sparkles,
 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input, Label } from '@/components/ui/Input';
@@ -22,14 +23,9 @@ import { semearExemplos } from '@/db/seed';
 import { APP_VERSION } from '../../../v.config';
 import {
   aiDB,
-  definirProviderAtivo,
-  listarProviders,
-  obterProviderAtivoId,
-  obterProvider,
   obterStats,
   openaiProvider,
   type StatsIA,
-  type ProviderInfo,
 } from '@/lib/ai';
 
 export function SettingsPage() {
@@ -41,7 +37,6 @@ export function SettingsPage() {
   const total = useLiveQuery(() => db.mensagens.count(), []);
   const [stats, setStats] = useState<StatsIA | null>(null);
 
-  const [providerAtivo, setProviderAtivo] = useState(obterProviderAtivoId());
   const [iaStatus, setIaStatus] = useState<{ tipo: 'ok' | 'erro' | 'loading'; msg: string }>({ tipo: 'loading', msg: 'Verificando…' });
 
   useEffect(() => {
@@ -52,22 +47,13 @@ export function SettingsPage() {
     void verificarIA();
   }, []);
 
-  const providers = listarProviders();
-  const provAtivo = obterProvider(providerAtivo);
-
   const verificarIA = async () => {
     const pr = await openaiProvider.pronto();
     if (pr.ok) {
-      setIaStatus({ tipo: 'ok', msg: `Assistente Ministerial ativo — respostas completas via IA.` });
+      setIaStatus({ tipo: 'ok', msg: `Respostas completas via IA — configuradas pelo administrador.` });
     } else {
       setIaStatus({ tipo: 'erro', msg: pr.motivo ?? 'Indisponível' });
     }
-  };
-
-  const handleProviderChange = (id: string) => {
-    definirProviderAtivo(id as 'openai' | 'local');
-    setProviderAtivo(id as 'openai' | 'local');
-    mostrarToast(`Modo: ${id}`, 'info');
   };
 
   const exportar = async () => {
@@ -120,8 +106,7 @@ export function SettingsPage() {
     mostrarToast('Biblioteca limpa', 'sucesso');
   };
 
-  const openaiInfo = providers.find((p: { info: () => { id: string } }) => p.info().id === 'openai')!;
-  const modelos = openaiInfo.info().modelos;
+
 
   return (
     <div className="flex h-full flex-col bg-paper">
@@ -129,87 +114,44 @@ export function SettingsPage() {
 
       <div className="flex-1 overflow-y-auto pb-28">
         <div className="mx-auto max-w-2xl space-y-5 px-4 py-4">
-          {/* IA — Provider */}
+          {/* IA — Status */}
           <section>
             <h2 className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-ink-500">
-              Assistente Ministerial · IA
+              Assistente Ministerial
             </h2>
             <Card className="overflow-hidden p-0">
-              <div className="border-b border-ink-100 p-4">
-                <div className="mb-2 flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 text-ink-700" />
-                  <span className="text-[13px] font-semibold text-ink-900">Provedor ativo</span>
+              <div className="p-4">
+                <div className="mb-3 flex items-start gap-3">
+                  <div className={cn(
+                    'flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl',
+                    iaStatus.tipo === 'ok' ? 'bg-emerald-100' : 'bg-red-50',
+                  )}>
+                    {iaStatus.tipo === 'ok' ? (
+                      <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                    ) : iaStatus.tipo === 'loading' ? (
+                      <Loader2 className="h-5 w-5 animate-spin text-ink-400" />
+                    ) : (
+                      <AlertCircle className="h-5 w-5 text-red-500" />
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <div className="text-[14px] font-semibold text-ink-900">
+                      {iaStatus.tipo === 'ok' ? 'Assistente ativo' : iaStatus.tipo === 'loading' ? 'Verificando…' : 'Configuração necessária'}
+                    </div>
+                    <p className="mt-1 text-[11.5px] leading-relaxed text-ink-500">{iaStatus.msg}</p>
+                  </div>
                 </div>
-                <div className="grid grid-cols-2 gap-2">
-                  {providers.map((p: { info: () => ProviderInfo }) => {
-                    const info = p.info();
-                    const ativo = providerAtivo === info.id;
-                    return (
-                      <button
-                        key={info.id}
-                        onClick={() => handleProviderChange(info.id)}
-                        className={
-                          'rounded-2xl border p-3 text-left transition-all ' +
-                          (ativo
-                            ? 'border-ink-900 bg-ink-50 shadow-soft'
-                            : 'border-ink-200 bg-white hover:border-ink-300')
-                        }
-                      >
-                        <div className="flex items-center gap-1.5">
-                          <Cpu className="h-3.5 w-3.5 text-ink-700" />
-                          <span className="text-[12.5px] font-semibold text-ink-900">{info.nome}</span>
-                          {ativo && <CheckCircle2 className="ml-auto h-3.5 w-3.5 text-emerald-600" />}
-                        </div>
-                        <p className="mt-1 text-[10.5px] leading-snug text-ink-500">{info.descricao}</p>
-                        {info.offline && (
-                          <span className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[9.5px] font-medium uppercase text-emerald-700">
-                            offline
-                          </span>
-                        )}
-                      </button>
-                    );
-                  })}
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={() => void verificarIA()} className="h-8 text-[12px]">
+                    <RefreshCw className="h-3.5 w-3.5" /> Verificar
+                  </Button>
+                  {iaStatus.tipo !== 'ok' && (
+                    <a href="/admin/api-keys" className="inline-flex h-8 items-center gap-1.5 rounded-xl border border-ink-200 bg-white px-4 text-[12px] font-medium text-ink-700 hover:bg-ink-50">
+                      Configurar IA →
+                    </a>
+                  )}
                 </div>
               </div>
-
-              {/* Status da IA — centralizado pelo admin */}
-              {providerAtivo === 'openai' && (
-                <div className="border-b border-ink-100 p-4">
-                  <div className="mb-2 flex items-center gap-2">
-                    <Sparkles className="h-4 w-4 text-ink-700" />
-                    <span className="text-[13px] font-semibold text-ink-900">Assistente Ministerial</span>
-                  </div>
-                  <div
-                    className={
-                      'mb-2 flex items-start gap-2 rounded-xl p-3 text-[11.5px] ' +
-                      (iaStatus.tipo === 'ok'
-                        ? 'bg-emerald-50 text-emerald-900'
-                        : iaStatus.tipo === 'loading'
-                        ? 'bg-ink-50 text-ink-700'
-                        : 'bg-red-50 text-red-900')
-                    }
-                  >
-                    {iaStatus.tipo === 'ok' ? (
-                      <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-emerald-600" />
-                    ) : iaStatus.tipo === 'loading' ? (
-                      <Loader2 className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 animate-spin" />
-                    ) : (
-                      <AlertCircle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-red-600" />
-                    )}
-                    <span>{iaStatus.msg}</span>
-                  </div>
-                  <Button variant="outline" onClick={() => void verificarIA()} className="h-8 text-[12px]">
-                    <RefreshCw className="h-3.5 w-3.5" /> Verificar status
-                  </Button>
-                  <p className="mt-2.5 text-[10.5px] text-ink-500">
-                    A IA é configurada pelo administrador em{' '}
-                    <a href="/admin/api-keys" className="font-medium underline underline-offset-2">
-                      /admin/api-keys
-                    </a>
-                    . Você não precisa configurar nada.
-                  </p>
-                </div>
-              )}
             </Card>
           </section>
 
