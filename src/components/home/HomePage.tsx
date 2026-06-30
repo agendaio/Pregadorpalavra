@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import {
@@ -11,19 +11,22 @@ import {
   Calendar,
   ArrowRight,
 } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { db } from '@/db/schema';
 import { useMensagensStore } from '@/stores/mensagens';
 import { MobileHeader } from '@/components/layout/MobileHeader';
 import { useUIStore } from '@/stores/ui';
 import { htmlParaTexto, formatarRelativo, truncar } from '@/lib/utils';
 import { cn } from '@/lib/utils';
+import { PulpitFab } from '@/components/layout/PulpitFab';
+import { TemplateGallery, type TemplatePregacao } from '@/components/editor/TemplateGallery';
+import { novaMensagem } from '@/types/mensagem';
 
 export function HomePage() {
   const mensagens = useLiveQuery(() => db.mensagens.toArray(), []);
-  const nova = useMensagensStore((s) => s.nova);
   const navigate = useNavigate();
   const mostrarToast = useUIStore((s) => s.mostrarToast);
+  const [showGallery, setShowGallery] = useState(false);
 
   const stats = useMemo(() => {
     const xs = mensagens ?? [];
@@ -49,9 +52,16 @@ export function HomePage() {
     return 'Boa noite';
   }, []);
 
-  const handleNova = async () => {
-    const m = await nova();
-    mostrarToast('Nova mensagem criada', 'sucesso');
+  const handleSelecionarTemplate = async (template: TemplatePregacao) => {
+    setShowGallery(false);
+    const m = novaMensagem({
+      titulo: template.rotulo,
+      tema: template.temaPadrao,
+      esboco: template.esbocoModelo,
+      categoria: template.categoria,
+    });
+    await db.mensagens.add(m);
+    mostrarToast(`"${template.rotulo}" criado`, 'sucesso');
     navigate(`/editar/${m.id}`);
   };
 
@@ -84,10 +94,10 @@ export function HomePage() {
             </div>
             <div className="mt-4 grid grid-cols-2 gap-2">
               <button
-                onClick={handleNova}
+                onClick={() => setShowGallery(true)}
                 className="flex items-center justify-center gap-2 rounded-lg bg-white px-3 py-2.5 text-[13px] font-semibold text-ink-900 transition-colors hover:bg-white/90 active:scale-[0.98]"
               >
-                <Plus className="h-4 w-4" /> Nova mensagem
+                <Plus className="h-4 w-4" /> Novo Sermão
               </button>
               <Link
                 to="/assistente"
@@ -120,6 +130,9 @@ export function HomePage() {
 
           {/* Recentes */}
           <section>
+            {recentes.length > 0 && (
+              <PulpitFab to={`/pulpit/${recentes[0].id}`} />
+            )}
             <div className="mb-2 flex items-center justify-between px-1">
               <h2 className="text-[11px] font-semibold uppercase tracking-[0.1em] text-ink-500">
                 Recentes
@@ -185,6 +198,16 @@ export function HomePage() {
           </section>
         </div>
       </div>
+
+      {/* Galeria de templates */}
+      <AnimatePresence>
+        {showGallery && (
+          <TemplateGallery
+            onSelecionar={handleSelecionarTemplate}
+            onFechar={() => setShowGallery(false)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

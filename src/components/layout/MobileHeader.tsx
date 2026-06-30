@@ -1,20 +1,25 @@
 import { type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, MoreHorizontal } from 'lucide-react';
+import { ArrowLeft, MoreHorizontal, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
+import { useUIStore } from '@/stores/ui';
 
 interface HeaderProps {
   title: string;
   subtitle?: string;
   /** Ação de voltar (default: history.back) */
   back?: boolean | (() => void);
+  /** Rota específica para voltar (sobrepõe history.back) */
+  to?: string;
   /** Menu/botão direito customizado */
   right?: ReactNode;
   /** Sticky com fundo translúcido */
   sticky?: boolean;
   /** Mostra borda inferior */
   bordered?: boolean;
+  /** Mostra botão de busca (default: true em mobile) */
+  search?: boolean;
   className?: string;
 }
 
@@ -22,15 +27,19 @@ export function MobileHeader({
   title,
   subtitle,
   back = true,
+  to,
   right,
   sticky = true,
   bordered = true,
+  search = true,
   className,
 }: HeaderProps) {
   const navigate = useNavigate();
+  const setBusca = useUIStore((s) => s.setBusca);
 
   const handleBack = () => {
     if (typeof back === 'function') back();
+    else if (to) navigate(to);
     else if (back) navigate(-1);
   };
 
@@ -56,7 +65,20 @@ export function MobileHeader({
         {subtitle && <p className="truncate text-[11.5px] text-ink-500 -mt-0.5">{subtitle}</p>}
       </div>
 
-      {right && <div className="flex flex-shrink-0 items-center gap-1">{right}</div>}
+      <div className="flex flex-shrink-0 items-center gap-1">
+        {search && (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setBusca(true)}
+            aria-label="Buscar"
+            className="flex-shrink-0"
+          >
+            <Search className="h-5 w-5" />
+          </Button>
+        )}
+        {right}
+      </div>
     </header>
   );
 }

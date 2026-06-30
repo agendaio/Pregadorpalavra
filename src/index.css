@@ -20,13 +20,18 @@
   }
 
   body {
-    @apply bg-paper text-ink-900 font-sans;
+    @apply bg-paper font-sans;
     font-feature-settings:
       'cv02',
       'cv03',
       'cv04',
       'cv11';
   }
+
+  /* Tamanhos de fonte do app (controlados pelo store) */
+  html.font-sm  { font-size: 14px; }
+  html.font-md  { font-size: 15px; }
+  html.font-lg  { font-size: 17px; }
 
   ::selection {
     background-color: rgba(220, 38, 38, 0.18);

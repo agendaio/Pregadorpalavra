@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   Compass,
   Sparkles,
@@ -31,6 +31,7 @@ interface Item {
 export function MorePage() {
   const tema = useUIStore((s) => s.tema);
   const alternarTema = useUIStore((s) => s.alternarTema);
+  const navigate = useNavigate();
 
   const grupos: { titulo: string; itens: Item[] }[] = [
     {
@@ -54,9 +55,9 @@ export function MorePage() {
     {
       titulo: 'Dados',
       itens: [
-        { icon: Download, label: 'Exportar backup', onClick: () => location.assign('/configuracoes#dados') },
-        { icon: History, label: 'Histórico de versões', onClick: () => location.assign('/configuracoes#historico') },
-        { icon: Tag, label: 'Gerenciar tags', onClick: () => location.assign('/configuracoes#tags') },
+        { to: '/configuracoes', icon: Download, label: 'Exportar backup', description: 'Backup JSON das suas mensagens' },
+        { to: '/configuracoes', icon: History, label: 'Histórico de versões', description: 'Veja versões anteriores de cada mensagem' },
+        { to: '/configuracoes', icon: Tag, label: 'Gerenciar tags', description: 'Organize com tags e categorias' },
       ],
     },
     {
@@ -69,7 +70,7 @@ export function MorePage() {
           description: `v${APP_VERSION} · Mobile-first + PWA`,
           onClick: () => window.open('https://github.com/agendaio/Pregadorpalavra', '_blank'),
         },
-        { icon: Info, label: 'Sobre', description: 'O sistema operacional para pregadores', onClick: () => location.assign('/sobre') },
+        { to: '/sobre', icon: Info, label: 'Sobre', description: 'O sistema operacional para pregadores' },
       ],
     },
   ];

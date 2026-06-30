@@ -12,8 +12,8 @@ import type { Mensagem } from '@/types/mensagem';
 export interface ChatMessage {
   role: 'system' | 'user' | 'assistant';
   content: string;
-  /** Quando foi criada (ms) */
-  timestamp: number;
+  /** Quando foi criada (ms) — opcional ao montar prompts */
+  timestamp?: number;
   /** Tokens consumidos apenas nesta mensagem */
   tokens?: number;
   /** Metadata opcional */

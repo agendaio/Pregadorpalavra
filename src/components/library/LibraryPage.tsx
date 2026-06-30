@@ -8,7 +8,6 @@ import {
   Tag as TagIcon,
   Clock,
   Calendar,
-  Sparkles,
   Plus,
   Search,
   ChevronRight,
@@ -19,7 +18,10 @@ import { useMensagensStore } from '@/stores/mensagens';
 import { useUIStore } from '@/stores/ui';
 import { Button } from '@/components/ui/Button';
 import { MobileHeader } from '@/components/layout/MobileHeader';
+import { SkeletonCard } from '@/components/ui/Skeleton';
+import { TemplateGallery, type TemplatePregacao } from '@/components/editor/TemplateGallery';
 import { cn, formatarRelativo, htmlParaTexto, truncar } from '@/lib/utils';
+import { novaMensagem } from '@/types/mensagem';
 import type { Mensagem } from '@/types/mensagem';
 
 type Filtro = 'todas' | 'fixadas' | 'rascunhos' | 'prontas' | 'pregadas';
@@ -34,9 +36,11 @@ export function LibraryPage() {
 
   const [busca, setBusca] = useState('');
   const [filtro, setFiltro] = useState<Filtro>('todas');
+  const [showGallery, setShowGallery] = useState(false);
 
   const lista: Mensagem[] = useMemo(() => {
-    let xs = mensagens ?? [];
+    if (!mensagens) return [];
+    let xs = mensagens;
     if (filtro === 'fixadas') xs = xs.filter((m) => fixadas.has(m.id) || m.favorita);
     if (filtro === 'rascunhos') xs = xs.filter((m) => m.status === 'rascunho');
     if (filtro === 'prontas') xs = xs.filter((m) => m.status === 'pronta');
@@ -66,9 +70,18 @@ export function LibraryPage() {
     };
   }, [mensagens, fixadas]);
 
-  const handleNova = async () => {
-    const m = await nova();
-    mostrarToast('Nova mensagem criada', 'sucesso');
+  const handleNova = () => setShowGallery(true);
+
+  const handleSelecionarTemplate = async (template: TemplatePregacao) => {
+    setShowGallery(false);
+    const m = novaMensagem({
+      titulo: template.rotulo,
+      tema: template.temaPadrao,
+      esboco: template.esbocoModelo,
+      categoria: template.categoria,
+    });
+    await db.mensagens.add(m);
+    mostrarToast(`"${template.rotulo}" criado`, 'sucesso');
     navigate(`/editar/${m.id}`);
   };
 
@@ -130,9 +143,18 @@ export function LibraryPage() {
 
       <div className="flex-1 overflow-y-auto pb-28">
         <div className="mx-auto max-w-2xl px-4 py-3">
-          {lista.length === 0 && <EmptyState onNova={handleNova} />}
+          {/* Skeleton enquanto IndexedDB carrega */}
+          {mensagens === undefined && (
+            <div className="space-y-2">
+              {[0, 1, 2, 3].map((i) => (
+                <SkeletonCard key={i} />
+              ))}
+            </div>
+          )}
 
-          {lista.length > 0 && (
+          {mensagens !== undefined && lista.length === 0 && <EmptyState onNova={handleNova} />}
+
+          {mensagens !== undefined && lista.length > 0 && (
             <div className="space-y-2">
               <AnimatePresence initial={false}>
                 {lista.map((m, i) => (
@@ -213,6 +235,16 @@ export function LibraryPage() {
           )}
         </div>
       </div>
+
+      {/* Galeria de templates */}
+      <AnimatePresence>
+        {showGallery && (
+          <TemplateGallery
+            onSelecionar={handleSelecionarTemplate}
+            onFechar={() => setShowGallery(false)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

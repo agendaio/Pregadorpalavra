@@ -19,7 +19,7 @@ import { Button } from '@/components/ui/Button';
 import { Input, Label } from '@/components/ui/Input';
 import { MobileHeader } from '@/components/layout/MobileHeader';
 import { db } from '@/db/schema';
-import { useUIStore } from '@/stores/ui';
+import { useUIStore, FONT_SIZE_LABELS, type FontSize } from '@/stores/ui';
 import { semearExemplos } from '@/db/seed';
 import { APP_VERSION } from '../../../v.config';
 import {
@@ -37,8 +37,8 @@ import {
 
 export function SettingsPage() {
   const tema = useUIStore((s) => s.tema);
-  const setTema = useUIStore((s) => s.setTema);
   const alternarTema = useUIStore((s) => s.alternarTema);
+  const fonte = useUIStore((s) => s.fonte);
   const mostrarToast = useUIStore((s) => s.mostrarToast);
 
   const total = useLiveQuery(() => db.mensagens.count(), []);
@@ -336,17 +336,45 @@ export function SettingsPage() {
             <h2 className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-ink-500">
               Aparência
             </h2>
-            <Card className="p-4">
+            <Card className="space-y-3 p-4">
+              {/* Tema */}
               <div className="flex items-center justify-between">
                 <div>
                   <div className="text-[13.5px] font-medium text-ink-900">Tema</div>
                   <p className="text-[11.5px] text-ink-500">
-                    Claro reduz cansaço em luz forte. Escuro pro púlpito à noite.
+                    Claro para luz forte. Escuro para o púlpito à noite.
                   </p>
                 </div>
                 <Button variant="outline" onClick={alternarTema}>
-                  {tema === 'light' ? 'Escuro' : 'Claro'}
+                  {tema === 'light' ? '🌙 Escuro' : '☀️ Claro'}
                 </Button>
+              </div>
+
+              <div className="border-t border-ink-100 pt-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-[13.5px] font-medium text-ink-900">Tamanho da fonte</div>
+                    <p className="text-[11.5px] text-ink-500">
+                      Ajuste para leitura prolongada mais confortável.
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-2.5 grid grid-cols-3 gap-2">
+                  {(['pequeno', 'medio', 'grande'] as FontSize[]).map((f) => (
+                    <button
+                      key={f}
+                      onClick={() => useUIStore.getState().setFonte(f)}
+                      className={
+                        'rounded-xl border py-2.5 text-center text-[12px] font-medium transition-all ' +
+                        (fonte === f
+                          ? 'border-ink-900 bg-ink-50 text-ink-900'
+                          : 'border-ink-200 bg-white text-ink-600 hover:border-ink-300')
+                      }
+                    >
+                      {FONT_SIZE_LABELS[f]}
+                    </button>
+                  ))}
+                </div>
               </div>
             </Card>
           </section>

@@ -1,5 +1,6 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useEffect } from 'react';
+import { AnimatePresence } from 'framer-motion';
 import { AppShell } from '@/components/layout/AppShell';
 import { HomePage } from '@/components/home/HomePage';
 import { LibraryPage } from '@/components/library/LibraryPage';
@@ -7,6 +8,7 @@ import { EditorPage } from '@/components/editor/EditorPage';
 import { PulpitPage } from '@/components/pulpit/PulpitPage';
 import { StudyPage } from '@/components/study/StudyPage';
 import { AnalystPage } from '@/components/analyst/AnalystPage';
+import { AboutPage } from '@/components/overview/AboutPage';
 import { SettingsPage } from '@/components/settings/SettingsPage';
 import { MorePage } from '@/components/more/MorePage';
 import { AssistantPage } from '@/components/assistant/AssistantPage';
@@ -16,15 +18,12 @@ import { PWAUpdatePrompt } from '@/components/pwa/PWAUpdatePrompt';
 import { semearExemplos } from '@/db/seed';
 import { initTema } from '@/stores/ui';
 
-export function App() {
-  useEffect(() => {
-    initTema();
-    semearExemplos();
-  }, []);
-
+/** Wrapper que permite AnimatePresence com React Router */
+function AnimatedRoutes() {
+  const location = useLocation();
   return (
-    <BrowserRouter>
-      <Routes>
+    <AnimatePresence mode="wait" initial={false}>
+      <Routes location={location} key={location.pathname.split('/')[1] || 'root'}>
         {/* Modo Púlpito é fullscreen, sem AppShell */}
         <Route path="/pulpit/:id" element={<PulpitPage />} />
 
@@ -38,10 +37,24 @@ export function App() {
           <Route path="/editar/:id" element={<EditorPage />} />
           <Route path="/estudo" element={<StudyPage />} />
           <Route path="/analista" element={<AnalystPage />} />
+          <Route path="/sobre" element={<AboutPage />} />
           <Route path="/configuracoes" element={<SettingsPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>
+    </AnimatePresence>
+  );
+}
+
+export function App() {
+  useEffect(() => {
+    initTema();
+    semearExemplos();
+  }, []);
+
+  return (
+    <BrowserRouter>
+      <AnimatedRoutes />
       <Toast />
       <PWAUpdatePrompt />
     </BrowserRouter>
