@@ -1,6 +1,5 @@
 ﻿import { Link } from 'react-router-dom';
 import {
-  Compass,
   Sparkles,
   Settings as SettingsIcon,
   Library,

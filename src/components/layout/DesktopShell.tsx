@@ -2,7 +2,6 @@ import { type ReactNode } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
   Library,
-  Compass,
   Sparkles,
   Search,
   PanelLeftClose,
@@ -12,7 +11,6 @@ import {
   Settings as SettingsIcon,
   Plus,
   Home,
-  ScrollText,
   MoreHorizontal,
 } from 'lucide-react';
 import { useUIStore } from '@/stores/ui';

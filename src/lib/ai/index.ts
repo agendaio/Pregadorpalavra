@@ -287,8 +287,10 @@ export async function registrarRequisicao(
 export type { AcaoIA } from './types';
 export { ACOES_IA } from './types';
 
-// ChatMessage (vários componentes)
+// ChatMessage (vários componentes) — re-export como TIPO e como INTERFACE (valor)
 export type { ChatMessage } from './provider';
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export type { ChatMessage as ChatMessageValue } from './provider';
 
 // Router e provider
 export { enviarComFallback } from './router';

@@ -1,6 +1,6 @@
 import { NavLink, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Home, Library, ScrollText, Sparkles, MoreHorizontal } from 'lucide-react';
+import { Home, Library, Sparkles, MoreHorizontal } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const TABS: ReadonlyArray<{

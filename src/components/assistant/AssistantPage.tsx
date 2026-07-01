@@ -163,29 +163,41 @@ export function AssistantPage() {
       // Usa token do usuário logado; se não estiver logado, usa ANON_KEY (funciona com RLS configurado)
       const token = userToken ?? SUPABASE_ANON_KEY;
 
-      // Timeout de 60s — streaming de IA pode demorar na primeira requisição
+      // Timeout de 120s — streaming de IA pode demorar na primeira requisição
       const controller = new AbortController();
-      const timeoutId = window.setTimeout(() => controller.abort(), 60_000);
+      const timeoutId = window.setTimeout(() => {
+        controller.abort();
+      }, 120_000);
       streamAbortRef.current = controller;
 
-      const res = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-chat`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
+      let res: Response;
+      try {
+        res = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-chat`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              messages: chatHistory,
+              agente_id: agenteSelecionado,
+              stream: true,
+              temperature: 0.7,
+              maxTokens: 2500,
+            }),
+            signal: controller.signal,
           },
-          body: JSON.stringify({
-            messages: chatHistory,
-            agente_id: agenteSelecionado,
-            stream: true,
-            temperature: 0.7,
-            maxTokens: 2500,
-          }),
-          signal: controller.signal,
-        },
-      );
+        );
+      } catch (fetchErr) {
+        window.clearTimeout(timeoutId);
+        if ((fetchErr as Error).name === 'AbortError') {
+          throw new Error('Tempo esgotado (2 min). A API está demorando demais. Tente uma pergunta mais curta.');
+        }
+        throw fetchErr;
+      }
+
       window.clearTimeout(timeoutId);
 
       if (!res.ok) {
@@ -207,6 +219,7 @@ export function AssistantPage() {
       };
       setMessages((prev) => [...prev, assistantMsg]);
 
+      let errorDuringStream = false;
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
@@ -219,7 +232,10 @@ export function AssistantPage() {
           if (data === '[DONE]') continue;
           try {
             const parsed = JSON.parse(data);
-            if (parsed.error) throw new Error(parsed.message ?? 'Erro na stream');
+            if (parsed.error) {
+              errorDuringStream = true;
+              throw new Error(parsed.message ?? 'Erro na stream');
+            }
             if (parsed.content) {
               streamContent += parsed.content;
               setMessages((prev) =>
@@ -228,24 +244,22 @@ export function AssistantPage() {
                 ),
               );
             }
-          } catch { /* skip */ }
+          } catch (parseErr) {
+            if (errorDuringStream) throw parseErr;
+            /* skip malformed chunk */
+          }
         }
       }
 
-      assistantMsg.content = streamContent;
+      assistantMsg.content = streamContent || 'Resposta recebida sem conteúdo.';
       await aiDB.mensagens.put({ sessaoId: currentSessionId, ...assistantMsg });
       await aiDB.sessoes.update(currentSessionId, { updatedAt: Date.now() });
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Erro desconhecido';
       console.error('[ai-chat] Erro na stream:', msg);
+      // Remove mensagem placeholder da IA se existir
+      setMessages((prev) => prev.filter((m) => m.id !== streamId));
       setError(msg);
-      const errorMsg: ChatMessage = {
-        id: crypto.randomUUID(),
-        role: 'assistant',
-        content: `⚠️ Não consegui responder: ${msg}\n\nTente novamente ou aguarde alguns segundos.`,
-        timestamp: Date.now(),
-      };
-      setMessages((prev) => [...prev, errorMsg]);
     } finally {
       setLoading(false);
     }
@@ -454,8 +468,8 @@ export function AssistantPage() {
                         className={cn(
                           'group relative max-w-[85%] rounded-2xl px-4 py-3 text-[13.5px] leading-relaxed',
                           msg.role === 'user'
-                            ? 'bg-ink-900 text-white dark:bg-ink-700'
-                            : 'border border-ink-200 bg-white text-ink-900 dark:border-ink-700 dark:bg-ink-900/50 dark:text-ink-100',
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-sky-50 border border-sky-200 text-ink-900 dark:bg-blue-950/50 dark:border-blue-800/40 dark:text-blue-100',
                         )}
                       >
                         <div className="prose prose-sm dark:prose-invert max-w-none">
