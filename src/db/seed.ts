@@ -65,6 +65,7 @@ export const EXEMPLOS: Omit<Mensagem, 'id' | 'criadoEm' | 'atualizadoEm'>[] = [
     tags: ['graÃ§a', 'soteriologia', 'efÃ©sios'],
     favorita: true,
     status: 'pregada',
+    slides: [],
     versao: 1,
   },
   {
@@ -120,6 +121,7 @@ export const EXEMPLOS: Omit<Mensagem, 'id' | 'criadoEm' | 'atualizadoEm'>[] = [
     tags: ['descanso', 'criaÃ§Ã£o', 'shalom'],
     favorita: false,
     status: 'pregada',
+    slides: [],
     versao: 1,
   },
   {
@@ -158,6 +160,7 @@ export const EXEMPLOS: Omit<Mensagem, 'id' | 'criadoEm' | 'atualizadoEm'>[] = [
     tags: ['fÃ©', 'habacuque', 'crise'],
     favorita: false,
     status: 'rascunho',
+    slides: [],
     versao: 1,
   },
 ];
