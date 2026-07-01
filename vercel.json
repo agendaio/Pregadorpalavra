@@ -1,4 +1,9 @@
 {
+  "gitSource": {
+    "type": "github",
+    "repo": "agendaio/Pregadorpalavra",
+    "branch": "main"
+  },
   "rewrites": [
     { "source": "/(.*)", "destination": "/" }
   ],
