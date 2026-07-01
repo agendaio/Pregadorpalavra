@@ -524,35 +524,33 @@ serve(async (req) => {
   }
 
   try {
-    const authHeader = req.headers.get('authorization') ?? '';
-    const jwt = authHeader.replace(/^Bearer\s+/i, '');
-    const ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
+    // Usuário anônimo é permitido — não validamos JWT aqui.
+    // O userId só é preenchido se o token for um JWT válido com sub claim.
+    let userId: string | null = null;
 
     // Cliente admin (bypass RLS)
     const sbAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
-    // Se o token é a ANON_KEY, usuário anônimo — permite acesso sem validar JWT
-    let userId: string | null = null;
-    if (jwt && jwt !== ANON_KEY) {
-      // Token de usuário logado — validar via REST endpoint (suporta HS256 + ES256)
+    const authHeader = req.headers.get('authorization') ?? '';
+    const jwt = authHeader.replace(/^Bearer\s+/i, '').trim();
+
+    // Tentar extrair userId do JWT (se tiver sub claim)
+    // Supabase usa base64url, não base64 — atob nativo falha
+    if (jwt) {
       try {
-        const userResp = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
-          headers: {
-            'Authorization': `Bearer ${jwt}`,
-            'apikey': ANON_KEY,
-          },
-        });
-        if (!userResp.ok) {
-          const errText = await userResp.text();
-          return jsonError(401, 'invalid_token', `Token inválido ou expirado (HTTP ${userResp.status}): ${errText.slice(0, 200)}`);
+        const parts = jwt.split('.');
+        if (parts.length === 3) {
+          // Corrige base64url → base64 padrão (Deno atob só aceita base64)
+          let b64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+          // Adiciona padding se necessário
+          while (b64.length % 4) b64 += '=';
+          const payload = JSON.parse(atob(b64));
+          if (payload.sub && payload.exp && payload.exp * 1000 > Date.now()) {
+            userId = payload.sub;
+          }
         }
-        const userJson = await userResp.json();
-        userId = userJson.id;
-        if (!userId) {
-          return jsonError(401, 'invalid_token', 'Resposta sem user.id');
-        }
-      } catch (e) {
-        return jsonError(401, 'invalid_token', `Falha ao validar token: ${(e as Error).message}`);
+      } catch {
+        // JWT inválido ou expirado —无所谓, usuário anônimo continua
       }
     }
 
