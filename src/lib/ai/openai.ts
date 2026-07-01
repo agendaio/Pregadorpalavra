@@ -56,6 +56,28 @@ export class OpenAIProvider implements AIProvider {
     };
   }
 
+  /** Extrai o código de erro da resposta — funciona tanto com error plain object quanto com Error nativo */
+  private extrairErro(error: unknown): { codigo: string; mensagem: string; status?: number } {
+    if (!error) return { codigo: '', mensagem: '' };
+
+    // FunctionsHttpError do Supabase JS: { message, status, context: { body, status } }
+    const ctx = (error as { context?: { body?: unknown; status?: number } }).context;
+    const errBody = ctx?.body;
+    const status = ctx?.status ?? (error as { status?: number }).status;
+
+    // Tenta extrair do body (pode ser string JSON ou object)
+    let bodyObj: Record<string, unknown> | null = null;
+    if (typeof errBody === 'string') {
+      try { bodyObj = JSON.parse(errBody); } catch { bodyObj = { message: errBody }; }
+    } else if (errBody && typeof errBody === 'object') {
+      bodyObj = errBody as Record<string, unknown>;
+    }
+
+    const codigo = (bodyObj?.error as string) ?? '';
+    const msgRaw = (bodyObj?.message as string) ?? String(error).slice(0, 300);
+    return { codigo, mensagem: msgRaw, status };
+  }
+
   async pronto(): Promise<{ ok: boolean; motivo?: string }> {
     if (!SUPABASE_CONFIGURED) {
       return {
@@ -67,44 +89,42 @@ export class OpenAIProvider implements AIProvider {
     const sb = supabase();
     if (!sb) return { ok: false, motivo: 'Cliente Supabase não disponível.' };
 
-    // Testa se a Edge Function responde
     try {
       const { data, error } = await sb.functions.invoke('ai-chat', {
-        body: {
-          messages: [{ role: 'user', content: 'teste' }],
-          maxTokens: 5,
-        },
+        body: { messages: [{ role: 'user', content: 'teste' }], maxTokens: 5 },
       });
 
       if (error) {
-        const errStr = String(error);
-        // Erro de API key não configurada pelo admin
-        if (errStr.includes('no_api_key')) {
+        const { codigo, mensagem, status } = this.extrairErro(error);
+
+        if (codigo === 'invalid_token' || status === 401) {
           return {
             ok: false,
-            motivo: 'IA não configurada pelo administrador. '
-              + 'Acesse /admin/api-keys para cadastrar uma chave OpenAI.',
+            motivo: 'Sessão expirada. Faça login novamente.',
           };
         }
-        return { ok: false, motivo: 'Erro na Edge Function: ' + errStr.slice(0, 200) };
+        if (codigo === 'no_api_key') {
+          return {
+            ok: false,
+            motivo: 'IA não configurada pelo administrador. Acesse /admin/api-keys para cadastrar uma chave OpenAI.',
+          };
+        }
+        return { ok: false, motivo: 'Erro no servidor: ' + mensagem.slice(0, 200) };
       }
-
       return { ok: true };
     } catch (e) {
       const err = e as Error & { name?: string };
-      // FunctionsFetchError não estende Error — verifica por nome
       if (err.name === 'FunctionsFetchError' || err.name === 'AbortError') {
-        const msg = (e as Error).message;
-        if (msg.includes('no_api_key')) {
-          return {
-            ok: false,
-            motivo: 'IA não configurada pelo administrador. '
-              + 'Acesse /admin/api-keys para cadastrar uma chave OpenAI.',
-          };
+        const { codigo, mensagem } = this.extrairErro(e);
+        if (codigo === 'invalid_token') {
+          return { ok: false, motivo: 'Sessão expirada. Faça login novamente.' };
         }
-        return { ok: false, motivo: 'Falha de conexão com o servidor: ' + msg.slice(0, 200) };
+        if (codigo === 'no_api_key') {
+          return { ok: false, motivo: 'IA não configurada pelo administrador. Acesse /admin/api-keys para cadastrar uma chave OpenAI.' };
+        }
+        return { ok: false, motivo: 'Falha de conexão: ' + mensagem.slice(0, 200) };
       }
-      return { ok: false, motivo: 'Falha de conexão com o servidor: ' + (e as Error).message };
+      return { ok: false, motivo: 'Falha de conexão: ' + (e as Error).message.slice(0, 200) };
     }
   }
 
@@ -128,28 +148,26 @@ export class OpenAIProvider implements AIProvider {
       });
 
       if (error) {
-        const errStr = String(error);
-        if (errStr.includes('no_api_key')) {
-          throw new AIError(
-            'IA não configurada. Solicite ao administrador que cadastre uma chave OpenAI em /admin/api-keys.',
-            'sem-chave',
-            'openai',
-          );
-        }
-        if (errStr.includes('limit_reached')) {
-          throw new AIError(
-            'Limite mensal de IA atingido. Faça upgrade do plano para continuar.',
-            'tokens-excedidos',
-            'openai',
-          );
-        }
-        if (errStr.includes('invalid_token')) {
+        const { codigo, mensagem, status } = this.extrairErro(error);
+
+        if (codigo === 'invalid_token' || status === 401) {
           throw new AIError('Sessão expirada. Faça login novamente.', 'sem-chave', 'openai');
         }
-        throw new AIError('Erro na Edge Function: ' + errStr.slice(0, 200), 'desconhecido', 'openai');
+        if (codigo === 'no_api_key') {
+          throw new AIError(
+            'IA não configurada. Solicite ao administrador que cadastre uma chave OpenAI em /admin/api-keys.',
+            'sem-chave', 'openai',
+          );
+        }
+        if (codigo === 'limit_reached') {
+          throw new AIError(
+            'Limite mensal de IA atingido. Faça upgrade do plano para continuar.',
+            'tokens-excedidos', 'openai',
+          );
+        }
+        throw new AIError('Erro no servidor: ' + mensagem.slice(0, 200), 'desconhecido', 'openai');
       }
 
-      // A Edge Function retorna { content, provider, model, tokensInput, tokensOutput, tokensTotal, custoUSD, duracaoMs }
       const result = data as {
         content: string;
         provider: string;
@@ -179,21 +197,20 @@ export class OpenAIProvider implements AIProvider {
     } catch (e) {
       if (e instanceof AIError) throw e;
 
-      const err = e as Error & { name?: string; cause?: unknown };
-      // FunctionsFetchError do Supabase (não estende Error — instanceof Error falha)
-      // AbortError do fetch/abort
+      const err = e as Error & { name?: string };
       if (err.name === 'AbortError' || err.name === 'FunctionsFetchError') {
-        const msg = err.message ?? String(e);
-        if (msg.includes('no_api_key')) {
+        const { codigo, mensagem } = this.extrairErro(e);
+        if (codigo === 'invalid_token') {
+          throw new AIError('Sessão expirada. Faça login novamente.', 'sem-chave', 'openai');
+        }
+        if (codigo === 'no_api_key') {
           throw new AIError(
             'IA não configurada. Solicite ao administrador que cadastre uma chave OpenAI em /admin/api-keys.',
-            'sem-chave',
-            'openai',
+            'sem-chave', 'openai',
           );
         }
-        throw new AIError(msg.slice(0, 300), 'rede', 'openai');
+        throw new AIError(mensagem.slice(0, 300), 'rede', 'openai');
       }
-
       throw new AIError((e as Error).message, 'rede', 'openai');
     }
   }
