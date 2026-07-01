@@ -349,7 +349,7 @@ export function ChatContainer({ onTogglePanel }: { onTogglePanel?: () => void })
         <div className="flex items-center gap-2">
           <button
             onClick={() => setSidebarAberta(s => !s)}
-            className="rounded-lg p-1.5 text-ink-500 hover:bg-ink-100 dark:hover:bg-ink-800 md:hidden"
+            className="rounded-lg p-1.5 text-ink-500 hover:bg-ink-100 dark:hover:bg-sky-100 md:hidden"
           >
             <MessageSquare className="h-4 w-4" />
           </button>
@@ -370,7 +370,7 @@ export function ChatContainer({ onTogglePanel }: { onTogglePanel?: () => void })
         <div className="flex items-center gap-2">
           <button
             onClick={() => void novaSessao()}
-            className="flex items-center gap-1.5 rounded-xl border border-ink-200 bg-white px-3 py-1.5 text-[12px] font-medium text-ink-600 hover:bg-ink-50 dark:border-ink-700 dark:bg-ink-900 dark:text-ink-300 dark:hover:bg-ink-800"
+            className="flex items-center gap-1.5 rounded-xl border border-ink-200 bg-white px-3 py-1.5 text-[12px] font-medium text-ink-600 hover:bg-ink-50 dark:border-sky-300 dark:bg-sky-100 dark:text-sky-700 dark:hover:bg-sky-200"
           >
             <Plus className="h-3.5 w-3.5" />
             Novo
@@ -378,7 +378,7 @@ export function ChatContainer({ onTogglePanel }: { onTogglePanel?: () => void })
           {onTogglePanel && (
             <button
               onClick={onTogglePanel}
-              className="flex items-center gap-1.5 rounded-xl border border-ink-200 bg-white px-3 py-1.5 text-[12px] font-medium text-ink-600 hover:bg-ink-50 dark:border-ink-700 dark:bg-ink-900 dark:text-ink-300 dark:hover:bg-ink-800"
+              className="flex items-center gap-1.5 rounded-xl border border-ink-200 bg-white px-3 py-1.5 text-[12px] font-medium text-ink-600 hover:bg-ink-50 dark:border-sky-300 dark:bg-sky-100 dark:text-sky-700 dark:hover:bg-sky-200"
             >
               <PanelRightOpen className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">Esboço</span>
@@ -395,7 +395,7 @@ export function ChatContainer({ onTogglePanel }: { onTogglePanel?: () => void })
             animate={{ x: 0 }}
             exit={{ x: '-100%' }}
             transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-            className="fixed inset-y-0 left-0 z-50 w-72 bg-paper dark:bg-ink-900 shadow-2xl md:hidden"
+            className="fixed inset-y-0 left-0 z-50 w-72 bg-paper dark:bg-sky-50 shadow-2xl md:hidden"
           >
             <div className="flex h-full flex-col">
               <div className="flex items-center justify-between border-b border-ink-200/70 px-4 py-3 dark:border-ink-800">
@@ -407,7 +407,7 @@ export function ChatContainer({ onTogglePanel }: { onTogglePanel?: () => void })
               <div className="p-3">
                 <button
                   onClick={() => void novaSessao()}
-                  className="flex w-full items-center gap-2 rounded-xl border border-dashed border-ink-300 px-3 py-2.5 text-[12px] text-ink-600 hover:bg-ink-50 dark:border-ink-700 dark:text-ink-300"
+                  className="flex w-full items-center gap-2 rounded-xl border border-dashed border-ink-300 px-3 py-2.5 text-[12px] text-ink-600 hover:bg-ink-50 dark:border-sky-300 dark:text-sky-700 dark:hover:bg-sky-100"
                 >
                   <Plus className="h-4 w-4" /> Nova conversa
                 </button>
@@ -420,8 +420,8 @@ export function ChatContainer({ onTogglePanel }: { onTogglePanel?: () => void })
                     className={cn(
                       'group mb-1 flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-[12.5px] transition-colors',
                       sessaoId === s.id
-                        ? 'bg-ink-100 text-ink-900 dark:bg-ink-800 dark:text-white'
-                        : 'text-ink-600 hover:bg-ink-50 dark:text-ink-300',
+                        ? 'bg-sky-100 text-sky-900 dark:bg-sky-200 dark:text-sky-900'
+                        : 'text-ink-600 hover:bg-ink-50 dark:text-sky-700 dark:hover:bg-sky-100',
                     )}
                   >
                     <MessageSquare className="h-3.5 w-3.5 flex-shrink-0" />
@@ -453,7 +453,7 @@ export function ChatContainer({ onTogglePanel }: { onTogglePanel?: () => void })
                 'group relative max-w-[85%] rounded-2xl px-4 py-3 text-[13.5px] leading-relaxed',
                 msg.role === 'user'
                   ? 'ml-auto bg-ink-900 text-white dark:bg-ink-700'
-                  : 'border border-ink-200 bg-white text-ink-900 dark:border-ink-700 dark:bg-ink-900/50 dark:text-ink-100',
+                  : 'border border-ink-200 bg-white text-ink-900 dark:border-ink-700 dark:bg-sky-50 dark:text-ink-900',
               )}
             >
               <div className="prose prose-sm dark:prose-invert max-w-none">
@@ -483,7 +483,7 @@ export function ChatContainer({ onTogglePanel }: { onTogglePanel?: () => void })
 
         {loading && (
           <div className="mb-4 flex justify-start animate-fade-in">
-            <div className="flex items-start gap-2 rounded-2xl border border-ink-200 bg-white px-4 py-3 dark:border-ink-700 dark:bg-ink-900/50">
+            <div className="flex items-start gap-2 rounded-2xl border border-ink-200 bg-white px-4 py-3 dark:border-ink-700 dark:bg-sky-50/50">
               <Loader2 className="mt-0.5 h-4 w-4 animate-spin text-ink-400" />
               <span className="text-[13px] text-ink-500 dark:text-ink-300">Pensando…</span>
               <button
@@ -510,8 +510,8 @@ export function ChatContainer({ onTogglePanel }: { onTogglePanel?: () => void })
       </div>
 
       {/* Input */}
-      <div className="border-t border-ink-200/70 bg-white px-4 py-3 dark:border-ink-800 dark:bg-ink-900/30">
-        <div className="flex items-end gap-2 rounded-2xl border border-ink-200 bg-white px-4 py-3 transition-colors focus-within:border-ink-400 dark:border-ink-700 dark:bg-ink-900/50">
+      <div className="border-t border-ink-200/70 bg-white px-4 py-3 dark:border-ink-800 dark:bg-sky-50">
+        <div className="flex items-end gap-2 rounded-2xl border border-ink-200 bg-white px-4 py-3 transition-colors focus-within:border-ink-400 dark:border-ink-700 dark:bg-sky-50/80">
           <textarea
             ref={inputRef}
             value={input}
@@ -534,7 +534,7 @@ export function ChatContainer({ onTogglePanel }: { onTogglePanel?: () => void })
               'flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl transition-all',
               input.trim() && !loading
                 ? 'bg-ink-900 text-white hover:bg-ink-800 dark:bg-white dark:text-ink-900'
-                : 'bg-ink-100 text-ink-400 dark:bg-ink-800 dark:text-ink-500',
+                : 'bg-ink-100 text-ink-400 dark:bg-sky-100 dark:text-sky-300',
             )}
           >
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
@@ -577,7 +577,7 @@ function Greeting({ onSugestão }: { onSugestão: (s: string) => void }) {
           <button
             key={sug}
             onClick={() => onSugestão(sug)}
-            className="rounded-full border border-ink-200 bg-white px-3 py-1.5 text-[11.5px] text-ink-600 transition-colors hover:border-ink-400 hover:bg-ink-50 dark:border-ink-700 dark:bg-ink-900 dark:text-ink-300 dark:hover:bg-ink-800"
+            className="rounded-full border border-ink-200 bg-white px-3 py-1.5 text-[11.5px] text-ink-600 transition-colors hover:border-ink-400 hover:bg-ink-50 dark:border-sky-300 dark:bg-sky-100 dark:text-sky-700 dark:hover:bg-sky-200"
           >
             {sug}
           </button>

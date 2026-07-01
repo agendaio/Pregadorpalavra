@@ -131,18 +131,18 @@ export function CopilotOutlinePanel({ asBottomSheet = false, onClose }: CopilotO
                 </div>
                 <div className="space-y-2">
                   {store.pontos.map((ponto, i) => (
-                    <div key={ponto.id} className="rounded-xl border border-ink-200/60 bg-white dark:border-ink-700 dark:bg-ink-900/30">
+                    <div key={ponto.id} className="rounded-xl border border-ink-200/60 bg-white dark:border-ink-700 dark:bg-sky-50/50">
                       <div className="flex items-start gap-2 px-3 py-2.5">
                         <span className="mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-ink-900 text-[10px] font-bold text-white dark:bg-white dark:text-ink-900">
                           {i + 1}
                         </span>
                         <div className="min-w-0 flex-1">
-                          <p className="text-[13px] font-medium text-ink-800 dark:text-ink-100">{ponto.texto}</p>
+                          <p className="text-[13px] font-medium text-ink-800 dark:text-sky-900">{ponto.texto}</p>
                           {ponto.subpontos.length > 0 && (
                             <ul className="mt-1 space-y-0.5">
                               {ponto.subpontos.map((sp, j) => (
-                                <li key={j} className="flex items-start gap-1.5 text-[12px] text-ink-600 dark:text-ink-400">
-                                  <span className="mt-1 text-[10px] text-ink-400">{String.fromCharCode(97 + j)})</span>
+                                <li key={j} className="flex items-start gap-1.5 text-[12px] text-ink-600 dark:text-sky-700">
+                                  <span className="mt-1 text-[10px] text-sky-500">{String.fromCharCode(97 + j)})</span>
                                   <span>{sp}</span>
                                 </li>
                               ))}
@@ -244,7 +244,7 @@ export function CopilotOutlinePanel({ asBottomSheet = false, onClose }: CopilotO
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-              className="fixed inset-x-0 bottom-0 z-40 flex max-h-[80vh] flex-col rounded-t-3xl border-t border-ink-200/80 bg-paper dark:border-ink-800 dark:bg-ink-900 shadow-2xl md:hidden"
+              className="fixed inset-x-0 bottom-0 z-40 flex max-h-[80vh] flex-col rounded-t-3xl border-t border-ink-200/80 bg-paper dark:border-ink-800 dark:bg-sky-50 shadow-2xl md:hidden"
             >
               {/* Drag handle */}
               <div className="flex justify-center py-2">
@@ -259,7 +259,7 @@ export function CopilotOutlinePanel({ asBottomSheet = false, onClose }: CopilotO
   }
 
   return (
-    <div className="flex h-full w-full flex-col border-l border-ink-200/70 bg-paper dark:border-ink-800 dark:bg-ink-900/20">
+    <div className="flex h-full w-full flex-col border-l border-ink-200/70 bg-paper dark:border-ink-800 dark:bg-sky-50/80">
       {content}
     </div>
   );
@@ -273,10 +273,10 @@ function EmptyState() {
       <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-50 dark:bg-amber-900/20">
         <Sparkles className="h-6 w-6 text-amber-400" />
       </div>
-      <p className="text-[13px] font-medium text-ink-700 dark:text-ink-300">
+      <p className="text-[13px] font-medium text-ink-700 dark:text-sky-700">
         Esboço em construção
       </p>
-      <p className="mt-1 text-[11.5px] text-ink-400 dark:text-ink-500">
+      <p className="mt-1 text-[11.5px] text-ink-400 dark:text-sky-600">
         Converse com o Assistente Ministerial e o esboço será montado automaticamente.
       </p>
     </div>
@@ -352,7 +352,7 @@ function Section({ title, icon, value, editingId, editValue, editingField, onEdi
       </div>
       <button
         onClick={() => onEdit(editingField, value)}
-        className="w-full rounded-xl border border-transparent px-3 py-2 text-left text-[13px] text-ink-800 transition-colors hover:border-ink-200 hover:bg-ink-50 dark:text-ink-100 dark:hover:border-ink-700 dark:hover:bg-ink-800/40"
+        className="w-full rounded-xl border border-transparent px-3 py-2 text-left text-[13px] text-ink-800 transition-colors hover:border-ink-200 hover:bg-ink-50 dark:text-sky-900 dark:hover:border-sky-300 dark:hover:bg-sky-100"
       >
         {value}
       </button>

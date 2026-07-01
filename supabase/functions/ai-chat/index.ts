@@ -556,14 +556,17 @@ serve(async (req) => {
       }
     }
 
-    // Verificar se é admin
-    const { data: adminData } = await sbAdmin
-      .from('admins')
-      .select('id, role')
-      .eq('user_id', userId)
-      .eq('ativo', true)
-      .maybeSingle();
-    const isAdmin = !!adminData;
+    // Verificar se é admin (só se usuário logado)
+    let isAdmin = false;
+    if (userId) {
+      const { data: adminData } = await sbAdmin
+        .from('admins')
+        .select('id, role')
+        .eq('user_id', userId)
+        .eq('ativo', true)
+        .maybeSingle();
+      isAdmin = !!adminData;
+    }
 
     // Parse body
     const body = await req.json().catch(() => ({}));
