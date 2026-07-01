@@ -48,9 +48,8 @@ export function MorePage() {
     {
       titulo: 'Acesso rápido',
       itens: [
-        { to: '/estudo',    icon: Compass,  label: 'Modo Estudo',         description: 'Personagens, mapas, cronologias, léxico' },
-        { to: '/analista',  icon: Sparkles, label: 'Analista de Sermões', description: 'Avaliação estrutural de cada mensagem' },
-        { to: '/biblioteca', icon: Library, label: 'Biblioteca completa', description: 'Todas as mensagens com filtros' },
+        { to: '/analista',   icon: Sparkles, label: 'Analista de Sermões', description: 'Avaliação estrutural de cada mensagem' },
+        { to: '/biblioteca', icon: Library,  label: 'Biblioteca completa',   description: 'Todas as mensagens com filtros' },
       ],
     },
     {

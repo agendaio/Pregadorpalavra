@@ -12,13 +12,14 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Play, ChevronUp, ChevronDown, Trash2, Plus, Clock,
   BookOpen, Target, MessageSquare, Users, FolderOpen,
-  X, GripVertical, CheckCircle2, Sparkles,
+  X, GripVertical, CheckCircle2, Sparkles, Layout,
 } from 'lucide-react';
 import { useCopilotOutlineStore } from '@/stores/copilotOutline';
 import { cn } from '@/lib/utils';
 import { useUIStore } from '@/stores/ui';
 import { db } from '@/db/schema';
 import { novaMensagem } from '@/types/mensagem';
+import { gerarSlides } from '@/lib/slideGenerator';
 
 interface CopilotOutlinePanelProps {
   /** Mostrar como bottom sheet (mobile) */
@@ -47,8 +48,19 @@ export function CopilotOutlinePanel({ asBottomSheet = false, onClose }: CopilotO
       categoria: 'pregacao',
       status: 'rascunho',
     });
+    
+    // Gera slides automaticamente a partir do esboço
+    const { slides } = gerarSlides({ mensagem });
+    mensagem.slides = slides;
+    
     await db.salvarMensagem(mensagem);
-    navigate(`/pulpit/${mensagem.id}`);
+    
+    // Se tem slides, vai pro editor primeiro pra revisar/editar
+    if (slides.length > 0) {
+      navigate(`/editar/${mensagem.id}`);
+    } else {
+      navigate(`/pulpit/${mensagem.id}`);
+    }
   };
 
   const startEditing = (id: string, value: string) => {
@@ -209,13 +221,37 @@ export function CopilotOutlinePanel({ asBottomSheet = false, onClose }: CopilotO
           )}
         </div>
         {hasContent && (
-          <button
-            onClick={handleIniciarPregacao}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 px-4 py-3 text-[13px] font-semibold text-white shadow-sm transition-all hover:from-amber-600 hover:to-orange-600 active:scale-[0.98]"
-          >
-            <Play className="h-4 w-4" fill="currentColor" />
-            Iniciar Pregação
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={handleIniciarPregacao}
+              className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 px-4 py-3 text-[13px] font-semibold text-white shadow-sm transition-all hover:from-amber-600 hover:to-orange-600 active:scale-[0.98]"
+            >
+              <Layout className="h-4 w-4" />
+              Editar Slides
+            </button>
+            <button
+              onClick={async () => {
+                // Salva rapidamente e vai direto pro púlpito
+                const mensagem = novaMensagem({
+                  titulo: store.titulo || 'Pregação',
+                  tema: store.tema,
+                  textoBase: store.textoBase,
+                  objetivo: store.objetivo,
+                  esboco: formatarEsbocoTexto(store),
+                  categoria: 'pregacao',
+                  status: 'rascunho',
+                });
+                const { slides } = gerarSlides({ mensagem });
+                mensagem.slides = slides;
+                await db.salvarMensagem(mensagem);
+                navigate(`/pulpit/${mensagem.id}`);
+              }}
+              className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-600 px-4 py-3 text-[13px] font-semibold text-white shadow-sm transition-all hover:from-emerald-600 hover:to-cyan-700 active:scale-[0.98]"
+            >
+              <Play className="h-4 w-4" fill="currentColor" />
+              Apresentar
+            </button>
+          </div>
         )}
       </div>
     </div>

@@ -1,17 +1,20 @@
 -- Migration: 0021_ia_config_ministerial_agent.sql
 -- Criado em: 2026-07-01
 -- Objetivo: Tabela de configuração centralizada para o Agente Ministerial
--- (Single-agent architecture: um agente para todos os usuários, configurado pelo admin)
 
+-- Cria a tabela se não existir (schema básico do original 20260602)
 CREATE TABLE IF NOT EXISTS ia_config (
-  id TEXT PRIMARY KEY,
-  label TEXT,
-  valor TEXT DEFAULT '',
-  metadata JSONB DEFAULT '{}',
-  ativo BOOLEAN DEFAULT true,
-  atualizado_em TIMESTAMPTZ DEFAULT NOW(),
-  criado_em TIMESTAMPTZ DEFAULT NOW()
+  id VARCHAR(50) PRIMARY KEY,
+  valor TEXT,
+  atualizado_em TIMESTAMPTZ DEFAULT now()
 );
+
+-- Adiciona colunas extras caso a tabela já exista do schema original
+ALTER TABLE ia_config ADD COLUMN IF NOT EXISTS label TEXT;
+ALTER TABLE ia_config ADD COLUMN IF NOT EXISTS metadata JSONB DEFAULT '{}'::jsonb;
+ALTER TABLE ia_config ADD COLUMN IF NOT EXISTS ativo BOOLEAN DEFAULT true;
+ALTER TABLE ia_config ADD COLUMN IF NOT EXISTS criado_em TIMESTAMPTZ DEFAULT NOW();
+ALTER TABLE ia_config ALTER COLUMN valor SET DEFAULT '';
 
 -- Comentário para documentação
 COMMENT ON TABLE ia_config IS 'Configurações centralizadas do sistema IA (agente ministerial, prompts globais, etc.)';

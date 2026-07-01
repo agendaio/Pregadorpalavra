@@ -11,7 +11,6 @@ const TABS: ReadonlyArray<{
 }> = [
   { to: '/',           label: 'Início',      icon: Home,           end: true },
   { to: '/biblioteca', label: 'Biblioteca',  icon: Library },
-  { to: '/esbocos',    label: 'Esboços',     icon: ScrollText },
   { to: '/assistente', label: 'Assistente',  icon: Sparkles },
   { to: '/mais',       label: 'Mais',        icon: MoreHorizontal },
 ];

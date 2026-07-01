@@ -523,6 +523,14 @@ export function PulpitPage() {
   const [slideIndex, setSlideIndex] = useState(0);
   const [espacamentoLinhas, setEspacamentoLinhas] = useState(1.55);
 
+  // Auto-abre modo apresentação quando tem slides
+  useEffect(() => {
+    if (mensagem?.slides && mensagem.slides.length > 0) {
+      setModoApresentacao(true);
+      setSlideIndex(0);
+    }
+  }, [mensagem?.id, mensagem?.slides?.length]);
+
   const mostrarToast = useUIStore((s) => s.mostrarToast);
 
   // â”€â”€â”€ Inicialização: parsear esboço quando mensagem muda â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
