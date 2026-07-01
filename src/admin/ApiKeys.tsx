@@ -921,21 +921,32 @@ function PromptGlobalSection() {
   const [prompt, setPrompt] = useState('');
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [msg, setMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
 
   useEffect(() => { void carregar(); }, []);
 
   async function carregar() {
     setLoading(true);
     const sb = supabase();
-    const { data } = await sb!.from('ia_config').select('valor').eq('id', 'prompt_global').single();
-    setPrompt(data?.valor ?? '');
+    if (!sb) { setMsg({ type: 'err', text: 'Supabase não configurado. Verifique VITE_SUPABASE_URL/KEY.' }); setLoading(false); return; }
+    const { data, error } = await sb.from('ia_config').select('valor').eq('id', 'prompt_global').single();
+    if (error) setPrompt('');
+    else setPrompt(data?.valor ?? '');
     setLoading(false);
   }
 
   async function salvar() {
+    if (!prompt.trim()) { setMsg({ type: 'err', text: 'Digite algo antes de salvar.' }); return; }
     setSaving(true);
+    setMsg(null);
     const sb = supabase();
-    await sb!.from('ia_config').upsert({ id: 'prompt_global', valor: prompt, atualizado_em: new Date().toISOString() });
+    if (!sb) { setMsg({ type: 'err', text: 'Supabase não configurado.' }); setSaving(false); return; }
+    const { error } = await sb.from('ia_config').upsert({ id: 'prompt_global', valor: prompt, atualizado_em: new Date().toISOString() });
+    if (error) {
+      setMsg({ type: 'err', text: `Erro: ${error.message}` });
+    } else {
+      setMsg({ type: 'ok', text: '✅ Prompt Global salvo com sucesso!' });
+    }
     setSaving(false);
   }
 
@@ -949,6 +960,11 @@ function PromptGlobalSection() {
         <textarea value={prompt} onChange={e => setPrompt(e.target.value)} rows={8}
           className="mb-3 w-full rounded-xl border border-ink-200 bg-white px-3 py-2 text-[13px] font-mono leading-relaxed focus:border-ink-900 focus:outline-none"
           placeholder="Ex: Você é um assistente pastoral útil e respeitoso..." />
+        {msg && (
+          <div className={cn('mb-3 rounded-xl px-3 py-2 text-[12px]', msg.type === 'ok' ? 'bg-emerald-50 text-emerald-800' : 'bg-red-50 text-red-700')}>
+            {msg.text}
+          </div>
+        )}
         <button onClick={() => void salvar()} disabled={saving}
           className="flex items-center gap-1.5 rounded-xl bg-ink-900 px-4 py-2 text-[12.5px] font-semibold text-white hover:bg-ink-800 disabled:opacity-50">
           {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
