@@ -491,11 +491,18 @@ function ApiKeysSection() {
                     {c.ultimo_status && <StatusBadge ok={c.ultimo_status === 'online'} label={c.ultimo_status === 'online' ? 'Online' : 'Offline'} />}
                     {c.ultimo_teste_latency_ms && <span className="text-[10.5px] font-mono text-ink-400">{c.ultimo_teste_latency_ms}ms</span>}
                     <button
+                      onClick={() => editarKey(c)}
+                      title="Editar chave"
+                      className={cn('flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-[11px] font-medium transition-all', editingKeyId === c.id ? 'border-indigo-200 bg-indigo-50 text-indigo-700' : 'border-ink-200 text-ink-600 hover:bg-ink-50')}
+                    >
+                      <Settings className="h-3 w-3" /> Editar
+                    </button>
+                    <button
                       onClick={() => void excluir(c.id, prov?.label ?? c.provider)}
                       title="Excluir chave"
-                      className="ml-1 flex h-7 w-7 items-center justify-center rounded-lg border border-red-200 text-red-600 hover:bg-red-50"
+                      className="flex items-center gap-1 rounded-lg border border-red-200 px-2.5 py-1.5 text-[11px] font-medium text-red-600 hover:bg-red-50"
                     >
-                      <Trash2 className="h-3.5 w-3.5" />
+                      <Trash2 className="h-3 w-3" />
                     </button>
                   </div>
                 </Card>
