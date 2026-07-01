@@ -722,6 +722,10 @@ export function PulpitPage() {
       if (e.key === '-' || e.key === '_') setTamanhoFonte(Math.max(18, tamanhoFonte - 2));
       if (e.key === '0') setTamanhoFonte(32);
       if (e.key === 'f' || e.key === 'F') setModoFoco((v) => !v);
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'p') {
+        e.preventDefault();
+        setModoApresentacao((v) => !v);
+      }
       if (e.key === 'ArrowDown' || e.key === 'j') {
         const next = Math.min(totalCaps - 1, primeiroNaoFeitoIdx + 1);
         if (next !== primeiroNaoFeitoIdx) abrirCapitulo(next);
@@ -924,6 +928,7 @@ return (
         style={{
           paddingBottom: 'calc(env(safe-area-inset-bottom) + 88px)',
           WebkitOverflowScrolling: 'touch',
+          lineHeight: espacamentoLinhas,
         }}
       >
         <div className="mx-auto max-w-2xl space-y-8 px-4 py-8 sm:space-y-10 sm:px-6 sm:py-10">
@@ -1021,6 +1026,14 @@ return (
               }}
               ariaLabel="Alternar tema"
             />
+            <BarraSeparador />
+            <BarraBotao
+              icon={<Settings2 className="h-4 w-4" />}
+              label="Ajustes"
+              onClick={() => setSettingsAberta((v) => !v)}
+              ariaLabel="Configurações"
+              destaque={settingsAberta}
+            />
           </div>
         </div>
       )}
@@ -1083,6 +1096,210 @@ return (
               <span>{resultadosBusca.length} resultados</span>
             </div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• PRESENTATION MODE â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
+      <AnimatePresence>
+        {modoApresentacao && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[60] flex flex-col items-center justify-center"
+            style={{ background: '#07070d' }}
+            onClick={() => setModoApresentacao(false)}
+          >
+            {/* Barra sutil no topo com botão sair */}
+            <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-between px-6 py-4">
+              <span className="text-[11px] font-medium uppercase tracking-widest text-white/30">
+                {mensagem.titulo || 'Sem título'}
+              </span>
+              <button
+                type="button"
+                onClick={() => setModoApresentacao(false)}
+                className="flex h-9 w-9 items-center justify-center rounded-full text-white/40 transition-colors hover:bg-white/10 hover:text-white"
+              >
+                <Minimize2 className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Conteúdo scrollável */}
+            <div
+              className="flex-1 overflow-y-auto overscroll-contain px-8 py-20"
+              style={{ width: 'min(900px, 100%)' }}
+            >
+              {capitulosColoridos.map((cap, idx) => {
+                const feito = capitulosFeitos.has(cap.id);
+                return (
+                  <div
+                    key={cap.id}
+                    className="mb-16"
+                    style={{ opacity: feito ? 0.4 : 1 }}
+                  >
+                    <h2
+                      className="mb-8 font-serif text-5xl font-bold leading-tight text-amber-300"
+                      style={{ fontSize: `${Math.min(tamanhoFonte + 12, 72)}px` }}
+                    >
+                      {idx + 1}. {cap.titulo}
+                    </h2>
+                    {cap.blocos.map((bloco, bi) => (
+                      <p
+                        key={bloco.id}
+                        className={cn(
+                          'mb-4 font-serif leading-relaxed text-white/80',
+                          bloco.texto.startsWith('▌') ? 'text-amber-100 font-semibold' : '',
+                        )}
+                        style={{
+                          fontSize: `${tamanhoFonte}px`,
+                          lineHeight: espacamentoLinhas,
+                        }}
+                      >
+                        {bloco.texto}
+                      </p>
+                    ))}
+                  </div>
+                );
+              })}
+              {/* Oração */}
+              <div className="mt-12 mb-8 text-center">
+                <div className="mb-6 text-6xl text-amber-300">✝</div>
+                <h2
+                  className="mb-8 font-serif font-bold text-amber-300"
+                  style={{ fontSize: `${Math.min(tamanhoFonte + 12, 72)}px` }}
+                >
+                  Oração
+                </h2>
+                <p
+                  className="italic leading-relaxed text-white/70"
+                  style={{ fontSize: `${tamanhoFonte}px`, lineHeight: espacamentoLinhas }}
+                >
+                  Senhor, que a Tua Palavra seja luz nos nossos caminhos.
+                  <br />
+                  Que a fé que ouvimos hoje se faça obra em nossas vidas.
+                  <br />
+                  Em nome de Jesus.{' '}
+                  <span className="font-semibold text-amber-300">Amém.</span>
+                </p>
+              </div>
+            </div>
+
+            {/* Indicador de progresso na base */}
+            <div className="absolute bottom-0 inset-x-0 flex items-center gap-3 px-8 py-4">
+              <div className="h-1 flex-1 overflow-hidden rounded-full bg-white/10">
+                <div
+                  className="h-full rounded-full bg-amber-300/60 transition-all duration-500"
+                  style={{ width: `${totalCaps > 0 ? (totalFeitos / totalCaps) * 100 : 0}%` }}
+                />
+              </div>
+              <span className="text-[11px] tabular-nums text-white/40">
+                {totalFeitos}/{totalCaps}
+              </span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• SETTINGS DRAWER â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
+      <AnimatePresence>
+        {settingsAberta && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[55] bg-black/60 backdrop-blur-sm"
+              onClick={() => setSettingsAberta(false)}
+            />
+            {/* Drawer */}
+            <motion.div
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 28, stiffness: 340 }}
+              className="fixed inset-x-0 bottom-0 z-[56] rounded-t-2xl border-t border-amber-300/15 bg-[#0e0e1c] px-5 pb-[max(env(safe-area-inset-bottom),1.5rem)] pt-5 shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Alça */}
+              <div className="mx-auto mb-5 h-1 w-10 rounded-full bg-white/20" />
+              <h3 className="mb-5 text-[15px] font-semibold text-amber-200">Configurações</h3>
+
+              <div className="space-y-5">
+                {/* Tamanho da fonte */}
+                <div>
+                  <div className="mb-2 flex items-center justify-between">
+                    <label className="text-[12.5px] text-white/60">Tamanho da fonte</label>
+                    <span className="font-mono text-[12px] text-amber-300">{tamanhoFonte}px</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={18}
+                    max={96}
+                    value={tamanhoFonte}
+                    onChange={(e) => setTamanhoFonte(Number(e.target.value))}
+                    className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-amber-300/20 accent-amber-400"
+                  />
+                  <div className="mt-1 flex justify-between text-[10px] text-white/30">
+                    <span>Pequeno</span>
+                    <span>Grande</span>
+                  </div>
+                </div>
+
+                {/* Espaçamento entre linhas */}
+                <div>
+                  <div className="mb-2 flex items-center justify-between">
+                    <label className="text-[12.5px] text-white/60">Espaçamento</label>
+                    <span className="font-mono text-[12px] text-amber-300">{espacamentoLinhas.toFixed(2)}×</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={100}
+                    max={220}
+                    value={espacamentoLinhas * 100}
+                    onChange={(e) => setEspacamentoLinhas(Number(e.target.value) / 100)}
+                    className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-amber-300/20 accent-amber-400"
+                  />
+                  <div className="mt-1 flex justify-between text-[10px] text-white/30">
+                    <span>Compacto</span>
+                    <span>Espaçado</span>
+                  </div>
+                </div>
+
+                {/* Modo apresentação */}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-[12.5px] text-white/80">Modo Apresentação</p>
+                    <p className="text-[10.5px] text-white/40">Tela cheia, texto grande</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSettingsAberta(false);
+                      setModoApresentacao(true);
+                    }}
+                    className="flex h-9 items-center gap-2 rounded-full bg-amber-300/15 px-4 text-[12px] font-semibold text-amber-200 transition-colors hover:bg-amber-300/25"
+                  >
+                    <Maximize2 className="h-4 w-4" />
+                    Ativar
+                  </button>
+                </div>
+
+                {/* Atalhos */}
+                <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
+                  <p className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-white/40">Atalhos</p>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-[11px] text-white/50">
+                    <span>Espaço</span><span>Iniciar / Pausar</span>
+                    <span>+</span><span>Aumentar fonte</span>
+                    <span>-</span><span>Diminuir fonte</span>
+                    <span>F</span><span>Modo foco</span>
+                    <span>Esc</span><span>Voltar ao editor</span>
+                    <span>↑↓</span><span>Navegar seções</span>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
     </div>

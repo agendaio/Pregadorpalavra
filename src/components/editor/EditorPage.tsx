@@ -113,7 +113,7 @@ export function EditorPage() {
     <div className="flex h-full flex-col bg-paper text-ink-900 dark:bg-paper-dark dark:text-ink-100">
       <MobileHeader
         title={mensagem.titulo || 'Sem título'}
-        subtitle={`Atualizada ${formatarRelativo(mensagem.atualizadoEm)} · v${mensagem.versao}`}
+        subtitle={salvando ? 'Salvando...' : `Atualizada ${formatarRelativo(mensagem.atualizadoEm)} · v${mensagem.versao}`}
         back={() => navigate('/biblioteca')}
         right={
           <>
