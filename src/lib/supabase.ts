@@ -13,6 +13,37 @@ const SUPABASE_ANON_KEY = (import.meta.env.VITE_SUPABASE_ANON_KEY as string | un
 /** Flag: Supabase está configurado? */
 export const SUPABASE_CONFIGURED = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
 
+/** URL e key públicos (usados em fetch direto para Edge Functions) */
+export { SUPABASE_URL, SUPABASE_ANON_KEY };
+
+/**
+ * Chama uma Edge Function via fetch direto (mais robusto que supabase.functions.invoke
+ * em ambientes com restrições de rede/extensões bloqueadoras).
+ */
+export async function callEdgeFunction<T = unknown>(
+  functionName: string,
+  body: Record<string, unknown>,
+): Promise<{ data: T | null; error: { message: string; status?: number } | null }> {
+  const url = `${SUPABASE_URL}/functions/v1/${functionName}`;
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+      },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json().catch(() => null);
+    if (!res.ok) {
+      return { data: null, error: { message: data?.message ?? data?.error ?? `HTTP ${res.status}`, status: res.status } };
+    }
+    return { data, error: null };
+  } catch (err) {
+    return { data: null, error: { message: (err as Error).message } };
+  }
+}
+
 /** Cliente único (lazy) */
 let _client: SupabaseClient | null = null;
 export function supabase(): SupabaseClient | null {
