@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import {
@@ -26,6 +26,7 @@ import { PulpitFab } from '@/components/layout/PulpitFab';
 import { useIsMobile } from '@/lib/responsive';
 import { cn, formatarRelativo } from '@/lib/utils';
 import { SPRING_IOS } from '@/lib/motion';
+import { gerarSlides } from '@/lib/slideGenerator';
 
 const STATUS_OPCOES = [
   { id: 'rascunho',  label: 'Rascunho' },
@@ -51,11 +52,36 @@ export function EditorPage() {
   const [salvando, setSalvando] = useState(false);
   const [showMeta, setShowMeta] = useState(!isMobile);
   const [showMenu, setShowMenu] = useState(false);
+  const ultimoEsbocoRef = useRef('');
 
   useEffect(() => {
     if (id) carregar(id);
     return () => limpar();
   }, [id, carregar, limpar]);
+
+  // Auto-gera slides quando o esboco muda e não há slides
+  useEffect(() => {
+    if (!mensagem) return;
+    const esbocoAtual = mensagem.esboco || '';
+    if (esbocoAtual === ultimoEsbocoRef.current) return;
+    if (mensagem.slides.length > 0) {
+      ultimoEsbocoRef.current = esbocoAtual;
+      return; // já tem slides, não sobrescreve
+    }
+    if (!esbocoAtual.trim()) return; // esboco vazio, não gera
+    ultimoEsbocoRef.current = esbocoAtual;
+    const { slides } = gerarSlides({ mensagem });
+    if (slides.length > 0) {
+      patch({ slides });
+    }
+  }, [mensagem?.esboco, mensagem?.slides?.length]);
+
+  const handleGerarSlides = () => {
+    if (!mensagem) return;
+    ultimoEsbocoRef.current = mensagem.esboco || '';
+    const { slides } = gerarSlides({ mensagem });
+    patch({ slides });
+  };
 
   // Auto-save com debounce de 4 segundos (já tratado pelo store via salvarDebounced)
   // Removido daqui para evitar dupla execução — o store já dispara salvarDebounced no patchComIndicador()
@@ -69,10 +95,10 @@ export function EditorPage() {
     return () => clearTimeout(t);
   }, [mensagem?.atualizadoEm]);
 
-  // Wrapper do patch que também ativa o indicador
+  // Wrapper do patch que também ativa o indicador de salvamento
   const patchComIndicador = (parcial: Parameters<typeof patch>[0]) => {
     setSalvando(true);
-    patchComIndicador(parcial);
+    patch(parcial);
   };
 
   if (!mensagem) {
@@ -289,6 +315,8 @@ export function EditorPage() {
               <SlideEditor
                 slides={mensagem.slides}
                 onChange={(slides) => patchComIndicador({ slides })}
+                onGerarSlides={handleGerarSlides}
+                podeRegenerar
               />
             </div>
 

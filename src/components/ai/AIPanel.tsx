@@ -62,16 +62,26 @@ export function AIPanel() {
     setErro(null);
 
     try {
+      // Se for pergunta livre (extra !== undefined), não usa o system append da ação
+      const isPerguntaLivre = extra !== undefined && extra !== acao;
+      const userContent = extra ?? acao;
+      
+      // Para perguntas livres, apenas responde a pergunta considerando o contexto
+      // Para ações pré-definidas, usa o system append específico
+      const systemAppend = isPerguntaLivre 
+        ? `O usuário está perguntando algo diretamente. Responda à pergunta de forma útil e contextualizada, considerando o contexto da mensagem em edição fornecido. Formate a resposta de forma clara.`
+        : SYSTEM_APPENDS[acao];
+
       const msgs: ChatMessage[] = [
-        { role: 'user', content: extra ?? acao, timestamp: Date.now() },
+        { role: 'user', content: userContent, timestamp: Date.now() },
       ];
-      const montadas = construirMensagens(msgs, mensagem, SYSTEM_APPENDS[acao]);
+      const montadas = construirMensagens(msgs, mensagem, systemAppend);
 
       const { response, fallbackUsado, providerUsado } = await enviarComFallback({
         messages: montadas,
         mensagemContexto: mensagem,
-        systemAppend: SYSTEM_APPENDS[acao],
-        maxTokens: 2000,
+        systemAppend,
+        maxTokens: 2500,
         temperature: 0.7,
       });
 

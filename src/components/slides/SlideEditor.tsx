@@ -18,6 +18,7 @@ import {
   MessageSquare,
   Heart,
   Layers,
+  Sparkles,
 } from 'lucide-react';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
 import { cn } from '@/lib/utils';
@@ -316,9 +317,13 @@ function FormOracao({ content, onChange }: { content: SlideOracao; onChange: (c:
 interface SlideEditorProps {
   slides: Slide[];
   onChange: (slides: Slide[]) => void;
+  /** Callback para gerar slides automaticamente a partir do esboço */
+  onGerarSlides?: () => void;
+  /** Se true, mostra botão de regenerar */
+  podeRegenerar?: boolean;
 }
 
-export function SlideEditor({ slides, onChange }: SlideEditorProps) {
+export function SlideEditor({ slides, onChange, onGerarSlides, podeRegenerar }: SlideEditorProps) {
   const [selectedId, setSelectedId] = useState<string | null>(slides[0]?.id ?? null);
   const [expanded, setExpanded] = useState(true);
   const [showAddMenu, setShowAddMenu] = useState(false);
@@ -384,14 +389,24 @@ export function SlideEditor({ slides, onChange }: SlideEditorProps) {
                   </div>
                   <div className="text-center">
                     <p className="text-[13px] font-medium text-ink-700 dark:text-ink-200">Nenhum slide ainda</p>
-                    <p className="text-[11px] text-ink-400">Adicione slides para criar a apresentação do púlpito</p>
+                    <p className="text-[11px] text-ink-400">Gere automaticamente a partir do esboço ou adicione manualmente</p>
                   </div>
-                  <button
-                    onClick={() => setShowAddMenu(!showAddMenu)}
-                    className="flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-[13px] font-medium text-white transition hover:bg-indigo-700 active:scale-95"
-                  >
-                    <Plus className="h-4 w-4" /> Adicionar slide
-                  </button>
+                  {onGerarSlides && (
+                    <button
+                      onClick={onGerarSlides}
+                      className="flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-[13px] font-medium text-white transition hover:bg-indigo-700 active:scale-95"
+                    >
+                      <Sparkles className="h-4 w-4" /> Gerar slides automaticamente
+                    </button>
+                  )}
+                  {!onGerarSlides && (
+                    <button
+                      onClick={() => setShowAddMenu(!showAddMenu)}
+                      className="flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-[13px] font-medium text-white transition hover:bg-indigo-700 active:scale-95"
+                    >
+                      <Plus className="h-4 w-4" /> Adicionar slide
+                    </button>
+                  )}
                 </div>
               ) : (
                 <div className="flex h-[480px]">
@@ -399,7 +414,16 @@ export function SlideEditor({ slides, onChange }: SlideEditorProps) {
                   <div className="flex w-48 flex-col border-r border-ink-200/70 dark:border-ink-800">
                     <div className="flex items-center justify-between px-3 py-2">
                       <span className="text-[10px] font-semibold uppercase tracking-wider text-ink-400">Slides</span>
-                      <div className="relative">
+                      <div className="relative flex items-center gap-1">
+                        {onGerarSlides && (
+                          <button
+                            onClick={onGerarSlides}
+                            className="flex h-6 w-6 items-center justify-center rounded-lg bg-amber-500 text-white transition hover:bg-amber-600"
+                            title="Regenerar slides a partir do esboço"
+                          >
+                            <Sparkles className="h-3.5 w-3.5" />
+                          </button>
+                        )}
                         <button
                           onClick={() => setShowAddMenu(!showAddMenu)}
                           className="flex h-6 w-6 items-center justify-center rounded-lg bg-indigo-600 text-white transition hover:bg-indigo-700"

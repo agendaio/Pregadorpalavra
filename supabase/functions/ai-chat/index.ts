@@ -524,35 +524,36 @@ serve(async (req) => {
   }
 
   try {
-    const authHeader = req.headers.get('authorization');
-    if (!authHeader) {
-      return jsonError(401, 'missing_auth', 'Token de autenticação ausente');
-    }
+    const authHeader = req.headers.get('authorization') ?? '';
     const jwt = authHeader.replace(/^Bearer\s+/i, '');
+    const ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
 
     // Cliente admin (bypass RLS)
     const sbAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
-    // Validar token via REST endpoint (suporta HS256 + ES256)
-    let userId: string;
-    try {
-      const userResp = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
-        headers: {
-          'Authorization': `Bearer ${jwt}`,
-          'apikey': Deno.env.get('SUPABASE_ANON_KEY')!,
-        },
-      });
-      if (!userResp.ok) {
-        const errText = await userResp.text();
-        return jsonError(401, 'invalid_token', `Token inválido ou expirado (HTTP ${userResp.status}): ${errText.slice(0, 200)}`);
+    // Se o token é a ANON_KEY, usuário anônimo — permite acesso sem validar JWT
+    let userId: string | null = null;
+    if (jwt && jwt !== ANON_KEY) {
+      // Token de usuário logado — validar via REST endpoint (suporta HS256 + ES256)
+      try {
+        const userResp = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+          headers: {
+            'Authorization': `Bearer ${jwt}`,
+            'apikey': ANON_KEY,
+          },
+        });
+        if (!userResp.ok) {
+          const errText = await userResp.text();
+          return jsonError(401, 'invalid_token', `Token inválido ou expirado (HTTP ${userResp.status}): ${errText.slice(0, 200)}`);
+        }
+        const userJson = await userResp.json();
+        userId = userJson.id;
+        if (!userId) {
+          return jsonError(401, 'invalid_token', 'Resposta sem user.id');
+        }
+      } catch (e) {
+        return jsonError(401, 'invalid_token', `Falha ao validar token: ${(e as Error).message}`);
       }
-      const userJson = await userResp.json();
-      userId = userJson.id;
-      if (!userId) {
-        return jsonError(401, 'invalid_token', 'Resposta sem user.id');
-      }
-    } catch (e) {
-      return jsonError(401, 'invalid_token', `Falha ao validar token: ${(e as Error).message}`);
     }
 
     // Verificar se é admin

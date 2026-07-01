@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { db } from '@/db/schema';
 import { novaMensagem, type Mensagem } from '@/types/mensagem';
+import { gerarSlidesMinimos } from '@/lib/slideGenerator';
 
 interface MensagensState {
   /** Mensagem em edição no editor */
@@ -35,6 +36,8 @@ export const useMensagensStore = create<MensagensState>((set, get) => ({
 
   nova: async () => {
     const m = novaMensagem({ titulo: 'Sem título' });
+    // Gera slides mínimos automaticamente (capa + chamada + oração)
+    m.slides = gerarSlidesMinimos(m);
     await db.salvarMensagem(m);
     set({ atual: m });
     return m;
