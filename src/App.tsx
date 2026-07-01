@@ -105,9 +105,11 @@ export function App() {
 
   return (
     <BrowserRouter>
-      <AnimatedRoutes />
-      <Toast />
-      <PWAUpdatePrompt />
+      <div className="flex h-screen flex-col overflow-hidden">
+        <AnimatedRoutes />
+        <Toast />
+        <PWAUpdatePrompt />
+      </div>
     </BrowserRouter>
   );
 }

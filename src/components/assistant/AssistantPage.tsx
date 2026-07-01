@@ -251,6 +251,149 @@ function AssistenteHome({
   );
 }
 
+// ─── RENDERIZADOR DE MARKDOWN SEMÂNTICO ─────────────────────────────────────
+function MarkdownRenderer({ content }: { content: string }) {
+  const lines = content.split('\n');
+  const elements: React.ReactNode[] = [];
+  let i = 0;
+
+  while (i < lines.length) {
+    const line = lines[i];
+
+    // H1 — título principal do sermão
+    if (line.startsWith('# ')) {
+      elements.push(
+        <h1 key={i} className="mb-2 mt-1 text-[20px] font-bold leading-snug text-ink-900 dark:text-white">
+          {parseInline(line.slice(2))}
+        </h1>,
+      );
+      i++;
+      continue;
+    }
+
+    // H2 — seção grande
+    if (line.startsWith('## ')) {
+      elements.push(
+        <h2 key={i} className="mb-1.5 mt-4 flex items-center gap-2 text-[15px] font-semibold text-indigo-700 dark:text-indigo-300">
+          <span className="h-1 w-6 flex-shrink-0 rounded-full bg-indigo-500" />
+          {parseInline(line.slice(3))}
+        </h2>,
+      );
+      i++;
+      continue;
+    }
+
+    // H3 — subseção
+    if (line.startsWith('### ')) {
+      elements.push(
+        <h3 key={i} className="mb-1 mt-3 flex items-center gap-2 text-[13.5px] font-semibold text-amber-600 dark:text-amber-400">
+          <span className="h-px w-4 flex-shrink-0 bg-amber-400" />
+          {parseInline(line.slice(4))}
+        </h3>,
+      );
+      i++;
+      continue;
+    }
+
+    // H4 — sub-subseção
+    if (line.startsWith('#### ')) {
+      elements.push(
+        <h4 key={i} className="mb-0.5 mt-2 text-[13px] font-semibold text-ink-700 dark:text-ink-300">
+          {parseInline(line.slice(5))}
+        </h4>,
+      );
+      i++;
+      continue;
+    }
+
+    // Divider
+    if (line.match(/^---+$/) || line.match(/^\*\*\*+$/)) {
+      elements.push(<hr key={i} className="my-3 border-ink-200 dark:border-ink-700" />);
+      i++;
+      continue;
+    }
+
+    // Lista de itens com traço ou asterisco
+    if (line.match(/^(\-|\*|\•)\s+/)) {
+      const items: string[] = [];
+      while (i < lines.length && lines[i].match(/^(\-|\*|\•)\s+/)) {
+        items.push(lines[i].replace(/^(\-|\*|\•)\s+/, ''));
+        i++;
+      }
+      elements.push(
+        <ul key={`ul-${i}`} className="my-1.5 list-none space-y-1 pl-3">
+          {items.map((item, j) => (
+            <li key={j} className="flex items-start gap-2 text-[13.5px] leading-relaxed text-ink-700 dark:text-ink-200">
+              <span className="mt-2.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-indigo-400" />
+              <span>{parseInline(item)}</span>
+            </li>
+          ))}
+        </ul>,
+      );
+      continue;
+    }
+
+    // Lista numerada
+    if (line.match(/^\d+\.\s+/)) {
+      const items: string[] = [];
+      while (i < lines.length && lines[i].match(/^\d+\.\s+/)) {
+        items.push(lines[i].replace(/^\d+\.\s+/, ''));
+        i++;
+      }
+      elements.push(
+        <ol key={`ol-${i}`} className="my-1.5 list-none space-y-1 pl-3">
+          {items.map((item, j) => (
+            <li key={j} className="flex items-start gap-2 text-[13.5px] leading-relaxed text-ink-700 dark:text-ink-200">
+              <span className="mt-1 flex h-4 w-4 flex-shrink-0 items-center justify-center rounded bg-indigo-100 text-[10px] font-bold text-indigo-700 dark:bg-indigo-900 dark:text-indigo-200">
+                {j + 1}
+              </span>
+              <span>{parseInline(item)}</span>
+            </li>
+          ))}
+        </ol>,
+      );
+      continue;
+    }
+
+    // Linha vazia
+    if (!line.trim()) {
+      i++;
+      continue;
+    }
+
+    // Parágrafo normal
+    elements.push(
+      <p key={i} className="my-1.5 text-[13.5px] leading-relaxed text-ink-700 dark:text-ink-200">
+        {parseInline(line)}
+      </p>,
+    );
+    i++;
+  }
+
+  return <>{elements}</>;
+}
+
+function parseInline(text: string): React.ReactNode[] {
+  const parts: React.ReactNode[] = [];
+  const regex = /\*\*([^*]+)\*\*/g;
+  let last = 0;
+  let match;
+  let key = 0;
+
+  while ((match = regex.exec(text)) !== null) {
+    if (match.index > last) {
+      parts.push(text.slice(last, match.index));
+    }
+    parts.push(<strong key={key++}>{match[1]}</strong>);
+    last = match.index + match[0].length;
+  }
+  if (last < text.length) {
+    parts.push(text.slice(last));
+  }
+
+  return parts.length > 0 ? parts : [text];
+}
+
 // ─── BLOCO DE AÇÃO DO ASSISTENTE ─────────────────────────────────────────────
 type BlocoAberto = string | null;
 
@@ -306,9 +449,7 @@ function BlocoIA({
             m.resposta && 'rounded-br-sm',
           )}
         >
-          <pre className="whitespace-pre-wrap break-words font-sans text-[14px] leading-relaxed text-ink-800 dark:text-ink-100">
-            {m.content}
-          </pre>
+          <MarkdownRenderer content={m.content} />
         </div>
 
         <div className="mt-1.5 flex flex-wrap items-center gap-1">

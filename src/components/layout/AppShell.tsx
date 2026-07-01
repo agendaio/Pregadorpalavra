@@ -34,8 +34,8 @@ export function AppShell() {
     <>
       <GlobalSearch value={buscaValue} onChange={setBuscaValue} />
       {isMobile ? (
-        <div className="flex h-full min-h-screen-dvh flex-col bg-paper dark:bg-paper-dark">
-          <div className="flex-1 pb-[calc(env(safe-area-inset-bottom)+72px)]">
+        <div className="flex fixed inset-0 flex-col bg-paper dark:bg-paper-dark">
+          <div className="flex-1 overflow-hidden pb-[calc(env(safe-area-inset-bottom)+72px)]">
             <Outlet />
           </div>
           <BottomNav />
