@@ -415,7 +415,7 @@ function ApiKeysSection() {
             <label className="mb-1 block text-[11px] font-medium text-ink-600 dark:text-ink-400">Temperatura: {temp}</label>
             <input type="range" min="0" max="1" step="0.05" value={temp} onChange={e => setTemp(Number(e.target.value))}
               className="w-full accent-ink-900" />
-            <p className="mt-0.5 text-[10px] text-ink-400">0 = preciso | 1 = criativo</p>
+            <p className="mt-0.5 text-[10px] text-ink-400 dark:text-ink-500">0 = preciso | 1 = criativo</p>
           </div>
           <div>
             <label className="mb-1 block text-[11px] font-medium text-ink-600 dark:text-ink-400">Máx Tokens: {maxTok}</label>
@@ -1247,7 +1247,7 @@ function ModelosSection() {
                 </div>
                 <div className="text-right">
                   <div className="text-[12px] font-mono text-ink-800">${u.custo.toFixed(4)}</div>
-                  <div className="text-[10px] text-ink-400">custo total</div>
+                  <div className="text-[10px] text-ink-400 dark:text-ink-500">custo total</div>
                 </div>
               </div>
             ))}
