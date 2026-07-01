@@ -1,6 +1,6 @@
 import { NavLink, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Home, Library, ScrollText, Sparkles, MoreHorizontal } from 'lucide-react';
+import { Home, ScrollText } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const TABS: ReadonlyArray<{
@@ -9,11 +9,8 @@ const TABS: ReadonlyArray<{
   icon: typeof Home;
   end?: boolean;
 }> = [
-  { to: '/',           label: 'Início',      icon: Home,           end: true },
-  { to: '/biblioteca', label: 'Biblioteca',  icon: Library },
-  { to: '/esbocos',    label: 'Esboços',     icon: ScrollText },
-  { to: '/assistente', label: 'Assistente',  icon: Sparkles },
-  { to: '/mais',       label: 'Mais',        icon: MoreHorizontal },
+  { to: '/',        label: 'Início',   icon: Home,      end: true },
+  { to: '/esbocos', label: 'Esboços', icon: ScrollText },
 ];
 
 export function BottomNav() {

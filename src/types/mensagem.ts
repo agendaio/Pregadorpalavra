@@ -74,7 +74,7 @@ export interface SlideOracao {
 
 /** Slide completo */
 export interface Slide {
-  id: string;
+  id: ID;
   tipo: SlideType;
   content: SlideContent;
 }

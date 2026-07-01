@@ -3,11 +3,11 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import {
   Plus,
-  Sparkles,
   BookOpen,
   ScrollText,
   Clock,
   ArrowRight,
+  Sparkles,
   TrendingUp,
   Compass,
 } from 'lucide-react';
@@ -83,19 +83,6 @@ export function HomePage() {
                 <div className="text-[12px] text-ink-500">Escolha um template</div>
               </div>
             </button>
-
-            <Link
-              to="/assistente"
-              className="flex flex-1 items-center gap-3 rounded-2xl border border-ink-200/80 bg-white px-4 py-3.5 transition-all hover:border-ink-300 hover:shadow-sm active:scale-[0.99] dark:border-ink-800 dark:bg-ink-900/30"
-            >
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 text-white shadow-sm">
-                <Sparkles className="h-5 w-5" />
-              </div>
-              <div>
-                <div className="text-[14px] font-semibold text-ink-900 dark:text-white">Assistente</div>
-                <div className="text-[12px] text-ink-500">Ajuda da IA ministerial</div>
-              </div>
-            </Link>
           </motion.div>
 
           {/* Stats simples */}
@@ -122,21 +109,9 @@ export function HomePage() {
             transition={{ delay: 0.1, duration: 0.3, ease: EASE_OUT }}
             className="mb-6 grid grid-cols-2 gap-2 sm:grid-cols-4"
           >
-            <Link to="/biblioteca" className="flex items-center gap-2 rounded-xl border border-ink-200/60 bg-white/80 px-3 py-2.5 text-[13px] text-ink-700 transition-all hover:border-ink-300 dark:border-ink-800 dark:bg-ink-900/20 dark:text-ink-300">
-              <BookOpen className="h-4 w-4 text-ink-400" />
-              Biblioteca
-            </Link>
             <Link to="/esbocos" className="flex items-center gap-2 rounded-xl border border-ink-200/60 bg-white/80 px-3 py-2.5 text-[13px] text-ink-700 transition-all hover:border-ink-300 dark:border-ink-800 dark:bg-ink-900/20 dark:text-ink-300">
               <ScrollText className="h-4 w-4 text-ink-400" />
               Esboços
-            </Link>
-            <Link to="/assistente" className="flex items-center gap-2 rounded-xl border border-ink-200/60 bg-white/80 px-3 py-2.5 text-[13px] text-ink-700 transition-all hover:border-ink-300 dark:border-ink-800 dark:bg-ink-900/20 dark:text-ink-300">
-              <Sparkles className="h-4 w-4 text-ink-400" />
-              Assistente
-            </Link>
-            <Link to="/analista" className="flex items-center gap-2 rounded-xl border border-ink-200/60 bg-white/80 px-3 py-2.5 text-[13px] text-ink-700 transition-all hover:border-ink-300 dark:border-ink-800 dark:bg-ink-900/20 dark:text-ink-300">
-              <TrendingUp className="h-4 w-4 text-ink-400" />
-              Analista
             </Link>
           </motion.div>
 
@@ -152,7 +127,7 @@ export function HomePage() {
                 Recentes
               </h2>
               <Link
-                to="/biblioteca"
+                to="/esbocos"
                 className="text-[12px] font-medium text-ink-600 hover:text-ink-900 dark:text-ink-300 dark:hover:text-white"
               >
                 Ver todas →

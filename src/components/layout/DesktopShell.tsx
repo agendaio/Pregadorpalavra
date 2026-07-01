@@ -1,9 +1,6 @@
 import { type ReactNode } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
-  Library,
-  Compass,
-  Sparkles,
   Search,
   PanelLeftClose,
   PanelLeftOpen,
@@ -13,7 +10,6 @@ import {
   Plus,
   Home,
   ScrollText,
-  MoreHorizontal,
 } from 'lucide-react';
 import { useUIStore } from '@/stores/ui';
 import { useMensagensStore } from '@/stores/mensagens';
@@ -23,12 +19,7 @@ import { APP_VERSION } from '@/v.config';
 
 const NAV = [
   { to: '/', label: 'Início', icon: Home, end: true },
-  { to: '/biblioteca', label: 'Biblioteca', icon: Library },
   { to: '/esbocos', label: 'Esboços', icon: ScrollText },
-  { to: '/assistente', label: 'Assistente', icon: Sparkles },
-  { to: '/estudo', label: 'Estudo', icon: Compass },
-  { to: '/analista', label: 'Analista', icon: Sparkles },
-  { to: '/mais', label: 'Mais', icon: MoreHorizontal },
 ];
 
 export function DesktopShell({ children }: { children: ReactNode }) {

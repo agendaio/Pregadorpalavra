@@ -87,7 +87,7 @@ export function EditorPage() {
     if (!confirm('Excluir esta mensagem? O histórico também será removido.')) return;
     await db.removerMensagem(mensagem.id);
     mostrarToast('Mensagem excluída', 'sucesso');
-    navigate('/biblioteca');
+    navigate('/esbocos');
   };
 
   const adicionarTag = () => {
@@ -104,7 +104,7 @@ export function EditorPage() {
       <MobileHeader
         title={mensagem.titulo || 'Sem título'}
         subtitle={`Atualizada ${formatarRelativo(mensagem.atualizadoEm)} · v${mensagem.versao}`}
-        back={() => navigate('/biblioteca')}
+        back={() => navigate('/esbocos')}
         right={
           <>
             {!isMobile && (

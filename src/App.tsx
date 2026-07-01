@@ -4,14 +4,8 @@ import { useEffect } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { AppShell } from '@/components/layout/AppShell';
 import { HomePage } from '@/components/home/HomePage';
-import { LibraryPage } from '@/components/library/LibraryPage';
 import { PulpitPage } from '@/components/pulpit/PulpitPage';
-import { StudyPage } from '@/components/study/StudyPage';
-import { AnalystPage } from '@/components/analyst/AnalystPage';
-import { AboutPage } from '@/components/overview/AboutPage';
 import { SettingsPage } from '@/components/settings/SettingsPage';
-import { MorePage } from '@/components/more/MorePage';
-import { AssistantPage } from '@/components/assistant/AssistantPage';
 import { OutlinesPage } from '@/components/outlines/OutlinesPage';
 import { Toast } from '@/components/ui/Toast';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
@@ -73,14 +67,8 @@ function AnimatedRoutes() {
           {/* Demais rotas usam o AppShell (que decide mobile vs desktop) */}
           <Route element={<AppShell />}>
             <Route path="/" element={<HomePage />} />
-            <Route path="/biblioteca" element={<LibraryPage />} />
             <Route path="/esbocos" element={<OutlinesPage />} />
-            <Route path="/assistente" element={<ErrorBoundary><AssistantPage /></ErrorBoundary>} />
-            <Route path="/mais" element={<MorePage />} />
             <Route path="/editar/:id" element={<EditorPage />} />
-            <Route path="/estudo" element={<StudyPage />} />
-            <Route path="/analista" element={<AnalystPage />} />
-            <Route path="/sobre" element={<AboutPage />} />
             <Route path="/configuracoes" element={<SettingsPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
