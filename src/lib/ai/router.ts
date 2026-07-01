@@ -73,15 +73,21 @@ export async function enviarComFallback(req: AIRequest): Promise<{
       }
       throw err;
     }
-    // erro desconhecido
-    if (ativo !== 'local') {
+
+    // FunctionsFetchError e outros erros não-Error nativos do browser/Supabase
+    const errMsg = (err as Error).message ?? String(err);
+    const errName = (err as Error).name ?? '';
+    const recuperavel = ['rede', 'fetch', 'TypeError', 'FunctionsFetchError', 'AbortError'].some(
+      (t) => errName.includes(t) || errMsg.includes(t),
+    );
+    if (recuperavel && ativo !== 'local') {
       try {
         const resp = await localProvider.enviar(req);
         return { response: resp, providerUsado: 'local', fallbackUsado: true };
       } catch {
-        throw new AIError((err as Error).message, 'desconhecido', ativo);
+        throw new AIError(errMsg.slice(0, 200), 'desconhecido', ativo);
       }
     }
-    throw new AIError((err as Error).message, 'desconhecido', ativo);
+    throw new AIError(errMsg.slice(0, 200), 'desconhecido', ativo);
   }
 }

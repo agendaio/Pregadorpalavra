@@ -91,6 +91,19 @@ export class OpenAIProvider implements AIProvider {
 
       return { ok: true };
     } catch (e) {
+      const err = e as Error & { name?: string };
+      // FunctionsFetchError não estende Error — verifica por nome
+      if (err.name === 'FunctionsFetchError' || err.name === 'AbortError') {
+        const msg = (e as Error).message;
+        if (msg.includes('no_api_key')) {
+          return {
+            ok: false,
+            motivo: 'IA não configurada pelo administrador. '
+              + 'Acesse /admin/api-keys para cadastrar uma chave OpenAI.',
+          };
+        }
+        return { ok: false, motivo: 'Falha de conexão com o servidor: ' + msg.slice(0, 200) };
+      }
       return { ok: false, motivo: 'Falha de conexão com o servidor: ' + (e as Error).message };
     }
   }
@@ -165,9 +178,22 @@ export class OpenAIProvider implements AIProvider {
       };
     } catch (e) {
       if (e instanceof AIError) throw e;
-      if ((e as Error).name === 'AbortError') {
-        throw new AIError('Requisição cancelada', 'cancelado', 'openai');
+
+      const err = e as Error & { name?: string; cause?: unknown };
+      // FunctionsFetchError do Supabase (não estende Error — instanceof Error falha)
+      // AbortError do fetch/abort
+      if (err.name === 'AbortError' || err.name === 'FunctionsFetchError') {
+        const msg = err.message ?? String(e);
+        if (msg.includes('no_api_key')) {
+          throw new AIError(
+            'IA não configurada. Solicite ao administrador que cadastre uma chave OpenAI em /admin/api-keys.',
+            'sem-chave',
+            'openai',
+          );
+        }
+        throw new AIError(msg.slice(0, 300), 'rede', 'openai');
       }
+
       throw new AIError((e as Error).message, 'rede', 'openai');
     }
   }
