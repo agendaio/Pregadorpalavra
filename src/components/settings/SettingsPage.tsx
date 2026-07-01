@@ -11,10 +11,12 @@ import {
   Loader2,
   Cpu,
   Sparkles,
+  Shield,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { MobileHeader } from '@/components/layout/MobileHeader';
 import { db } from '@/db/schema';
+import { useAuthAdminStore } from '@/stores/authAdmin';
 import { useUIStore, FONT_SIZE_LABELS, type FontSize } from '@/stores/ui';
 import { semearExemplos } from '@/db/seed';
 import { APP_VERSION } from '@/v.config';
@@ -107,63 +109,67 @@ export function SettingsPage() {
     mostrarToast('Biblioteca limpa', 'sucesso');
   };
 
-  return (
+    const admin = useAuthAdminStore((s) => s.admin);
+
+return (
     <div className="flex h-full flex-col bg-paper text-ink-900 dark:bg-paper-dark dark:text-ink-100">
       <MobileHeader title="Configurações" subtitle="IA, aparência, dados" />
 
       <div className="flex-1 overflow-y-auto pb-32">
         <div className="mx-auto max-w-2xl space-y-6 px-4 py-4">
 
-          {/* IA â€” Status */}
-          <section>
-            <h2 className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-500 dark:text-ink-400">
-              Assistente Ministerial
-            </h2>
-            <div className="overflow-hidden rounded-2xl border border-ink-200/80 bg-white shadow-soft dark:border-ink-800 dark:bg-ink-900/40">
-              <div className="flex items-start gap-3 p-4">
-                <div className={cn(
-                  'flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl',
-                  iaStatus.tipo === 'ok' ? 'bg-emerald-100 dark:bg-emerald-500/20' : 'bg-red-50 dark:bg-red-500/20',
-                )}>
-                  {iaStatus.tipo === 'ok' ? (
-                    <CheckCircle2 className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-                  ) : iaStatus.tipo === 'loading' ? (
-                    <Loader2 className="h-5 w-5 animate-spin text-ink-400" />
-                  ) : (
-                    <AlertCircle className="h-5 w-5 text-accent dark:text-red-400" />
+          {/*           {/* IA — SÓ MOSTRA PRO ADMIN */}
+          {admin && (
+            <section>
+              <h2 className="mb-2 flex items-center gap-1.5 px-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-500 dark:text-ink-400">
+                <Shield className="h-3 w-3" /> Painel Admin
+              </h2>
+              <div className="overflow-hidden rounded-2xl border border-ink-200/80 bg-white shadow-soft dark:border-ink-800 dark:bg-ink-900/40">
+                <div className="flex items-start gap-3 p-4">
+                  <div className={cn(
+                    'flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl',
+                    iaStatus.tipo === 'ok' ? 'bg-emerald-100 dark:bg-emerald-500/20' : 'bg-red-50 dark:bg-red-500/20',
+                  )}>
+                    {iaStatus.tipo === 'ok' ? (
+                      <CheckCircle2 className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                    ) : iaStatus.tipo === 'loading' ? (
+                      <Loader2 className="h-5 w-5 animate-spin text-ink-400" />
+                    ) : (
+                      <AlertCircle className="h-5 w-5 text-accent dark:text-red-400" />
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <div className="text-[14.5px] font-semibold tracking-tight text-ink-900 dark:text-white">
+                      {iaStatus.tipo === 'ok'
+                        ? 'Assistente ativo'
+                        : iaStatus.tipo === 'loading'
+                        ? 'Verificando…'
+                        : 'Configuração necessária'}
+                    </div>
+                    <p className="mt-1 text-[12.5px] leading-relaxed text-ink-500 dark:text-ink-400">
+                      {iaStatus.msg}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex gap-2 border-t border-ink-100 px-4 py-3 dark:border-ink-800">
+                  <button
+                    onClick={() => void verificarIA()}
+                    className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-ink-200 bg-white px-3 text-[12.5px] font-medium text-ink-700 transition-colors hover:bg-ink-50 active:scale-95 dark:border-ink-700 dark:bg-ink-800 dark:text-ink-100 dark:hover:bg-ink-700"
+                  >
+                    <RefreshCw className="h-3.5 w-3.5" /> Verificar
+                  </button>
+                  {iaStatus.tipo !== 'ok' && (
+                    <a
+                      href="/admin/api-keys"
+                      className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-ink-900 px-4 text-[12.5px] font-medium text-white transition-colors hover:bg-ink-800 dark:bg-white dark:text-ink-950"
+                    >
+                      Configurar IA →
+                    </a>
                   )}
                 </div>
-                <div className="flex-1">
-                  <div className="text-[14.5px] font-semibold tracking-tight text-ink-900 dark:text-white">
-                    {iaStatus.tipo === 'ok'
-                      ? 'Assistente ativo'
-                      : iaStatus.tipo === 'loading'
-                      ? 'Verificandoâ€¦'
-                      : 'Configuração necessária'}
-                  </div>
-                  <p className="mt-1 text-[12.5px] leading-relaxed text-ink-500 dark:text-ink-400">
-                    {iaStatus.msg}
-                  </p>
-                </div>
               </div>
-              <div className="flex gap-2 border-t border-ink-100 px-4 py-3 dark:border-ink-800">
-                <button
-                  onClick={() => void verificarIA()}
-                  className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-ink-200 bg-white px-3 text-[12.5px] font-medium text-ink-700 transition-colors hover:bg-ink-50 active:scale-95 dark:border-ink-700 dark:bg-ink-800 dark:text-ink-100 dark:hover:bg-ink-700"
-                >
-                  <RefreshCw className="h-3.5 w-3.5" /> Verificar
-                </button>
-                {iaStatus.tipo !== 'ok' && (
-                  <a
-                    href="/admin/api-keys"
-                    className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-ink-900 px-4 text-[12.5px] font-medium text-white transition-colors hover:bg-ink-800 dark:bg-white dark:text-ink-950"
-                  >
-                    Configurar IA â†’
-                  </a>
-                )}
-              </div>
-            </div>
-          </section>
+            </section>
+          )}
 
           {stats && stats.requisicoes > 0 && (
             <section>

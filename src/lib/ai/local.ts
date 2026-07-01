@@ -213,10 +213,8 @@ export class LocalProvider implements AIProvider {
         `\n\nQuando você configurar uma chave da API OpenAI nas Configurações, eu passo a gerar respostas personalizadas com IA real, mantendo este mesmo contexto.\n\n` +
         (refs ? `**Referências carregadas:** ${refs}\n` : '');
     } else {
-      conteudo =
-        `**Assistente Ministerial**\n\n` +
-        `Para te ajudar com profundidade, abra uma mensagem no editor. Eu pego automaticamente o tema, texto-base, versículos e esboço.\n\n` +
-        `Enquanto isso, posso conversar sobre teologia, exegese, pregação e vida ministerial de forma geral. O que você gostaria de discutir?`;
+      // Resposta para conversa livre — tenta identificar o tema e dar uma resposta útil
+      conteudo = gerarRespostaLivre(textoUser);
     }
 
     if (req.systemAppend) conteudo += `\n\n---\n${req.systemAppend}`;
@@ -241,6 +239,88 @@ export class LocalProvider implements AIProvider {
     if (!texto) return 0;
     return Math.ceil(texto.length / 3.5);
   }
+}
+
+/** Gera resposta para conversa livre sem contexto de mensagem */
+function gerarRespostaLivre(textoUser: string): string {
+  const texto = textoUser.toLowerCase();
+  const linhas = textoUser.split(/\s+/);
+  const primeiraLinha = textoUser.split('\n')[0].trim();
+
+  // Detectar livro/capítulo: "Romanos 8", "João 3:16", "Gênesis 1"
+  const refMatch = primeiraLinha.match(/^(\d?\s*[A-Za-zÀ-ÿ]+)\s*(\d+)[:\s]+(\d+[-\d,]*)?/i);
+  const livroMatch = primeiraLinha.match(/^(\d?\s*[A-Za-zÀ-ÿ]+)\s*(\d+)$/i);
+
+  if (refMatch) {
+    const livro = refMatch[1].trim();
+    const cap = refMatch[2];
+    const vers = refMatch[3] ?? '1';
+    return `**${livro} ${cap}${vers !== '1' ? ':' + vers : ''}**\n\n` +
+      `Este é um trecho clássico da Escritura. Para te ajudar melhor com uma resposta personalizada:\n\n` +
+      `1. **Abra o editor** e crie uma nova mensagem com este texto-base.\n` +
+      `2. **O assistente vai carregar** automaticamente o contexto, tema e esboço.\n` +
+      `3. **Peça** "Criar Esboço" ou "Explicar Versículo" no painel de ações.\n\n` +
+      `Enquanto isso, posso te dar uma orientação inicial:\n\n` +
+      `Ao estudar este trecho,，值得 atenção: contexto histórico, público original, gênero literário e a intenção do autor. ` +
+      `Depois de definir esses elementos, a aplicação prática fica muito mais clara.\n\n` +
+      `*Para respostas completas com IA generativa, configure a chave da API OpenAI nas Configurações.*`;
+  }
+
+  if (livroMatch) {
+    const livro = livroMatch[1].trim();
+    const cap = livroMatch[2];
+    return `**${livro} ${cap}**\n\n` +
+      `Este capítulo é parte importante do livro. Para te ajudar:\n\n` +
+      `1. Abra uma mensagem no editor com este texto-base (ex: "${livro} ${cap}:1-10").\n` +
+      `2. Use o painel de ações: "Criar Esboço", "Estudo Bíblico" ou "Sermão Expositivo".\n\n` +
+      `*Para respostas completas da IA, configure a chave OpenAI nas Configurações.*`;
+  }
+
+  // Detectar palavras-chave teológicas
+  if (/amor|fé|graça|esperança|salvação|redenção/i.test(texto)) {
+    return `**Sobre amor, fé e graça**\n\n` +
+      `Você tocou num tema central da teologia cristã. Para aprofundar:\n\n` +
+      `- Identifique o **livro e texto-base** bíblico específico.\n` +
+      `- Use o comando **"Criar Esboço"** com esse texto aberto.\n` +
+      `- Peça **"Contexto Histórico"** para entender a audiência original.\n` +
+      `- Solicite **"Aplicações"** para três níveis: pessoal, relacional, comunitário.\n\n` +
+      `Quer aplicar isso a um texto específico? Abra uma mensagem no editor e me diga!`;
+  }
+
+  if (/pregação|sermão|pregador|oratória|homilética/i.test(texto)) {
+    return `**Sobre pregação e homilética**\n\n` +
+      `Ótimo tema! Elementos essenciais de uma boa pregação:\n\n` +
+      `**1. Exegese fiel** — entenda o texto no seu contexto original.\n` +
+      `**2. Teologia sólida** — conecte com a narrativa bíblica inteira.\n` +
+      `**3. Aplicação prática** — como esta verdade muda a vida do ouvinte?\n` +
+      `**4. Estrutura clara** — um ponto central, desenvolvido com evidências.\n\n` +
+      `Para montar um esboço estruturado, abra uma mensagem no editor com seu texto-base e peça "Criar Esboço".\n\n` +
+      `*Configure a chave OpenAI para respostas completas e personalizadas.*`;
+  }
+
+  if (/célula|culto|discipulado|evangelismo|missões/i.test(texto)) {
+    return `**Sobre vida ministerial e discipulado**\n\n` +
+      `Excelente foco! Para desenvolver esse tema:\n\n` +
+      `1. Defina um **texto-base bíblico** que fundamente o tema.\n` +
+      `2. Use o assistente com "Aplicações" para três contextos: pessoal, relacional, comunitário.\n` +
+      `3. Para **célula/grupo**, peça "Perguntas para Grupo" no painel.\n` +
+      `4. Para **evangelismo**, solicite "Ilustrações" com aplicações concretas.\n\n` +
+      `Abra uma mensagem no editor e me diga o tema específico que está trabalhando!`;
+  }
+
+  // Resposta genérica mas útil
+  return `**Assistente Ministerial — modo local**\n\n` +
+    `Entendi sua pergunta. Para te dar a melhor resposta possível:\n\n` +
+    `**Abra o editor** no botão "+" e cadastre seu texto-base, tema e esboço.\n` +
+    `Eu vou carregar automaticamente todo o contexto e gerar algo personalizado.\n\n` +
+    `**Enquanto isso**, estas são as ações disponíveis mesmo sem IA completa:\n\n` +
+    `• **Criar Esboço** — estrutura de sermonário em 3 pontos.\n` +
+    `• **Estudo Bíblico** — análise profunda com contexto e cruzamentos.\n` +
+    `• **Sermão Expositivo** — estrutura completa com introdução e conclusão.\n` +
+    `• **Aplicações** — práticas em 3 níveis (pessoal, relacional, comunitário).\n` +
+    `• **Ilustrações** — exemplos concretos e memoráveis.\n\n` +
+    `Para desbloquear **IA generativa completa**, configure sua chave OpenAI em Configurações.`;
+}
 }
 
 export const localProvider = new LocalProvider();
