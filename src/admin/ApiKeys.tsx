@@ -939,11 +939,13 @@ function PromptGlobalSection() {
     if (!prompt.trim()) { setMsg({ type: 'err', text: 'Digite algo antes de salvar.' }); return; }
     setSaving(true);
     setMsg(null);
-    const sb = supabase();
-    if (!sb) { setMsg({ type: 'err', text: 'Supabase não configurado.' }); setSaving(false); return; }
-    const { error } = await sb.from('ia_config').upsert({ id: 'prompt_global', valor: prompt, atualizado_em: new Date().toISOString() });
-    if (error) {
-      setMsg({ type: 'err', text: `Erro: ${error.message}` });
+    const { data, error } = await callEdgeFunction<{ success: boolean; data?: unknown }>('admin-save-config', {
+      id: 'prompt_global',
+      valor: prompt,
+      atualizado_em: new Date().toISOString(),
+    });
+    if (error || !data?.success) {
+      setMsg({ type: 'err', text: `Erro: ${error?.message ?? 'Falha ao salvar'}` });
     } else {
       setMsg({ type: 'ok', text: '✅ Prompt Global salvo com sucesso!' });
     }
