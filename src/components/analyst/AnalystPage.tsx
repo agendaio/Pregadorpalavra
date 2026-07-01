@@ -32,33 +32,33 @@ function analisar(m: Mensagem): Analise {
   checks.push({ ok: !!m.objetivo, rotulo: 'Objetivo definido', detalhe: m.objetivo || 'O que o ouvinte deve compreender?' });
   if (m.objetivo) pontos++;
 
-  checks.push({ ok: !!m.publico, rotulo: 'PÃºblico-alvo identificado', detalhe: m.publico || 'Para quem?' });
+  checks.push({ ok: !!m.publico, rotulo: 'Público-alvo identificado', detalhe: m.publico || 'Para quem?' });
   if (m.publico) pontos++;
 
-  checks.push({ ok: m.versiculos.length > 0, rotulo: 'VersÃ­culos centrais' });
+  checks.push({ ok: m.versiculos.length > 0, rotulo: 'Versículos centrais' });
   if (m.versiculos.length > 0) pontos++;
 
-  checks.push({ ok: m.aplicacoes.length > 0, rotulo: 'AplicaÃ§Ãµes prÃ¡ticas' });
+  checks.push({ ok: m.aplicacoes.length > 0, rotulo: 'Aplicações práticas' });
   if (m.aplicacoes.length > 0) pontos++;
 
-  checks.push({ ok: m.ilustracoes.length > 0, rotulo: 'IlustraÃ§Ãµes concretas' });
+  checks.push({ ok: m.ilustracoes.length > 0, rotulo: 'Ilustrações concretas' });
   if (m.ilustracoes.length > 0) pontos++;
 
-  checks.push({ ok: !!m.conclusao, rotulo: 'ConclusÃ£o redigida' });
+  checks.push({ ok: !!m.conclusao, rotulo: 'Conclusão redigida' });
   if (m.conclusao) pontos++;
 
   checks.push({ ok: texto.length > 1500, rotulo: 'Desenvolvimento suficiente (>1500 caracteres)' });
   if (texto.length > 1500) pontos++;
 
-  checks.push({ ok: texto.length < 12000, rotulo: 'Sem excesso de conteÃºdo (<12000)' });
+  checks.push({ ok: texto.length < 12000, rotulo: 'Sem excesso de conteúdo (<12000)' });
   if (texto.length < 12000) pontos++;
 
-  if (texto.length > 12000) alertas.push('ConteÃºdo longo: considere focar.');
+  if (texto.length > 12000) alertas.push('Conteúdo longo: considere focar.');
   if (m.tempoEstimado > 0 && texto.length / 150 > m.tempoEstimado)
     alertas.push(`Ritmo indica ${Math.round(texto.length / 150)} min â€” maior que o tempo estimado.`);
-  if (m.versiculos.length === 0) alertas.push('Nenhum versÃ­culo registrado.');
-  if (m.aplicacoes.length === 0) alertas.push('Sem aplicaÃ§Ãµes prÃ¡ticas registradas.');
-  if (!m.oracao) alertas.push('Considere escrever uma oraÃ§Ã£o final.');
+  if (m.versiculos.length === 0) alertas.push('Nenhum versículo registrado.');
+  if (m.aplicacoes.length === 0) alertas.push('Sem aplicações práticas registradas.');
+  if (!m.oracao) alertas.push('Considere escrever uma oração final.');
 
   return { mensagem: m, pontuacao: Math.round((pontos / total) * 100), checks, alertas };
 }
@@ -83,7 +83,7 @@ export function AnalystPage() {
                 Nenhuma mensagem para analisar
               </h3>
               <p className="mt-1 text-[13px] text-ink-500 dark:text-ink-400">
-                Crie mensagens para receber anÃ¡lise estrutural.
+                Crie mensagens para receber análise estrutural.
               </p>
             </div>
           )}
@@ -104,7 +104,7 @@ export function AnalystPage() {
                       to={`/editar/${a.mensagem.id}`}
                       className="truncate text-[14.5px] font-semibold tracking-tight text-ink-900 hover:underline dark:text-white"
                     >
-                      {a.mensagem.titulo || 'Sem tÃ­tulo'}
+                      {a.mensagem.titulo || 'Sem título'}
                     </Link>
                     <span className="text-[10.5px] text-ink-500 dark:text-ink-400 tabular-nums">
                       {formatarRelativo(a.mensagem.atualizadoEm)}

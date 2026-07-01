@@ -128,7 +128,7 @@ export function LibraryPage() {
             <input
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
-              placeholder="Buscar mensagem, tema, versÃ­culoâ€¦"
+              placeholder="Buscar mensagem, tema, versículoâ€¦"
               className="flex-1 bg-transparent text-[14px] outline-none placeholder:text-ink-400 dark:placeholder:text-ink-500"
             />
           </div>
@@ -180,7 +180,7 @@ export function LibraryPage() {
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
                           <h3 className="truncate text-[14.5px] font-semibold tracking-tight text-ink-900 dark:text-white">
-                            {m.titulo || 'Sem tÃ­tulo'}
+                            {m.titulo || 'Sem título'}
                           </h3>
                           <StatusBadge status={m.status} />
                         </div>
@@ -263,7 +263,7 @@ function EmptyState({ onNova }: { onNova: () => void }) {
         <BookOpen className="h-6 w-6" />
       </motion.div>
       <h3 className="text-[15px] font-semibold tracking-tight text-ink-900 dark:text-white">
-        Sua biblioteca estÃ¡ vazia
+        Sua biblioteca está vazia
       </h3>
       <p className="mt-1 max-w-xs text-[13px] leading-relaxed text-ink-500 dark:text-ink-400">
         Comece criando sua primeira mensagem. Tudo funciona offline.

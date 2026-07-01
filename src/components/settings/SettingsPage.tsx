@@ -53,7 +53,7 @@ export function SettingsPage() {
     if (pr.ok) {
       setIaStatus({ tipo: 'ok', msg: 'Respostas completas via IA â€” configuradas pelo administrador.' });
     } else {
-      setIaStatus({ tipo: 'erro', msg: pr.motivo ?? 'IndisponÃ­vel' });
+      setIaStatus({ tipo: 'erro', msg: pr.motivo ?? 'Indisponível' });
     }
   };
 
@@ -91,14 +91,14 @@ export function SettingsPage() {
         }
         mostrarToast(`Importado: ${dados.mensagens?.length ?? 0} mensagens`, 'sucesso');
       } catch {
-        mostrarToast('Arquivo invÃ¡lido', 'erro');
+        mostrarToast('Arquivo inválido', 'erro');
       }
     };
     input.click();
   };
 
   const limparTudo = async () => {
-    if (!confirm('Apagar TODAS as mensagens e histÃ³rico? Esta aÃ§Ã£o Ã© irreversÃ­vel.')) return;
+    if (!confirm('Apagar TODAS as mensagens e histórico? Esta ação é irreversível.')) return;
     await db.mensagens.clear();
     await db.historico.clear();
     await aiDB.mensagens.clear();
@@ -109,7 +109,7 @@ export function SettingsPage() {
 
   return (
     <div className="flex h-full flex-col bg-paper text-ink-900 dark:bg-paper-dark dark:text-ink-100">
-      <MobileHeader title="ConfiguraÃ§Ãµes" subtitle="IA, aparÃªncia, dados" />
+      <MobileHeader title="Configurações" subtitle="IA, aparência, dados" />
 
       <div className="flex-1 overflow-y-auto pb-32">
         <div className="mx-auto max-w-2xl space-y-6 px-4 py-4">
@@ -139,7 +139,7 @@ export function SettingsPage() {
                       ? 'Assistente ativo'
                       : iaStatus.tipo === 'loading'
                       ? 'Verificandoâ€¦'
-                      : 'ConfiguraÃ§Ã£o necessÃ¡ria'}
+                      : 'Configuração necessária'}
                   </div>
                   <p className="mt-1 text-[12.5px] leading-relaxed text-ink-500 dark:text-ink-400">
                     {iaStatus.msg}
@@ -172,7 +172,7 @@ export function SettingsPage() {
               </h2>
               <div className="rounded-2xl border border-ink-200/80 bg-white p-4 shadow-soft dark:border-ink-800 dark:bg-ink-900/40">
                 <div className="grid grid-cols-3 gap-2">
-                  <Stat label="RequisiÃ§Ãµes" valor={String(stats.requisicoes)} icon={Sparkles} />
+                  <Stat label="Requisições" valor={String(stats.requisicoes)} icon={Sparkles} />
                   <Stat label="Tokens" valor={stats.tokensTotal.toLocaleString('pt-BR')} icon={Cpu} />
                   <Stat label="Custo" valor={`$${stats.custoTotalUSD.toFixed(4)}`} icon={Coins} />
                 </div>
@@ -192,17 +192,17 @@ export function SettingsPage() {
             </section>
           )}
 
-          {/* AparÃªncia */}
+          {/* Aparência */}
           <section>
             <h2 className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-500 dark:text-ink-400">
-              AparÃªncia
+              Aparência
             </h2>
             <div className="space-y-3 rounded-2xl border border-ink-200/80 bg-white p-4 shadow-soft dark:border-ink-800 dark:bg-ink-900/40">
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0 flex-1">
                   <div className="text-[14px] font-medium tracking-tight text-ink-900 dark:text-white">Tema</div>
                   <p className="text-[12px] text-ink-500 dark:text-ink-400">
-                    Claro pra luz forte. Escuro pro pÃºlpito Ã  noite.
+                    Claro pra luz forte. Escuro pro púlpito à noite.
                   </p>
                 </div>
                 <Switch
@@ -218,7 +218,7 @@ export function SettingsPage() {
                     Tamanho da fonte
                   </div>
                   <p className="text-[12px] text-ink-500 dark:text-ink-400">
-                    Ajuste para leitura prolongada mais confortÃ¡vel.
+                    Ajuste para leitura prolongada mais confortável.
                   </p>
                 </div>
                 <div className="grid grid-cols-3 gap-2">
@@ -289,7 +289,7 @@ export function SettingsPage() {
                     Apagar tudo
                   </div>
                   <p className="text-[12px] text-ink-500 dark:text-ink-400">
-                    Mensagens, histÃ³rico e conversas de IA.
+                    Mensagens, histórico e conversas de IA.
                   </p>
                 </div>
                 <button

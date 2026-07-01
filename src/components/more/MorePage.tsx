@@ -30,15 +30,15 @@ export function MorePage() {
 
   const grupos: { titulo: string; itens: Item[] }[] = [
     {
-      titulo: 'Acesso rÃ¡pido',
+      titulo: 'Acesso rápido',
       itens: [
-        { to: '/estudo',    icon: Compass,  label: 'Modo Estudo',         description: 'Personagens, mapas, cronologias, lÃ©xico' },
-        { to: '/analista',  icon: Sparkles, label: 'Analista de SermÃµes', description: 'AvaliaÃ§Ã£o estrutural de cada mensagem' },
+        { to: '/estudo',    icon: Compass,  label: 'Modo Estudo',         description: 'Personagens, mapas, cronologias, léxico' },
+        { to: '/analista',  icon: Sparkles, label: 'Analista de Sermões', description: 'Avaliação estrutural de cada mensagem' },
         { to: '/biblioteca', icon: Library, label: 'Biblioteca completa', description: 'Todas as mensagens com filtros' },
       ],
     },
     {
-      titulo: 'AparÃªncia',
+      titulo: 'Aparência',
       itens: [
         {
           icon: tema === 'light' ? Moon : Sun,
@@ -50,10 +50,10 @@ export function MorePage() {
     {
       titulo: 'Sistema',
       itens: [
-        { to: '/configuracoes', icon: SettingsIcon, label: 'ConfiguraÃ§Ãµes', description: 'API da IA, backup, limpeza' },
+        { to: '/configuracoes', icon: SettingsIcon, label: 'Configurações', description: 'API da IA, backup, limpeza' },
         {
           icon: Github,
-          label: 'CÃ³digo-fonte',
+          label: 'Código-fonte',
           description: `v${APP_VERSION} Â· Mobile-first + PWA`,
           onClick: () => window.open('https://github.com/solabrasil/solabrasil', '_blank'),
         },

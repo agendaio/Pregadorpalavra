@@ -48,12 +48,12 @@ export function OutlinesPage() {
   return (
     <div className="flex h-full flex-col bg-paper text-ink-900 dark:bg-paper-dark dark:text-ink-100">
       <MobileHeader
-        title="EsboÃ§os"
-        subtitle={`${lista.length} mensagens com esboÃ§o`}
+        title="Esboços"
+        subtitle={`${lista.length} mensagens com esboço`}
         right={
           <button
             onClick={() => setShowGallery(true)}
-            aria-label="Novo sermÃ£o"
+            aria-label="Novo sermão"
             className="mr-1 flex h-11 w-11 items-center justify-center rounded-full text-ink-700 transition-colors hover:bg-ink-100 active:bg-ink-200 dark:text-ink-200 dark:hover:bg-ink-800/60"
           >
             <Plus className="h-5 w-5" />
@@ -67,7 +67,7 @@ export function OutlinesPage() {
           <input
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
-            placeholder="Buscar esboÃ§osâ€¦"
+            placeholder="Buscar esboçosâ€¦"
             className="flex-1 bg-transparent text-[14px] outline-none placeholder:text-ink-400 dark:placeholder:text-ink-500"
           />
         </div>
@@ -118,7 +118,7 @@ export function OutlinesPage() {
                       </div>
                       <div className="min-w-0 flex-1">
                         <h3 className="truncate text-[14.5px] font-semibold tracking-tight text-ink-900 dark:text-white">
-                          {m.titulo || 'Sem tÃ­tulo'}
+                          {m.titulo || 'Sem título'}
                         </h3>
                         {m.textoBase && (
                           <p className="mt-0.5 truncate text-[12px] text-ink-600 dark:text-ink-300">
@@ -162,16 +162,16 @@ function EmptyState({ onNova }: { onNova: () => void }) {
         <ScrollText className="h-6 w-6" />
       </motion.div>
       <h3 className="text-[15px] font-semibold tracking-tight text-ink-900 dark:text-white">
-        Nenhum esboÃ§o ainda
+        Nenhum esboço ainda
       </h3>
       <p className="mt-1 max-w-xs text-[13px] leading-relaxed text-ink-500 dark:text-ink-400">
-        Crie uma mensagem e use o Assistente para gerar esboÃ§os estruturados.
+        Crie uma mensagem e use o Assistente para gerar esboços estruturados.
       </p>
       <button
         onClick={onNova}
         className="mt-5 inline-flex h-11 items-center gap-2 rounded-xl bg-ink-900 px-5 text-[14px] font-semibold text-white shadow-soft transition-all hover:bg-ink-800 active:scale-[0.97] dark:bg-white dark:text-ink-950 dark:hover:bg-ink-100"
       >
-        <Plus className="h-4 w-4" /> Novo sermÃ£o
+        <Plus className="h-4 w-4" /> Novo sermão
       </button>
     </div>
   );
