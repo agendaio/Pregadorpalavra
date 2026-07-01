@@ -137,6 +137,9 @@ function ApiKeysSection() {
   const [testOk, setTestOk] = useState(false);
   const [mostrarChave, setMostrarChave] = useState<string | null>(null);
 
+  // Editing state
+  const [editingKeyId, setEditingKeyId] = useState<string | null>(null);
+
   // Form state
   const [provider, setProvider] = useState('openai');
   const [modelo, setModelo] = useState('gpt-4o-mini');
@@ -147,6 +150,48 @@ function ApiKeysSection() {
   const [ctxWin, setCtxWin] = useState(128000);
   const [streaming, setStreaming] = useState(true);
   const [memoria, setMemoria] = useState('sermon');
+
+  function editarKey(c: ApiKeyConfig) {
+    setEditingKeyId(c.id);
+    setProvider(c.provider);
+    setModelo(c.modelo_padrao ?? PROVIDERS.find(p => p.id === c.provider)?.modelos[0].id ?? 'gpt-4o-mini');
+    setApiKeyRaw(c.key_ciphertext ?? '');
+    setTemp(c.temperature ?? 0.7);
+    setMaxTok(c.max_tokens ?? 2048);
+    setTimeoutMs(c.timeout_ms ?? 60000);
+    setCtxWin(c.context_window ?? 128000);
+    setStreaming(c.streaming ?? true);
+    setMemoria(c.memoria_contexto ?? 'sermon');
+    setTestResults([]);
+    setTestOk(false);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  async function excluirKey(c: ApiKeyConfig) {
+    if (!confirm(`Excluir a chave ${PROVIDERS.find(p => p.id === c.provider)?.label}?`)) return;
+    const sb = supabase();
+    await sb!.from('api_keys').delete().eq('id', c.id);
+    if (editingKeyId === c.id) {
+      setEditingKeyId(null);
+      void resetForm();
+    }
+    await carregar();
+  }
+
+  function resetForm() {
+    setEditingKeyId(null);
+    setProvider('openai');
+    setModelo('gpt-4o-mini');
+    setApiKeyRaw('');
+    setTemp(0.7);
+    setMaxTok(2048);
+    setTimeoutMs(60000);
+    setCtxWin(128000);
+    setStreaming(true);
+    setMemoria('sermon');
+    setTestResults([]);
+    setTestOk(false);
+  }
 
   const provMeta = PROVIDERS.find(p => p.id === provider)!;
 
@@ -211,31 +256,121 @@ function ApiKeysSection() {
   }
 
   async function salvar() {
-    if (!apiKeyRaw.trim()) return;
-    setSaving(true);
-    const sb = supabase();
-    const payload = {
-      provider, modelo_padrao: modelo, ativo: true,
-      temperature: temp, max_tokens: maxTok, timeout_ms: timeoutMs,
-      context_window: ctxWin, streaming,
-      memoria_contexto: memoria,
-      key_ciphertext: apiKeyRaw.trim(),
-    };
-    const existing = configs.find(c => c.provider === provider);
-    if (existing) {
-      await sb!.from('api_keys').update({ ...payload, atualizado_em: new Date().toISOString() }).eq('id', existing.id);
-    } else {
-      await sb!.from('api_keys').insert(payload);
+    if (!apiKeyRaw.trim()) {
+      setTestResults([{ name: 'Validação', passed: false, message: 'Digite a API Key antes de salvar.' }]);
+      return;
     }
+    setSaving(true);
+
+    // Auto-testar antes de salvar
+    setTestando(true);
+    setTestResults([]);
+    let testPassed = false;
+    try {
+      const { data, error } = await callEdgeFunction<{ success: boolean; tests: TestResult[] }>(
+        'test-key',
+        { provider, apiKey: apiKeyRaw.trim(), model: modelo },
+      );
+      if (data && Array.isArray(data.tests)) {
+        setTestResults(data.tests);
+        setTestOk(data.success);
+        if (!data.success) {
+          setTestando(false);
+          setSaving(false);
+          return;
+        }
+        testPassed = true;
+      } else if (error) {
+        const msg = error.message ?? 'Erro desconhecido';
+        setTestResults([{ name: 'Teste falhou', passed: false, message: msg }]);
+        setTestOk(false);
+        setTestando(false);
+        setSaving(false);
+        return;
+      }
+    } catch (e) {
+      setTestResults([{ name: 'Erro no teste', passed: false, message: (e as Error).message }]);
+      setTestOk(false);
+      setTestando(false);
+      setSaving(false);
+      return;
+    }
+    setTestando(false);
+
+    const sb = supabase();
+    const latencyMs = testResults.find(t => t.latencyMs)?.latencyMs ?? null;
+    const payload = {
+      provider,
+      key_ciphertext: apiKeyRaw.trim(),
+      modelo_padrao: modelo,
+      ativo: true,
+      temperature: temp,
+      max_tokens: maxTok,
+      timeout_ms: timeoutMs,
+      context_window: ctxWin,
+      streaming,
+      memoria_contexto: memoria,
+      ultimo_teste_em: new Date().toISOString(),
+      ultimo_status: 'online',
+      ultimo_teste_latency_ms: latencyMs,
+    };
+
+    try {
+      // Modo edição: atualiza direto
+      if (editingKeyId) {
+        const { error } = await sb!.from('api_keys').update({ ...payload, atualizado_em: new Date().toISOString() }).eq('id', editingKeyId);
+        if (error) throw error;
+        setTestResults(prev => [...prev, { name: 'Salvar', passed: true, message: `✅ Chave editada e salva com sucesso!` }]);
+        resetForm();
+      } else {
+        // Modo novo: desativa as ativas do mesmo provider
+        await sb!.from('api_keys').update({ ativo: false, atualizado_em: new Date().toISOString() }).eq('provider', provider).eq('ativo', true);
+        const inactiveExisting = configs.find((c) => c.provider === provider && !c.ativo);
+        if (inactiveExisting) {
+          const { error } = await sb!.from('api_keys').update({ ...payload, atualizado_em: new Date().toISOString() }).eq('id', inactiveExisting.id);
+          if (error) throw error;
+        } else {
+          const { error } = await sb!.from('api_keys').insert({ ...payload, criado_em: new Date().toISOString() });
+          if (error) throw error;
+        }
+        setTestResults(prev => [...prev, { name: 'Salvar', passed: true, message: `✅ Chave ${provider} salva com sucesso!` }]);
+        setApiKeyRaw('');
+      }
+      await carregar();
+    } catch (e) {
+      const msg = (e as Error).message ?? String(e);
+      setTestResults(prev => [...prev, { name: 'Erro ao salvar', passed: false, message: `❌ ${msg}` }]);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function excluir(id: string, provLabel: string) {
+    if (!confirm(`Excluir chave ${provLabel}? Esta ação não pode ser desfeita.`)) return;
+    const sb = supabase();
+    const { error } = await sb!.from('api_keys').delete().eq('id', id);
+    if (error) {
+      setTestResults([{ name: 'Erro ao excluir', passed: false, message: `❌ ${error.message}` }]);
+      return;
+    }
+    if (editingKeyId === id) resetForm();
     await carregar();
-    setSaving(false);
   }
 
   if (loading) return <div className="flex items-center justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-ink-300" /></div>;
 
   return (
     <div className="space-y-5">
-      <SectionTitle>Configurar Provedor de IA</SectionTitle>
+      <div className="flex items-center justify-between">
+        <SectionTitle>
+          {editingKeyId ? `✏️ Editando: ${PROVIDERS.find(p => p.id === provider)?.label}` : 'Configurar Provedor de IA'}
+        </SectionTitle>
+        {editingKeyId && (
+          <button onClick={resetForm} className="flex items-center gap-1 rounded-xl border border-ink-200 bg-white px-3 py-1.5 text-[12px] font-medium text-ink-600 hover:bg-ink-50">
+            <X className="h-3.5 w-3.5" /> Cancelar edição
+          </button>
+        )}
+      </div>
       <Card className="p-4">
         <div className="mb-4 grid grid-cols-4 gap-2">
           {PROVIDERS.map(p => (
@@ -308,17 +443,18 @@ function ApiKeysSection() {
           </label>
         </div>
 
-        <div className="flex gap-2">
-          <button onClick={() => void testarChave()} disabled={!apiKeyRaw.trim() || testando}
-            className="flex items-center gap-1.5 rounded-xl border border-ink-200 bg-white px-4 py-2 text-[12.5px] font-medium text-ink-700 hover:bg-ink-50 disabled:opacity-50">
-            {testando ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Beaker className="h-3.5 w-3.5" />}
-            {testando ? 'Testando…' : 'Testar'}
-          </button>
-          <button onClick={() => void salvar()} disabled={saving || !apiKeyRaw.trim()}
+        <div className="flex flex-wrap gap-2">
+          <button onClick={() => void salvar()} disabled={saving || testando || !apiKeyRaw.trim()}
             className="flex items-center gap-1.5 rounded-xl bg-ink-900 px-4 py-2 text-[12.5px] font-semibold text-white hover:bg-ink-800 disabled:opacity-50">
-            {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
-            {saving ? 'Salvando…' : 'Salvar'}
+            {(saving || testando) ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Beaker className="h-3.5 w-3.5" />}
+            {saving ? 'Salvando…' : testando ? 'Testando e salvando…' : editingKeyId ? '🔄 Testar e Atualizar' : '🧪 Testar e Salvar'}
           </button>
+          {editingKeyId && (
+            <button onClick={() => void excluir(editingKeyId, PROVIDERS.find(p => p.id === provider)?.label ?? provider)}
+              className="flex items-center gap-1.5 rounded-xl border border-red-200 bg-white px-4 py-2 text-[12.5px] font-medium text-red-600 hover:bg-red-50">
+              <Trash2 className="h-3.5 w-3.5" /> Excluir
+            </button>
+          )}
         </div>
 
         {testResults.length > 0 && (
@@ -347,16 +483,29 @@ function ApiKeysSection() {
                   <span className="text-2xl">{prov?.logo}</span>
                   <div className="flex-1">
                     <div className="text-[13px] font-semibold text-ink-900">{prov?.label}</div>
-                    <div className="text-[11px] text-ink-500">{c.modelo_padrao} · {c.ativo ? '🟢 Ativo' : '⚫ Inativo'}</div>
+                    <div className="text-[11px] text-ink-500">
+                      {c.modelo_padrao} · {c.ativo ? '🟢 Ativo' : '⚫ Inativo'} · {c.key_ciphertext ? `${c.key_ciphertext.slice(0, 6)}…${c.key_ciphertext.slice(-4)}` : 'sem chave'}
+                    </div>
                   </div>
                   <div className="flex items-center gap-2">
                     {c.ultimo_status && <StatusBadge ok={c.ultimo_status === 'online'} label={c.ultimo_status === 'online' ? 'Online' : 'Offline'} />}
                     {c.ultimo_teste_latency_ms && <span className="text-[10.5px] font-mono text-ink-400">{c.ultimo_teste_latency_ms}ms</span>}
+                    <button
+                      onClick={() => void excluir(c.id, prov?.label ?? c.provider)}
+                      title="Excluir chave"
+                      className="ml-1 flex h-7 w-7 items-center justify-center rounded-lg border border-red-200 text-red-600 hover:bg-red-50"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
                   </div>
                 </Card>
               );
             })}
           </div>
+          <p className="mt-2 text-[10.5px] text-ink-500">
+            💡 <strong>Como funciona:</strong> ao salvar, o sistema desativa automaticamente outras chaves do mesmo provedor e ativa a nova.
+            Cada provedor pode ter apenas <strong>1 chave ativa</strong> por vez (constraint do banco).
+          </p>
         </>
       )}
     </div>
