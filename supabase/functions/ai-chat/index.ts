@@ -30,7 +30,9 @@ function json(data: unknown, status = 200, extraHeaders: Record<string, string> 
       'Content-Type': 'application/json',
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'authorization, content-type',
+      // Supabase JS injeta `apikey` e `x-client-info` automaticamente — devem
+      // constar aqui no preflight OPTIONS, senão o browser bloqueia com CORS.
+      'Access-Control-Allow-Headers': 'authorization, content-type, apikey, x-client-info',
       ...extraHeaders,
     },
   });
@@ -125,7 +127,7 @@ async function callOpenAI(opts: ChatOptions) {
         'Cache-Control': 'no-cache',
         'Connection': 'keep-alive',
         'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'authorization, content-type',
+        'Access-Control-Allow-Headers': 'authorization, content-type, apikey, x-client-info',
       },
     });
   }
@@ -511,7 +513,7 @@ serve(async (req) => {
       headers: {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'authorization, content-type',
+        'Access-Control-Allow-Headers': 'authorization, content-type, apikey, x-client-info',
         'Access-Control-Max-Age': '86400',
       },
     });

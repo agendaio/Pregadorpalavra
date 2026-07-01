@@ -3,7 +3,9 @@ import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Authorization, Content-Type, X-Client-Info',
+  // Supabase JS adiciona automaticamente os headers `apikey` e `x-client-info`
+  // em toda chamada. Sem eles no preflight, o browser bloqueia com CORS.
+  'Access-Control-Allow-Headers': 'Authorization, Content-Type, X-Client-Info, apikey, x-client-info',
   'Access-Control-Max-Age': '86400',
 };
 
