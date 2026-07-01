@@ -1,13 +1,13 @@
 ﻿/**
- * /pulpit â€” Modo PregaÃ§Ã£o Premium
+ * /pulpit â€” Modo Pregação Premium
  *
- * Tela em tempo real usada durante cultos e ministraÃ§Ãµes.
+ * Tela em tempo real usada durante cultos e ministrações.
  * Mobile-first, fullscreen, segura contra toques acidentais, e desenhada
- * para que o pregador NUNCA se perca: o ponto atual estÃ¡ sempre no centro,
- * o prÃ³ximo sobe automaticamente, e tudo que jÃ¡ foi ministrado permanece
- * visÃ­vel (com opacidade reduzida e check) para referÃªncia rÃ¡pida.
+ * para que o pregador NUNCA se perca: o ponto atual está sempre no centro,
+ * o próximo sobe automaticamente, e tudo que já foi ministrado permanece
+ * visível (com opacidade reduzida e check) para referência rápida.
  *
- * NÃ£o altera stores, parser ou modelo de dados â€” apenas consome o que existe.
+ * Não altera stores, parser ou modelo de dados â€” apenas consome o que existe.
  */
 
 import {
@@ -57,9 +57,9 @@ interface SecaoClassificada extends Capitulo {
   cor: {
     borda: string;   // cor de destaque
     fundo: string;   // fundo do card
-    ativo: string;   // fundo quando Ã© o ponto atual
+    ativo: string;   // fundo quando é o ponto atual
     check: string;   // cor do check
-    texto: string;   // cor do tÃ­tulo
+    texto: string;   // cor do título
   };
 }
 
@@ -70,15 +70,15 @@ interface ResultadoBusca {
   contexto: string;
 }
 
-// â”€â”€â”€ ClassificaÃ§Ã£o semÃ¢ntica dos capÃ­tulos â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// â”€â”€â”€ Classificação semântica dos capítulos â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 //
-// Decidida pelo tÃ­tulo â€” pregador escreve "IntroduÃ§Ã£o", "Ponto 1 â€” A fÃ©",
-// "AplicaÃ§Ã£o", "IlustraÃ§Ã£o", "ConclusÃ£o" e a UI cuida do resto.
+// Decidida pelo título â€” pregador escreve "Introdução", "Ponto 1 â€” A fé",
+// "Aplicação", "Ilustração", "Conclusão" e a UI cuida do resto.
 
-const RE_INTRO    = /^(intro|introduÃ§Ã£o|introducao|abertura|abertura|contextualizaÃ§Ã£o|contextualizacao)/i;
-const RE_APLIC    = /^(aplica|aplicaÃ§Ã£o|aplicacao|desafio|encerramento|prÃ¡tica|pratica)/i;
-const RE_ILUST    = /^(ilustra|ilustraÃ§Ã£o|ilustracao|histÃ³ria|historia|exemplo|metÃ¡fora|metafora|parÃ¡bola|parabola)/i;
-const RE_CONCL    = /^(conclus|conclusÃ£o|conclusao|fechamento|final|call\s*to\s*action|cta|apelo)/i;
+const RE_INTRO    = /^(intro|introdução|introducao|abertura|abertura|contextualização|contextualizacao)/i;
+const RE_APLIC    = /^(aplica|aplicação|aplicacao|desafio|encerramento|prática|pratica)/i;
+const RE_ILUST    = /^(ilustra|ilustração|ilustracao|história|historia|exemplo|metáfora|metafora|parábola|parabola)/i;
+const RE_CONCL    = /^(conclus|conclusão|conclusao|fechamento|final|call\s*to\s*action|cta|apelo)/i;
 const RE_PONTO    = /^ponto\s*\d|^p\s*\d|^parte\s*\d|^i{1,3}\s*[-â€“â€”]/i;
 
 function classificarCapitulo(titulo: string): TipoSecao {
@@ -89,7 +89,7 @@ function classificarCapitulo(titulo: string): TipoSecao {
   if (RE_ILUST.test(t)) return 'ilustracao';
   if (RE_CONCL.test(t)) return 'conclusao';
   if (RE_PONTO.test(t)) return 'ponto';
-  return 'ponto'; // default razoÃ¡vel
+  return 'ponto'; // default razoável
 }
 
 const CORES: Record<TipoSecao, SecaoClassificada['cor']> = {
@@ -138,15 +138,15 @@ const CORES: Record<TipoSecao, SecaoClassificada['cor']> = {
 };
 
 const ROTULO_TIPO: Record<TipoSecao, string> = {
-  introducao: 'IntroduÃ§Ã£o',
+  introducao: 'Introdução',
   ponto: 'Ponto',
-  aplicacao: 'AplicaÃ§Ã£o',
-  ilustracao: 'IlustraÃ§Ã£o',
-  conclusao: 'ConclusÃ£o',
-  conteudo: 'ConteÃºdo',
+  aplicacao: 'Aplicação',
+  ilustracao: 'Ilustração',
+  conclusao: 'Conclusão',
+  conteudo: 'Conteúdo',
 };
 
-// â”€â”€â”€ Hook: detecÃ§Ã£o de long-press â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// â”€â”€â”€ Hook: detecção de long-press â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function useLongPress(onLongPress: () => void, delay = 600) {
   const timer = useRef<number | null>(null);
@@ -170,12 +170,12 @@ function useLongPress(onLongPress: () => void, delay = 600) {
     onPointerUp: cancel,
     onPointerLeave: cancel,
     onPointerCancel: cancel,
-    // Sinaliza pro consumidor se o Ãºltimo gesto foi long-press (nÃ£o disparar onClick)
+    // Sinaliza pro consumidor se o último gesto foi long-press (não disparar onClick)
     foiLongPress: () => triggered.current,
   };
 }
 
-// â”€â”€â”€ Componente: linha de conteÃºdo (marca simples) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// â”€â”€â”€ Componente: linha de conteúdo (marca simples) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const BlocoLinha = memo(function BlocoLinha({
   texto,
@@ -242,7 +242,7 @@ const BlocoLinha = memo(function BlocoLinha({
   );
 });
 
-// â”€â”€â”€ Componente: card de seÃ§Ã£o (accordion inteligente) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// â”€â”€â”€ Componente: card de seção (accordion inteligente) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 interface CapituloCardProps {
   capitulo: SecaoClassificada;
@@ -326,7 +326,7 @@ const CapituloCard = memo(function CapituloCard({
           type="button"
           onClick={handleHeaderClick}
           aria-expanded={aberto && !feito}
-          aria-label={`${capitulo.titulo} â€” ${feito ? 'concluÃ­do' : aberto ? 'aberto' : 'fechado'}`}
+          aria-label={`${capitulo.titulo} â€” ${feito ? 'concluído' : aberto ? 'aberto' : 'fechado'}`}
           className="flex w-full cursor-pointer items-center gap-3 px-4 py-3.5 text-left transition-colors touch-manipulation"
         >
           {/* Badge lateral */}
@@ -351,7 +351,7 @@ const CapituloCard = memo(function CapituloCard({
             )}
           </div>
 
-          {/* TÃ­tulo + subtÃ­tulo + meta */}
+          {/* Título + subtítulo + meta */}
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
               <span
@@ -369,7 +369,7 @@ const CapituloCard = memo(function CapituloCard({
               )}
               {feito && (
                 <span className="rounded-full bg-emerald-500/20 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-300">
-                  ConcluÃ­do
+                  Concluído
                 </span>
               )}
             </div>
@@ -409,7 +409,7 @@ const CapituloCard = memo(function CapituloCard({
           </div>
         )}
 
-        {/* Hint long-press (sÃ³ no capÃ­tulo atual) */}
+        {/* Hint long-press (só no capítulo atual) */}
         {ehAtual && !feito && (
           <div className="absolute right-12 top-1/2 -translate-y-1/2 hidden sm:block">
             <span className="rounded-full bg-white/5 px-2 py-0.5 text-[9px] text-white/40">
@@ -419,7 +419,7 @@ const CapituloCard = memo(function CapituloCard({
         )}
       </div>
 
-      {/* ConteÃºdo expandido */}
+      {/* Conteúdo expandido */}
       <AnimatePresence initial={false}>
         {aberto && !feito && capitulo.blocos.length > 0 && (
           <motion.div
@@ -447,14 +447,14 @@ const CapituloCard = memo(function CapituloCard({
                   />
                 );
               })}
-              {/* BotÃ£o explÃ­cito "Concluir esta seÃ§Ã£o" â€” alÃ©m do long-press */}
+              {/* Botão explícito "Concluir esta seção" â€” além do long-press */}
               <button
                 type="button"
                 onClick={concluirSecao}
                 className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg border border-emerald-400/30 bg-emerald-500/10 px-3 py-2.5 text-[12px] font-semibold text-emerald-200 transition-colors hover:bg-emerald-500/20 active:scale-[0.99] touch-manipulation"
               >
                 <CheckCircle2 className="h-3.5 w-3.5" />
-                Concluir esta seÃ§Ã£o
+                Concluir esta seção
               </button>
             </div>
           </motion.div>
@@ -469,7 +469,7 @@ const CapituloCard = memo(function CapituloCard({
 function destacarTermo(texto: string, termo: string) {
   if (!termo) return texto;
   // Para o React, devolvemos o texto original (sem dangerouslySetInnerHTML).
-  // O destaque visual Ã© feito via classes condicionais em BlocoLinha.
+  // O destaque visual é feito via classes condicionais em BlocoLinha.
   return texto;
 }
 
@@ -510,11 +510,11 @@ export function PulpitPage() {
   const [modoFoco, setModoFoco] = useState(false);
   const [buscaAberta, setBuscaAberta] = useState(false);
   const [termoBusca, setTermoBusca] = useState('');
-  const [temaEscuro, setTemaEscuro] = useState(true); // /pulpit Ã© sempre dark por design
+  const [temaEscuro, setTemaEscuro] = useState(true); // /pulpit é sempre dark por design
 
   const mostrarToast = useUIStore((s) => s.mostrarToast);
 
-  // â”€â”€â”€ InicializaÃ§Ã£o: parsear esboÃ§o quando mensagem muda â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // â”€â”€â”€ Inicialização: parsear esboço quando mensagem muda â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   useEffect(() => {
     if (!mensagem) return;
     const fonte = mensagem.esboco || mensagem.conteudo;
@@ -522,7 +522,7 @@ export function PulpitPage() {
     inicializarProgresso(parsearEsboco(fonte));
   }, [mensagem?.id, mensagem, inicializarProgresso]);
 
-  // â”€â”€â”€ CapÃ­tulos classificados por tipo semÃ¢ntico â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // â”€â”€â”€ Capítulos classificados por tipo semântico â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const capitulosClassificados: SecaoClassificada[] = useMemo(() => {
     return capitulos.map((c) => ({
       ...c,
@@ -531,7 +531,7 @@ export function PulpitPage() {
     }));
   }, [capitulos]);
 
-  // â”€â”€â”€ CapÃ­tulos com cor recalculada apÃ³s classificar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // â”€â”€â”€ Capítulos com cor recalculada após classificar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const capitulosColoridos = useMemo(() => {
     return capitulos.map((c) => {
       const tipo = classificarCapitulo(c.titulo);
@@ -539,13 +539,13 @@ export function PulpitPage() {
     });
   }, [capitulos]);
 
-  // â”€â”€â”€ RelÃ³gio parede (1Hz) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // â”€â”€â”€ Relógio parede (1Hz) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   useEffect(() => {
     const t = window.setInterval(() => setAgora(Date.now()), 1000);
     return () => window.clearInterval(t);
   }, []);
 
-  // â”€â”€â”€ Tick cronÃ´metro (5Hz para precisÃ£o sem queimar CPU) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // â”€â”€â”€ Tick cronômetro (5Hz para precisão sem queimar CPU) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   useEffect(() => {
     if (!iniciadaEm || pausada) return;
     const t = window.setInterval(tickAgora, 200);
@@ -566,18 +566,18 @@ export function PulpitPage() {
     else cardRefs.current.delete(id);
   }, []);
 
-  // â”€â”€â”€ PrÃ³ximo / atual â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // â”€â”€â”€ Próximo / atual â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const totalFeitos = capitulosFeitos.size;
   const totalCaps = capitulos.length;
   const todosFeitos = totalCaps > 0 && totalFeitos === totalCaps;
   const primeiroNaoFeitoIdx = capitulos.findIndex((c) => !capitulosFeitos.has(c.id));
   const capituloAtual = primeiroNaoFeitoIdx >= 0 ? capitulosColoridos[primeiroNaoFeitoIdx] : null;
 
-  // â”€â”€â”€ Scroll inteligente: quando um capÃ­tulo vira feito, o prÃ³ximo vai pro centro â”€â”€
+  // â”€â”€â”€ Scroll inteligente: quando um capítulo vira feito, o próximo vai pro centro â”€â”€
   const ultimoFeitoRef = useRef<number>(-1);
   useEffect(() => {
     if (primeiroNaoFeitoIdx < 0) return;
-    // Detecta mudanÃ§a: o que era "prÃ³ximo" agora Ã© "atual"
+    // Detecta mudança: o que era "próximo" agora é "atual"
     const totalFeitosAgora = capitulosFeitos.size;
     if (totalFeitosAgora === ultimoFeitoRef.current) return;
     ultimoFeitoRef.current = totalFeitosAgora;
@@ -597,11 +597,11 @@ export function PulpitPage() {
     return () => window.clearTimeout(t);
   }, [capitulosFeitos, primeiroNaoFeitoIdx]);
 
-  // â”€â”€â”€ AÃ§Ãµes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // â”€â”€â”€ Ações â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const handleIniciarOuPausar = useCallback(() => {
     if (!iniciadaEm) {
       iniciar();
-      mostrarToast('MinistraÃ§Ã£o iniciada', 'sucesso');
+      mostrarToast('Ministração iniciada', 'sucesso');
     } else if (pausada) {
       iniciar();
     } else {
@@ -623,7 +623,7 @@ export function PulpitPage() {
 
   const handleReabrirSecao = useCallback(
     (id: number) => {
-      // Remove dos feitos e forÃ§a abrir
+      // Remove dos feitos e força abrir
       const state = useProgressoStore.getState();
       const novosFeitos = new Set(state.capitulosFeitos);
       novosFeitos.delete(id);
@@ -643,7 +643,7 @@ export function PulpitPage() {
     setTermoBusca('');
   }, [resetar, resetarProgresso]);
 
-  // â”€â”€â”€ Busca: Cmd/Ctrl+K ou botÃ£o â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // â”€â”€â”€ Busca: Cmd/Ctrl+K ou botão â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   useEffect(() => {
     const fn = (e: KeyboardEvent) => {
       const tag = (e.target as HTMLElement)?.tagName;
@@ -671,9 +671,9 @@ export function PulpitPage() {
     const t = termoBusca.toLowerCase();
     const out: ResultadoBusca[] = [];
     for (const cap of capitulosColoridos) {
-      // Procura no tÃ­tulo
+      // Procura no título
       if (cap.titulo.toLowerCase().includes(t)) {
-        out.push({ capituloId: cap.id, blocoId: -1, texto: cap.titulo, contexto: 'TÃ­tulo' });
+        out.push({ capituloId: cap.id, blocoId: -1, texto: cap.titulo, contexto: 'Título' });
       }
       // Procura nas linhas
       for (const bloco of cap.blocos) {
@@ -719,7 +719,7 @@ export function PulpitPage() {
     abrirCapitulo,
   ]);
 
-  // â”€â”€â”€ CronÃ´metro derivado â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // â”€â”€â”€ Cronômetro derivado â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   let duracaoMs = 0;
   if (iniciadaEm) duracaoMs = pausada ? tempoPausadoMs : Date.now() - iniciadaEm;
   const progressoTempo =
@@ -730,7 +730,7 @@ export function PulpitPage() {
     ? Math.max(0, mensagem.tempoEstimado * 60_000 - duracaoMs)
     : 0;
 
-  // â”€â”€â”€ Lock body scroll enquanto /pulpit estÃ¡ ativo â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // â”€â”€â”€ Lock body scroll enquanto /pulpit está ativo â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   useLayoutEffect(() => {
     const prevOverflow = document.body.style.overflow;
     const prevHeight = document.body.style.height;
@@ -754,7 +754,7 @@ export function PulpitPage() {
     );
   }
 
-  // Paleta tema â€” dark sempre (pregaÃ§Ã£o Ã© noturna/luz baixa)
+  // Paleta tema â€” dark sempre (pregação é noturna/luz baixa)
   const tema = {
     bg: '#07070d',
     bgGrad: 'linear-gradient(180deg, #0a0a18 0%, #07070f 60%, #050509 100%)',
@@ -794,7 +794,7 @@ return (
 
         <div className="min-w-0 flex-1">
           <h1 className="truncate text-[13.5px] font-semibold leading-tight text-amber-100 sm:text-[14.5px]">
-            {mensagem.titulo || 'Sem tÃ­tulo'}
+            {mensagem.titulo || 'Sem título'}
           </h1>
           <div className="truncate text-[10px] text-white/50">
             {mensagem.textoBase && <span>{mensagem.textoBase}</span>}
@@ -802,7 +802,7 @@ return (
           </div>
         </div>
 
-        {/* CronÃ´metro central */}
+        {/* Cronômetro central */}
         <div className="flex flex-shrink-0 items-center gap-1.5 rounded-full border border-amber-300/20 bg-amber-300/[0.04] px-2.5 py-1 sm:gap-2 sm:px-3 sm:py-1.5">
           <Clock className="h-3 w-3 text-amber-300/80" />
           <span className="font-mono text-[13.5px] font-semibold tabular-nums leading-none text-amber-100 sm:text-[15px]">
@@ -815,14 +815,14 @@ return (
           )}
         </div>
 
-        {/* RelÃ³gio parede */}
+        {/* Relógio parede */}
         <div className="hidden flex-shrink-0 text-right sm:block">
           <div className="font-mono text-[12px] leading-none tabular-nums text-white/55">
             {formatarRelogio(agora)}
           </div>
         </div>
 
-        {/* BotÃ£o play/pause */}
+        {/* Botão play/pause */}
         <button
           type="button"
           onClick={handleIniciarOuPausar}
@@ -842,7 +842,7 @@ return (
         </button>
       </header>
 
-      {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• BARRA DE NAVEGAÃ‡ÃƒO RÃPIDA (chips) â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
+      {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• BARRA DE NAVEGAÃ‡ÃƒO RÁPIDA (chips) â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
       {!modoFoco && (
         <div
           className="flex flex-shrink-0 items-center gap-1.5 overflow-x-auto border-b border-amber-300/10 bg-black/20 px-3 py-2 sm:px-5 scrollbar-none"
@@ -888,13 +888,13 @@ return (
               className="ml-auto flex flex-shrink-0 items-center gap-1.5 rounded-full bg-emerald-500/20 px-3 py-1 text-[11px] font-semibold text-emerald-200 hover:bg-emerald-500/30 active:scale-95 touch-manipulation"
             >
               <RotateCcw className="h-3 w-3" />
-              RecomeÃ§ar
+              Recomeçar
             </button>
           )}
         </div>
       )}
 
-      {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• CORPO: lista de seÃ§Ãµes â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
+      {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• CORPO: lista de seções â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
       <div
         ref={scrollContainerRef}
         className="flex-1 overflow-y-auto overscroll-contain"
@@ -925,8 +925,8 @@ return (
           {capitulosColoridos.length === 0 && (
             <div className="flex min-h-[60vh] flex-col items-center justify-center text-center">
               <div className="mb-4 text-5xl">ðŸ“–</div>
-              <p className="text-[15px] font-semibold text-amber-100">Nenhum esboÃ§o carregado</p>
-              <p className="mt-2 text-[12px] text-white/55">Volte ao editor e escreva o sermÃ£o.</p>
+              <p className="text-[15px] font-semibold text-amber-100">Nenhum esboço carregado</p>
+              <p className="mt-2 text-[12px] text-white/55">Volte ao editor e escreva o sermão.</p>
             </div>
           )}
 
@@ -934,11 +934,11 @@ return (
           {capitulosColoridos.length > 0 && (
             <div className="mt-12 mb-4 flex flex-col items-center text-center">
               <div className="mb-4 text-5xl text-amber-300">âœ</div>
-              <h2 className="mb-6 text-[28px] font-bold text-amber-300 sm:text-[32px]">OraÃ§Ã£o</h2>
+              <h2 className="mb-6 text-[28px] font-bold text-amber-300 sm:text-[32px]">Oração</h2>
               <p className="max-w-md italic text-[15.5px] leading-relaxed text-white/80 sm:text-[16px]">
                 Senhor, que a Tua Palavra seja luz nos nossos caminhos.<br />
-                Que a fÃ© que ouvimos hoje se faÃ§a obra em nossas vidas.<br />
-                Em nome de Jesus. <span className="font-semibold text-amber-300">AmÃ©m.</span>
+                Que a fé que ouvimos hoje se faça obra em nossas vidas.<br />
+                Em nome de Jesus. <span className="font-semibold text-amber-300">Amém.</span>
               </p>
               <div className="mt-8 h-px w-32 bg-amber-300/40" />
             </div>
@@ -1023,7 +1023,7 @@ return (
               <input
                 autoFocus
                 type="text"
-                placeholder="Buscar no esboÃ§oâ€¦"
+                placeholder="Buscar no esboçoâ€¦"
                 value={termoBusca}
                 onChange={(e) => setTermoBusca(e.target.value)}
                 className="flex-1 bg-transparent text-[15px] text-white placeholder:text-white/40 focus:outline-none"
@@ -1066,7 +1066,7 @@ return (
   );
 }
 
-// â”€â”€â”€ Componente: card de seÃ§Ã£o (design profissional dark+gold) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// â”€â”€â”€ Componente: card de seção (design profissional dark+gold) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const CapituloCardNovo = memo(function CapituloCardNovo({
   capitulo,
@@ -1089,7 +1089,7 @@ const CapituloCardNovo = memo(function CapituloCardNovo({
 }) {
   const numero = String(indice).padStart(2, '0');
 
-  // Separa os blocos em grupos: subtÃ­tulos, citaÃ§Ãµes, listas, parÃ¡grafos
+  // Separa os blocos em grupos: subtítulos, citações, listas, parágrafos
   type Item =
     | { kind: 'subtitulo'; texto: string }
     | { kind: 'citacao'; texto: string; ref?: string }
@@ -1106,9 +1106,9 @@ const CapituloCardNovo = memo(function CapituloCardNovo({
     } else if (txt.match(/^\d+\.\s+/) || txt.match(/^[â€¢\-]\s+/)) {
       itens.push({ kind: 'lista', texto: txt.replace(/^(\d+\.|[â€¢\-])\s+/, '').trim() });
     } else if (txt.length > 60 && txt.match(/[A-Z][a-z]+/)) {
-      // Detecta citaÃ§Ã£o bÃ­blica (heurÃ­stica: aspas ou nome de livro)
+      // Detecta citação bíblica (heurística: aspas ou nome de livro)
       const citMatch = txt.match(/["""]([^"""]+)["""]?/);
-      const refMatch = txt.match(/\(([A-ZÃÃ‰ÃÃ“Ãš][a-zÃ§]+\s+\d+[:\.]\d+[^)]*)\)/);
+      const refMatch = txt.match(/\(([A-ZÁÃ‰ÍÃ“Ãš][a-zç]+\s+\d+[:\.]\d+[^)]*)\)/);
       if (citMatch || refMatch) {
         itens.push({
           kind: 'citacao',
@@ -1156,7 +1156,7 @@ const CapituloCardNovo = memo(function CapituloCardNovo({
       transition={{ duration: 0.35, ease: [0.22, 0.9, 0.3, 1] }}
       className="space-y-5"
     >
-      {/* Header do capÃ­tulo â€” numeraÃ§Ã£o grande + tÃ­tulo em ouro */}
+      {/* Header do capítulo â€” numeração grande + título em ouro */}
       <div className="border-b border-amber-300/15 pb-3">
         <h2 className="font-serif text-[26px] font-bold leading-tight text-amber-300 sm:text-[30px]">
           {numero}. {capitulo.titulo}
@@ -1170,12 +1170,12 @@ const CapituloCardNovo = memo(function CapituloCardNovo({
         {feito && (
           <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-300">
             <CheckCircle2 className="h-3 w-3" />
-            ConcluÃ­do
+            Concluído
           </div>
         )}
       </div>
 
-      {/* Cards de pontos (subtÃ­tulos viram cards em grid) */}
+      {/* Cards de pontos (subtítulos viram cards em grid) */}
       {grupos.map((g, gi) => {
         if (g.tipo === 'cards') {
           const subtitulo = g.items[0]?.kind === 'subtitulo' ? (g.items[0] as Item & { kind: 'subtitulo' }).texto : null;
@@ -1277,7 +1277,7 @@ const CapituloCardNovo = memo(function CapituloCardNovo({
 });
 
 function extractTitle(texto: string): string {
-  // Pega a primeira frase atÃ© ":" ou "." ou "-"
+  // Pega a primeira frase até ":" ou "." ou "-"
   const m = texto.split(/[:.\-â€“â€”]/)[0];
   return (m || texto).slice(0, 60).trim();
 }
@@ -1292,7 +1292,7 @@ function extractDescription(texto: string): string {
 }
 
 function extractRef(texto: string): string | null {
-  const m = texto.match(/\(([A-ZÃÃ‰ÃÃ“Ãš][^)]*\d+[:\.][^)]*)\)/);
+  const m = texto.match(/\(([A-ZÁÃ‰ÍÃ“Ãš][^)]*\d+[:\.][^)]*)\)/);
   return m ? m[1] : null;
 }
 
