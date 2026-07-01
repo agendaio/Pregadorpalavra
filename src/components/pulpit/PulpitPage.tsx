@@ -40,6 +40,11 @@ import {
   ChevronDown,
   Clock,
   BookOpen,
+  Settings2,
+  Maximize2,
+  Minimize2,
+  AlignJustify,
+  PanelTopOpen,
 } from 'lucide-react';
 import { db } from '@/db/schema';
 import { usePulpitStore } from '@/stores/pulpit';
@@ -511,6 +516,9 @@ export function PulpitPage() {
   const [buscaAberta, setBuscaAberta] = useState(false);
   const [termoBusca, setTermoBusca] = useState('');
   const [temaEscuro, setTemaEscuro] = useState(true); // /pulpit é sempre dark por design
+  const [settingsAberta, setSettingsAberta] = useState(false);
+  const [modoApresentacao, setModoApresentacao] = useState(false);
+  const [espacamentoLinhas, setEspacamentoLinhas] = useState(1.55);
 
   const mostrarToast = useUIStore((s) => s.mostrarToast);
 
@@ -596,6 +604,21 @@ export function PulpitPage() {
     }, 320);
     return () => window.clearTimeout(t);
   }, [capitulosFeitos, primeiroNaoFeitoIdx]);
+
+  // â”€â”€â”€ Auto-scroll pro "Amém" quando termina tudo â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  const ultimoFeitoTodosRef = useRef(false);
+  useEffect(() => {
+    if (!todosFeitos || ultimoFeitoTodosRef.current) return;
+    ultimoFeitoTodosRef.current = true;
+    const t = window.setTimeout(() => {
+      const el = document.getElementById('orcao-final');
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        mostrarToast('Pregação concluída — Que Deus abençoe!', 'sucesso');
+      }
+    }, 400);
+    return () => window.clearTimeout(t);
+  }, [todosFeitos, mostrarToast]);
 
   // â”€â”€â”€ Ações â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const handleIniciarOuPausar = useCallback(() => {
