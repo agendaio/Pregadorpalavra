@@ -244,11 +244,10 @@ export class LocalProvider implements AIProvider {
 /** Gera resposta para conversa livre sem contexto de mensagem */
 function gerarRespostaLivre(textoUser: string): string {
   const texto = textoUser.toLowerCase();
-  const linhas = textoUser.split(/\s+/);
   const primeiraLinha = textoUser.split('\n')[0].trim();
 
   // Detectar livro/capítulo: "Romanos 8", "João 3:16", "Gênesis 1"
-  const refMatch = primeiraLinha.match(/^(\d?\s*[A-Za-zÀ-ÿ]+)\s*(\d+)[:\s]+(\d+[-\d,]*)?/i);
+  const refMatch = primeiraLinha.match(/^(\d?\s*[A-Za-zÀ-ÿ]+)\s*(\d+)([:\s]+(\d+[-\d,]*))?/i);
   const livroMatch = primeiraLinha.match(/^(\d?\s*[A-Za-zÀ-ÿ]+)\s*(\d+)$/i);
 
   if (refMatch) {
@@ -261,7 +260,7 @@ function gerarRespostaLivre(textoUser: string): string {
       `2. **O assistente vai carregar** automaticamente o contexto, tema e esboço.\n` +
       `3. **Peça** "Criar Esboço" ou "Explicar Versículo" no painel de ações.\n\n` +
       `Enquanto isso, posso te dar uma orientação inicial:\n\n` +
-      `Ao estudar este trecho,，值得 atenção: contexto histórico, público original, gênero literário e a intenção do autor. ` +
+      `Ao estudar este trecho, preste atenção: contexto histórico, público original, gênero literário e a intenção do autor. ` +
       `Depois de definir esses elementos, a aplicação prática fica muito mais clara.\n\n` +
       `*Para respostas completas com IA generativa, configure a chave da API OpenAI nas Configurações.*`;
   }
@@ -320,7 +319,6 @@ function gerarRespostaLivre(textoUser: string): string {
     `• **Aplicações** — práticas em 3 níveis (pessoal, relacional, comunitário).\n` +
     `• **Ilustrações** — exemplos concretos e memoráveis.\n\n` +
     `Para desbloquear **IA generativa completa**, configure sua chave OpenAI em Configurações.`;
-}
 }
 
 export const localProvider = new LocalProvider();
