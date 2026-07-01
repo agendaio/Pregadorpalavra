@@ -281,8 +281,32 @@ export async function registrarRequisicao(
   }
 }
 
-// ─── Provider stub (mantido para compatibilidade) ────────────────────────────
+// ─── Re-exports para compatibilidade de módulos ──────────────────────────────
 
-export const openaiProvider = {
-  pronto: async () => ({ ok: false, motivo: 'Provider configurado em lib/ai/openai.ts' }),
-};
+// Tipos de ações rápidas (AIPanel, etc.)
+export type { AcaoIA } from './types';
+export { ACOES_IA } from './types';
+
+// ChatMessage (vários componentes)
+export type { ChatMessage } from './provider';
+
+// Router e provider
+export { enviarComFallback } from './router';
+export { openaiProvider, OpenAIProvider } from './openai';
+export { localProvider, LocalProvider } from './local';
+export type { ProviderId } from './router';
+
+// Agent
+export { construirMensagens, SYSTEM_APPENDS } from './agent';
+export { SYSTEM_PROMPT, CONTEXT_INSTRUCTION } from './prompt';
+
+// contextoMensagem (agent.ts e local.ts)
+export { contextoMensagem } from './contexto';
+
+// Stats para SettingsPage
+export interface StatsIA {
+  requisicoes: number;
+  tokensTotal: number;
+  custoTotalUSD: number;
+  porProvider: Record<string, { requisicoes: number; tokens: number; custo: number }>;
+}
