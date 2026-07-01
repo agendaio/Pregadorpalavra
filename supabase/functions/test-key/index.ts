@@ -1,4 +1,4 @@
-﻿import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
+import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -238,7 +238,9 @@ serve(async (req) => {
     }
 
     const result = await runTests(provider, apiKey.trim(), model);
-    return json(result, result.success ? 200 : 422);
+    // Sempre 200 — sucesso/falha vai no body.tests (frontend lê normalmente).
+    // 422 quebraria o parse do supabase.functions.invoke e viraria "FunctionsFetchError".
+    return json(result, 200);
   } catch (err) {
     return json({
       success: false,

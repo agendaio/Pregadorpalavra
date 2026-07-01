@@ -176,39 +176,97 @@ function ApiKeysSection() {
     setTestResults([]);
     setTestOk(false);
     const sb = supabase();
+    if (!sb) {
+      setTestResults([{
+        name: 'Cliente Supabase',
+        passed: false,
+        message: 'Cliente Supabase não inicializou. Verifique VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no .env.',
+      }]);
+      setTestando(false);
+      return;
+    }
+
+    const session = await sb.auth.getSession();
+    if (!session.data.session) {
+      setTestResults([{
+        name: 'Autenticação',
+        passed: false,
+        message: 'Você não está logado como admin. Faça login em /admin/login antes de testar.',
+      }]);
+      setTestando(false);
+      return;
+    }
+
     try {
-      const { data, error } = await sb!.functions.invoke('test-key', {
+      const { data, error } = await sb.functions.invoke('test-key', {
         body: { provider, apiKey: apiKeyRaw.trim(), model: modelo },
       });
-      if (error || !data) {
-        const status = (error as any)?.context?.status;
-        const errBody = (error as any)?.context?.body;
-        let msg = errBody?.message ?? (error as any)?.message ?? String(error ?? '');
 
-        // Mostrar mensagem real do provedor (openai quota, anthropic credit, etc)
-        if (errBody?.tests && Array.isArray(errBody.tests)) {
-          setTestResults(errBody.tests);
-          setTestOk(false);
-          return;
-        }
-
-        if (String(msg).includes('quota') || String(msg).includes('credit') || status === 429) {
-          msg = `💳 Sem crédito na conta ${provider}. Adicione saldo em ${provider === 'anthropic' ? 'console.anthropic.com → Plans & Billing' : 'platform.openai.com → Billing'}.`;
-        } else if (status === 401) {
-          msg = `🔑 Chave inválida ou expirada. Verifique em ${provider}.`;
-        } else if (status === 403) {
-          msg = `⛔ Sem permissão. A chave não tem acesso a este modelo.`;
-        } else if (!status && String(msg).match(/Failed to send|FetchError/i)) {
-          msg = 'Não foi possível conectar ao servidor. Verifique sua internet.';
-        }
-        setTestResults([{ name: status ? `HTTP ${status}` : 'Erro de conexão', passed: false, message: msg }]);
-      } else {
+      // Função retornou OK e tem tests[]
+      if (data && typeof data === 'object' && Array.isArray((data as any).tests)) {
         const r = data as { success: boolean; tests: TestResult[] };
         setTestResults(r.tests);
         setTestOk(r.success);
+        return;
       }
+
+      // Erro veio do wrapper — tenta extrair body e status reais
+      if (error) {
+        const err: any = error;
+        const ctx = err.context ?? {};
+        const status: number | undefined = ctx.status;
+        const rawBody = ctx.body;
+        const errBody = typeof rawBody === 'string'
+          ? (() => { try { return JSON.parse(rawBody); } catch { return rawBody; } })()
+          : rawBody ?? null;
+
+        const detail = errBody?.message ?? err.message ?? String(error).slice(0, 200);
+
+        // 401/403 da Edge Function
+        if (status === 401) {
+          setTestResults([{
+            name: 'HTTP 401 — não autorizado',
+            passed: false,
+            message: 'Sua sessão de admin expirou. Faça logout e login novamente em /admin/login.',
+          }]);
+          return;
+        }
+        if (status === 403) {
+          setTestResults([{
+            name: 'HTTP 403 — proibido',
+            passed: false,
+            message: 'Você não tem permissão admin. A função test-key exige JWT de admin.',
+          }]);
+          return;
+        }
+
+        // Erros de rede / DNS / CORS
+        const netMatch = String(detail).match(/Failed to send|FetchError|network|fetch|ECONNREFUSED|ENOTFOUND|CORS|TypeError/i);
+        if (netMatch) {
+          setTestResults([{
+            name: 'Falha de rede',
+            passed: false,
+            message: `🌐 Não foi possível chamar a Edge Function. Detalhes: ${detail}\n\nVerifique:\n• Sua internet está ok?\n• VPN/proxy/firewall não está bloqueando supabase.co?\n• Extensão bloqueadora (uBlock, Privacy Badger) desativada?\n• Abra DevTools → Network e veja o status real da requisição`,
+          }]);
+          return;
+        }
+
+        setTestResults([{ name: status ? `HTTP ${status}` : 'Erro', passed: false, message: detail }]);
+        return;
+      }
+
+      // Caso raro: sem data e sem error
+      setTestResults([{ name: 'Sem resposta', passed: false, message: 'Edge Function não retornou dados. Verifique se está deployada.' }]);
     } catch (e) {
-      setTestResults([{ name: 'Erro interno', passed: false, message: (e as Error).message }]);
+      const msg = (e as Error)?.message ?? String(e);
+      const netMatch = msg.match(/Failed to send|FetchError|network|fetch|ECONNREFUSED|ENOTFOUND|CORS|TypeError/i);
+      setTestResults([{
+        name: 'Erro interno',
+        passed: false,
+        message: netMatch
+          ? `🌐 Falha de rede: ${msg}\n\nVerifique internet/proxy/VPN/Adblock.`
+          : msg,
+      }]);
     } finally {
       setTestando(false);
     }
@@ -266,6 +324,7 @@ function ApiKeysSection() {
               <input type={mostrarChave === provider ? 'text' : 'password'} value={apiKeyRaw}
                 onChange={e => setApiKeyRaw(e.target.value)}
                 placeholder="sk-..."
+                style={{ WebkitTextFillColor: '#18181b', colorScheme: 'light' }}
                 className="w-full rounded-xl border border-ink-200 bg-white px-3 py-2 pr-10 text-[13px] font-mono text-ink-900 placeholder-ink-300 focus:border-ink-900 focus:outline-none" />
               <button onClick={() => setMostrarChave(mostrarChave === provider ? null : provider)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-400 hover:text-ink-700">
