@@ -44,6 +44,7 @@ const AdminSubscriptions  = lazy(() => import('@/admin/Subscriptions').then((m) 
 const AdminNotifications  = lazy(() => import('@/admin/Notifications').then((m) => ({ default: m.AdminNotifications })));
 const AdminLogs           = lazy(() => import('@/admin/Logs').then((m) => ({ default: m.AdminLogs })));
 const AdminSettings       = lazy(() => import('@/admin/Settings').then((m) => ({ default: m.AdminSettings })));
+const AdminAgenteConfig   = lazy(() => import('@/admin/AgenteConfig').then((m) => ({ default: m.AdminAgenteConfig })));
 
 function AnimatedRoutes() {
   const location = useLocation();
@@ -60,6 +61,7 @@ function AnimatedRoutes() {
             <Route path="plans" element={<AdminPlans />} />
             <Route path="features" element={<AdminFeatures />} />
             <Route path="api-keys" element={<AdminApiKeys />} />
+            <Route path="agente" element={<AdminAgenteConfig />} />
             <Route path="usage" element={<AdminUsage />} />
             <Route path="subscriptions" element={<AdminSubscriptions />} />
             <Route path="notifications" element={<AdminNotifications />} />
@@ -75,10 +77,10 @@ function AnimatedRoutes() {
             <Route path="/" element={<HomePage />} />
             <Route path="/biblioteca" element={<LibraryPage />} />
             <Route path="/esbocos" element={<OutlinesPage />} />
-            <Route path="/assistente" element={<ErrorBoundary><AssistantPage /></ErrorBoundary>} />
+            <Route path="/assistente" element={<Navigate to="/" replace />} />
             <Route path="/mais" element={<MorePage />} />
             <Route path="/editar/:id" element={<EditorPage />} />
-            <Route path="/estudo" element={<StudyPage />} />
+            <Route path="/estudo" element={<Navigate to="/" replace />} />
             <Route path="/analista" element={<AnalystPage />} />
             <Route path="/sobre" element={<AboutPage />} />
             <Route path="/configuracoes" element={<SettingsPage />} />

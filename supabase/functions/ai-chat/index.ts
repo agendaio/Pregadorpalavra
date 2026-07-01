@@ -576,6 +576,7 @@ serve(async (req) => {
       stream = false,
       agente_id = null,       // ID do agente IA específico
       modo = 'chat',          // 'chat' | 'test'
+      session_context = null, // Contexto do esboço em construção
     } = body;
 
     if (!Array.isArray(messages) || messages.length === 0) {
@@ -607,6 +608,45 @@ serve(async (req) => {
       return jsonError(500, 'no_api_key', `Nenhuma chave ${provider} configurada. Solicite ao administrador que cadastre uma chave na aba API Keys do painel admin.`);
     }
 
+    // ── Carregar config global do Agente Ministerial ──
+    let ministerialConfig: {
+      systemPrompt: string;
+      temperatura: number;
+      maxTokens: number;
+      modelo: string | null;
+      habilitado: boolean;
+    } = {
+      systemPrompt: '',
+      temperatura: temperature,
+      maxTokens: maxTokens,
+      modelo: null,
+      habilitado: true,
+    };
+
+    try {
+      const { data: cfgData } = await sbAdmin
+        .from('ia_config')
+        .select('valor, metadata')
+        .eq('id', 'agente_ministerial')
+        .maybeSingle();
+
+      if (cfgData) {
+        const meta = cfgData.metadata ?? {};
+        ministerialConfig = {
+          systemPrompt: cfgData.valor ?? '',
+          temperatura: meta.temperatura ?? temperature,
+          maxTokens: meta.max_tokens ?? maxTokens,
+          modelo: meta.modelo ?? null,
+          habilitado: meta.habilitado !== false,
+        };
+      }
+    } catch { /* não bloqueia — usa defaults */ }
+
+    // Se agente desabilitado
+    if (!ministerialConfig.habilitado && modo !== 'test') {
+      return jsonError(503, 'agent_disabled', 'O Assistente Ministerial está temporariamente desabilitado pelo administrador.');
+    }
+
     // ── Carregar agente se especificado ──
     let agentInfo: { id: string; nome: string; icon: string } | null = null;
     let agentPrompt = '';
@@ -636,7 +676,9 @@ serve(async (req) => {
     }
 
     const effectiveProvider = keyData?.provider ?? provider;
-    const effectiveModel = agentModelOverride || model || keyData?.modelo_padrao || 'gpt-4o-mini';
+    const effectiveModel = agentModelOverride || ministerialConfig.modelo || model || keyData?.modelo_padrao || 'gpt-4o-mini';
+    const effectiveTemp = agentTemp || ministerialConfig.temperatura;
+    const effectiveMaxTokens = agentMaxTokens || ministerialConfig.maxTokens;
 
     // Verificar limites (admin é ilimitado)
     if (!isAdmin) {
@@ -671,15 +713,75 @@ serve(async (req) => {
 
     // Montar prompt do sistema
     const promptParts: string[] = [];
+
+    // 1. Prompt customizado do Agente Ministerial (prioridade)
+    if (ministerialConfig.systemPrompt.trim()) {
+      promptParts.push(ministerialConfig.systemPrompt.trim());
+    }
+    // 2. Prompt do agente específico (se houver)
     if (agentPrompt) {
       promptParts.push(agentPrompt);
     }
+    // 3. System append (instruções extras)
     if (systemAppend) {
       promptParts.push(systemAppend);
     }
+    // 4. Fallback: base default
     if (promptParts.length === 0) {
       promptParts.push(SYSTEM_BASE);
     }
+
+    // 5. Injetar contexto de sessão (esboço em construção)
+    if (session_context && typeof session_context === 'object') {
+      const ctx = session_context as Record<string, unknown>;
+      const partesCtx: string[] = [
+        '# Contexto atual da pregação',
+        '',
+      ];
+      const add = (label: string, key: string) => {
+        const val = ctx[key];
+        if (typeof val === 'string' && val.trim()) {
+          partesCtx.push(`**${label}:** ${val}`);
+        }
+      };
+      add('Título', 'titulo');
+      add('Série', 'serie');
+      add('Texto Base', 'textoBase');
+      add('Tema', 'tema');
+      add('Objetivo', 'objetivo');
+      add('Público', 'publico');
+      add('Resumo', 'resumo');
+
+      const pontos = ctx.pontos as Array<{ texto: string; subpontos: string[]; aplicacoes: string[] }> | undefined;
+      if (pontos && pontos.length > 0) {
+        partesCtx.push('');
+        partesCtx.push('**Estrutura atual:**');
+        pontos.forEach((p, i) => {
+          partesCtx.push(`${i + 1}. ${p.texto}`);
+          p.subpontos?.forEach((sp, j) => {
+            partesCtx.push(`   ${String.fromCharCode(97 + j)}) ${sp}`);
+          });
+          p.aplicacoes?.forEach((app) => {
+            partesCtx.push(`   → ${app}`);
+          });
+        });
+      }
+      const intro = ctx.introducao as string | undefined;
+      if (intro?.trim()) {
+        partesCtx.push('');
+        partesCtx.push(`**Introdução:** ${intro}`);
+      }
+      const concl = ctx.conclusao as string | undefined;
+      if (concl?.trim()) {
+        partesCtx.push('');
+        partesCtx.push(`**Conclusão:** ${concl}`);
+      }
+      partesCtx.push('');
+      partesCtx.push('> Use este contexto automaticamente para suas respostas.');
+
+      promptParts.unshift(partesCtx.join('\n'));
+    }
+
     const systemContent = promptParts.join('\n\n');
 
     const start = Date.now();
@@ -694,8 +796,8 @@ serve(async (req) => {
         content: m.content,
       })),
       systemContent,
-      maxTokens: agentMaxTokens,
-      temperature: agentTemp,
+      maxTokens: effectiveMaxTokens,
+      temperature: effectiveTemp,
       streaming: stream,
     });
 

@@ -107,18 +107,18 @@ function TabPill({ id, active, onClick, icon: Icon, label }: {
 }
 
 function Card({ children, className = '' }: { children: React.ReactNode; className?: string }) {
-  return <div className={cn('rounded-2xl border border-ink-200 bg-white shadow-soft', className)}>{children}</div>;
+  return <div className={cn('rounded-2xl border border-ink-200 bg-white shadow-soft dark:border-ink-700 dark:bg-ink-900', className)}>{children}</div>;
 }
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
-  return <h2 className="mb-3 text-[13px] font-semibold text-ink-900">{children}</h2>;
+  return <h2 className="mb-3 text-[13px] font-semibold text-ink-900 dark:text-white">{children}</h2>;
 }
 
 function StatusBadge({ ok, label }: { ok: boolean; label: string }) {
   return (
     <span className={cn(
       'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10.5px] font-semibold',
-      ok ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'
+      ok ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300' : 'bg-red-50 text-red-700 dark:bg-red-900/50 dark:text-red-300'
     )}>
       {ok ? <CheckCircle2 className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
       {label}
@@ -377,13 +377,13 @@ function ApiKeysSection() {
             <button key={p.id} onClick={() => { setProvider(p.id); setModelo(p.modelos[0].id); }}
               className={cn('flex flex-col items-center gap-1 rounded-xl border-2 p-3 transition-all', provider === p.id ? 'border-ink-900 bg-ink-50' : 'border-ink-200 bg-white hover:border-ink-300')}>
               <span className="text-2xl">{p.logo}</span>
-              <span className="text-[11px] font-semibold text-ink-800">{p.label}</span>
+              <span className="text-[11px] font-semibold text-ink-800 dark:text-white">{p.label}</span>
             </button>
           ))}
         </div>
 
         <div className="mb-3">
-          <label className="mb-1 block text-[11px] font-medium text-ink-600">Modelo</label>
+          <label className="mb-1 block text-[11px] font-medium text-ink-600 dark:text-ink-400">Modelo</label>
           <select value={modelo} onChange={e => setModelo(e.target.value)}
             className="w-full rounded-xl border border-ink-200 bg-white px-3 py-2 text-[13px] text-ink-900 focus:border-ink-900 focus:outline-none">
             {provMeta.modelos.map(m => <option key={m.id} value={m.id}>{m.label}</option>)}
@@ -391,7 +391,7 @@ function ApiKeysSection() {
         </div>
 
         <div className="mb-3">
-          <label className="mb-1 block text-[11px] font-medium text-ink-600">API Key</label>
+          <label className="mb-1 block text-[11px] font-medium text-ink-600 dark:text-ink-400">API Key</label>
           <div className="flex gap-2">
             <div className="relative flex-1">
               <input type={mostrarChave === provider ? 'text' : 'password'} value={apiKeyRaw}
@@ -412,20 +412,20 @@ function ApiKeysSection() {
 
         <div className="mb-4 grid grid-cols-2 gap-3">
           <div>
-            <label className="mb-1 block text-[11px] font-medium text-ink-600">Temperatura: {temp}</label>
+            <label className="mb-1 block text-[11px] font-medium text-ink-600 dark:text-ink-400">Temperatura: {temp}</label>
             <input type="range" min="0" max="1" step="0.05" value={temp} onChange={e => setTemp(Number(e.target.value))}
               className="w-full accent-ink-900" />
             <p className="mt-0.5 text-[10px] text-ink-400">0 = preciso | 1 = criativo</p>
           </div>
           <div>
-            <label className="mb-1 block text-[11px] font-medium text-ink-600">Máx Tokens: {maxTok}</label>
+            <label className="mb-1 block text-[11px] font-medium text-ink-600 dark:text-ink-400">Máx Tokens: {maxTok}</label>
             <input type="range" min="256" max="8192" step="256" value={maxTok} onChange={e => setMaxTok(Number(e.target.value))}
               className="w-full accent-ink-900" />
           </div>
         </div>
 
         <div className="mb-4">
-          <label className="mb-1 block text-[11px] font-medium text-ink-600">Memória Contextual</label>
+          <label className="mb-1 block text-[11px] font-medium text-ink-600 dark:text-ink-400">Memória Contextual</label>
           <div className="flex flex-wrap gap-2">
             {MEMORIA_TIPOS.map(m => (
               <button key={m.id} onClick={() => setMemoria(m.id)}
@@ -437,7 +437,7 @@ function ApiKeysSection() {
         </div>
 
         <div className="mb-4 flex items-center gap-3">
-          <label className="flex items-center gap-2 text-[12px] text-ink-700">
+          <label className="flex items-center gap-2 text-[12px] text-ink-700 dark:text-ink-300">
             <input type="checkbox" checked={streaming} onChange={e => setStreaming(e.target.checked)} className="accent-ink-900" />
             Streaming (resposta em tempo real)
           </label>
@@ -482,25 +482,25 @@ function ApiKeysSection() {
                 <Card key={c.id} className="flex items-center gap-3 p-3">
                   <span className="text-2xl">{prov?.logo}</span>
                   <div className="flex-1">
-                    <div className="text-[13px] font-semibold text-ink-900">{prov?.label}</div>
-                    <div className="text-[11px] text-ink-500">
+                    <div className="text-[13px] font-semibold text-ink-900 dark:text-white">{prov?.label}</div>
+                    <div className="text-[11px] text-ink-500 dark:text-ink-400">
                       {c.modelo_padrao} · {c.ativo ? '🟢 Ativo' : '⚫ Inativo'} · {c.key_ciphertext ? `${c.key_ciphertext.slice(0, 6)}…${c.key_ciphertext.slice(-4)}` : 'sem chave'}
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
                     {c.ultimo_status && <StatusBadge ok={c.ultimo_status === 'online'} label={c.ultimo_status === 'online' ? 'Online' : 'Offline'} />}
-                    {c.ultimo_teste_latency_ms && <span className="text-[10.5px] font-mono text-ink-400">{c.ultimo_teste_latency_ms}ms</span>}
+                    {c.ultimo_teste_latency_ms && <span className="text-[10.5px] font-mono text-ink-400 dark:text-ink-500">{c.ultimo_teste_latency_ms}ms</span>}
                     <button
                       onClick={() => editarKey(c)}
                       title="Editar chave"
-                      className={cn('flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-[11px] font-medium transition-all', editingKeyId === c.id ? 'border-indigo-200 bg-indigo-50 text-indigo-700' : 'border-ink-200 text-ink-600 hover:bg-ink-50')}
+                      className={cn('flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-[11px] font-medium transition-all', editingKeyId === c.id ? 'border-indigo-200 bg-indigo-50 text-indigo-700 dark:border-indigo-800 dark:bg-indigo-900/50 dark:text-indigo-300' : 'border-ink-200 text-ink-600 hover:bg-ink-50 dark:border-ink-700 dark:text-ink-400 dark:hover:bg-ink-800')}
                     >
                       <Settings className="h-3 w-3" /> Editar
                     </button>
                     <button
                       onClick={() => void excluir(c.id, prov?.label ?? c.provider)}
                       title="Excluir chave"
-                      className="flex items-center gap-1 rounded-lg border border-red-200 px-2.5 py-1.5 text-[11px] font-medium text-red-600 hover:bg-red-50"
+                      className="flex items-center gap-1 rounded-lg border border-red-200 px-2.5 py-1.5 text-[11px] font-medium text-red-600 hover:bg-red-50 dark:border-red-900 dark:bg-red-900/30 dark:text-red-400"
                     >
                       <Trash2 className="h-3 w-3" />
                     </button>
@@ -509,7 +509,7 @@ function ApiKeysSection() {
               );
             })}
           </div>
-          <p className="mt-2 text-[10.5px] text-ink-500">
+          <p className="mt-2 text-[10.5px] text-ink-500 dark:text-ink-400">
             💡 <strong>Como funciona:</strong> ao salvar, o sistema desativa automaticamente outras chaves do mesmo provedor e ativa a nova.
             Cada provedor pode ter apenas <strong>1 chave ativa</strong> por vez (constraint do banco).
           </p>
@@ -737,7 +737,7 @@ function AgentesSection() {
         {/* Identidade */}
         <div className="grid grid-cols-3 gap-4">
           <div>
-            <label className="mb-1 block text-[11px] font-medium text-ink-600">Ícone</label>
+            <label className="mb-1 block text-[11px] font-medium text-ink-600 dark:text-ink-400">Ícone</label>
             <div className="flex flex-wrap gap-1.5">
               {ICONES.map(ic => (
                 <button key={ic} onClick={() => setForm(f => ({ ...f, icon: ic }))}
@@ -748,7 +748,7 @@ function AgentesSection() {
             </div>
           </div>
           <div>
-            <label className="mb-1 block text-[11px] font-medium text-ink-600">Cor</label>
+            <label className="mb-1 block text-[11px] font-medium text-ink-600 dark:text-ink-400">Cor</label>
             <div className="flex flex-wrap gap-1.5">
               {CORES.map(cor => (
                 <button key={cor} onClick={() => setForm(f => ({ ...f, cor }))}
@@ -758,7 +758,7 @@ function AgentesSection() {
             </div>
           </div>
           <div>
-            <label className="mb-1 block text-[11px] font-medium text-ink-600">Ativo</label>
+            <label className="mb-1 block text-[11px] font-medium text-ink-600 dark:text-ink-400">Ativo</label>
             <label className="flex items-center gap-2 pt-1">
               <input type="checkbox" checked={form.ativo} onChange={e => setForm(f => ({ ...f, ativo: e.target.checked }))}
                 className="accent-ink-900" />
@@ -769,7 +769,7 @@ function AgentesSection() {
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="mb-1 block text-[11px] font-medium text-ink-600">Nome *</label>
+            <label className="mb-1 block text-[11px] font-medium text-ink-600 dark:text-ink-400">Nome *</label>
             <input value={form.nome} onChange={e => {
               const nome = e.target.value;
               const slug = nome.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
@@ -777,7 +777,7 @@ function AgentesSection() {
             }} className="w-full rounded-xl border border-ink-200 bg-white px-3 py-2 text-[13px] focus:border-ink-900 focus:outline-none" placeholder="Ex: Assistente Pregador" />
           </div>
           <div>
-            <label className="mb-1 block text-[11px] font-medium text-ink-600">Slug</label>
+            <label className="mb-1 block text-[11px] font-medium text-ink-600 dark:text-ink-400">Slug</label>
             <div className="flex items-center gap-2">
               <input value={form.slug} onChange={e => setForm(f => ({ ...f, slug: e.target.value }))}
                 className="flex-1 rounded-xl border border-ink-200 bg-ink-50 px-3 py-2 text-[13px] font-mono text-ink-600 focus:border-ink-900 focus:outline-none" />
@@ -790,12 +790,12 @@ function AgentesSection() {
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="mb-1 block text-[11px] font-medium text-ink-600">Especialidade</label>
+            <label className="mb-1 block text-[11px] font-medium text-ink-600 dark:text-ink-400">Especialidade</label>
             <input value={form.especialidade} onChange={e => setForm(f => ({ ...f, especialidade: e.target.value }))}
               className="w-full rounded-xl border border-ink-200 bg-white px-3 py-2 text-[13px] focus:border-ink-900 focus:outline-none" placeholder="Ex: Pregação e Teologia" />
           </div>
           <div>
-            <label className="mb-1 block text-[11px] font-medium text-ink-600">Memória</label>
+            <label className="mb-1 block text-[11px] font-medium text-ink-600 dark:text-ink-400">Memória</label>
             <div className="flex flex-wrap gap-1.5">
               {MEMORIA_TIPOS.map(m => (
                 <button key={m.id} onClick={() => setForm(f => ({ ...f, memoria_tipo: m.id }))}
@@ -808,13 +808,13 @@ function AgentesSection() {
         </div>
 
         <div>
-          <label className="mb-1 block text-[11px] font-medium text-ink-600">Descrição</label>
+          <label className="mb-1 block text-[11px] font-medium text-ink-600 dark:text-ink-400">Descrição</label>
           <input value={form.descricao} onChange={e => setForm(f => ({ ...f, descricao: e.target.value }))}
             className="w-full rounded-xl border border-ink-200 bg-white px-3 py-2 text-[13px] focus:border-ink-900 focus:outline-none" placeholder="Resumo do agente..." />
         </div>
 
         <div>
-          <label className="mb-1 block text-[11px] font-medium text-ink-600">Objetivo</label>
+          <label className="mb-1 block text-[11px] font-medium text-ink-600 dark:text-ink-400">Objetivo</label>
           <textarea value={form.objetivo} onChange={e => setForm(f => ({ ...f, objetivo: e.target.value }))}
             rows={2}
             className="w-full rounded-xl border border-ink-200 bg-white px-3 py-2 text-[13px] focus:border-ink-900 focus:outline-none" placeholder="Qual o objetivo deste agente?" />
@@ -825,20 +825,20 @@ function AgentesSection() {
           <h3 className="text-[12px] font-semibold text-ink-700">Configuração de IA</h3>
           <div className="grid grid-cols-3 gap-3">
             <div>
-              <label className="mb-1 block text-[11px] font-medium text-ink-600">Modelo</label>
+          <label className="mb-1 block text-[11px] font-medium text-ink-600 dark:text-ink-400 dark:text-ink-400">Modelo</label>
               <select value={form.modelo} onChange={e => setForm(f => ({ ...f, modelo: e.target.value }))}
                 className="w-full rounded-lg border border-ink-200 bg-white px-2 py-1.5 text-[12px] focus:border-ink-900 focus:outline-none">
                 {PROVIDERS.flatMap(p => p.modelos).map(m => <option key={m.id} value={m.id}>{m.label}</option>)}
               </select>
             </div>
             <div>
-              <label className="mb-1 block text-[11px] font-medium text-ink-600">Temperatura: {form.temperatura}</label>
+              <label className="mb-1 block text-[11px] font-medium text-ink-600 dark:text-ink-400">Temperatura: {form.temperatura}</label>
               <input type="range" min="0" max="1" step="0.05" value={form.temperatura}
                 onChange={e => setForm(f => ({ ...f, temperatura: Number(e.target.value) }))}
                 className="w-full accent-ink-900" />
             </div>
             <div>
-              <label className="mb-1 block text-[11px] font-medium text-ink-600">Máx Tokens: {form.max_tokens}</label>
+              <label className="mb-1 block text-[11px] font-medium text-ink-600 dark:text-ink-400">Máx Tokens: {form.max_tokens}</label>
               <input type="range" min="256" max="8192" step="256" value={form.max_tokens}
                 onChange={e => setForm(f => ({ ...f, max_tokens: Number(e.target.value) }))}
                 className="w-full accent-ink-900" />
@@ -847,7 +847,7 @@ function AgentesSection() {
         </div>
 
         <div>
-          <label className="mb-1 block text-[11px] font-medium text-ink-600">Prompt do Sistema *</label>
+          <label className="mb-1 block text-[11px] font-medium text-ink-600 dark:text-ink-400">Prompt do Sistema *</label>
           <textarea value={form.prompt_sistema} onChange={e => setForm(f => ({ ...f, prompt_sistema: e.target.value }))}
             rows={10}
             className="w-full rounded-xl border border-ink-200 bg-white px-3 py-2 text-[13px] font-mono leading-relaxed focus:border-ink-900 focus:outline-none"
@@ -904,7 +904,7 @@ function AgentesSection() {
 
         {testOutput && (
           <div>
-            <label className="mb-1 block text-[11px] font-medium text-ink-600">Resposta</label>
+            <label className="mb-1 block text-[11px] font-medium text-ink-600 dark:text-ink-400">Resposta</label>
             <pre className="max-h-96 overflow-auto rounded-xl border border-ink-200 bg-ink-50 p-3 text-[11.5px] font-mono whitespace-pre-wrap text-ink-800">
               {testOutput}
             </pre>
@@ -1399,12 +1399,12 @@ export default function ApiKeysPage() {
   if (!initialized) return <div className="flex items-center justify-center py-32"><Loader2 className="h-8 w-8 animate-spin text-ink-300" /></div>;
 
   return (
-    <div className="min-h-screen bg-ink-50 pb-20">
+    <div className="min-h-screen bg-ink-50 dark:bg-ink-950 pb-20">
       {/* Header */}
-      <div className="sticky top-0 z-10 border-b border-ink-200 bg-white px-4 pt-4 pb-3 shadow-sm">
+      <div className="sticky top-0 z-10 border-b border-ink-200 bg-white dark:border-ink-800 dark:bg-ink-900 px-4 pt-4 pb-3 shadow-sm dark:shadow-none">
         <div className="mb-3 flex items-center gap-2">
-          <Brain className="h-5 w-5 text-ink-700" />
-          <h1 className="text-[16px] font-bold text-ink-900">Central de Inteligência Artificial</h1>
+          <Brain className="h-5 w-5 text-ink-700 dark:text-ink-300" />
+          <h1 className="text-[16px] font-bold text-ink-900 dark:text-white">Central de Inteligência Artificial</h1>
         </div>
         {/* Tabs */}
         <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">

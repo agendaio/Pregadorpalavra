@@ -18,6 +18,7 @@ import {
   Menu,
   X,
   ShieldCheck,
+  Brain,
 } from 'lucide-react';
 import { useAuthAdminStore } from '@/stores/authAdmin';
 import { supabase } from '@/lib/supabase';
@@ -29,6 +30,7 @@ const NAV = [
   { to: '/admin/plans', label: 'Planos', icon: Package },
   { to: '/admin/features', label: 'Features', icon: Flag },
   { to: '/admin/api-keys', label: 'API Keys', icon: KeyRound },
+  { to: '/admin/agente', label: 'Agente IA', icon: Brain },
   { to: '/admin/usage', label: 'Uso da IA', icon: Activity },
   { to: '/admin/subscriptions', label: 'Assinaturas', icon: CreditCard },
   { to: '/admin/notifications', label: 'Notificações', icon: Bell },

@@ -1,0 +1,331 @@
+version: "1"
+plan:
+  name: "Pregador OS ChatGPT-like Refactor"
+  max_concurrency: 10
+  max_consecutive_failures: 2
+  max_cycles: 8
+  auto_reject_retries: 1
+
+tasks:
+  - id: design-contract
+    title: "Design contract: CopilotOutline store schema"
+    prompt: |
+      Create a shared design contract document at `docs/copilot-outline-contract.md` in the repo
+      `C:\Users\Solai Brasil\Documents\dev\ESBOÇO PREGADOR`.
+
+      The document must define:
+      1. The Zustand store interface for the CopilotOutline (`src/stores/copilotOutline.ts`):
+         - `titulo: string`
+         - `tema: string`
+         - `objetivo: string`
+         - `textoBase: string`
+         - `publico: string`
+         - `serie: string`
+         - `introducao: string`
+         - `pontos: Array<{ id: string; texto: string; subpontos: string[]; aplicacoes: string[] }>`
+         - `conclusao: string`
+         - `resumo: string`
+         - `tempoEstimado: number`
+         - `conversaId: string`
+         - Methods: `patchTitulo`, `patchTema`, `patchObjetivo`, `addPonto`, `removePonto`,
+           `reorderPontos`, `patchPonto`, `addSubponto`, `addAplicacao`, `patchConclusao`,
+           `setTempoEstimado`, `setConversaId`, `reset`
+      2. The text selection action types enum for the floating menu
+      3. The store must persist to localStorage under key `pregador.copilotOutline`
+      4. It must be lightweight and synchronous for performance
+
+      Write the ACTUAL CODE for `src/stores/copilotOutline.ts` following the existing patterns
+      in `src/stores/ui.ts` (same style: zustand, localStorage persistence).
+
+      Also write the TypeScript types in `src/types/copilotOutline.ts`.
+
+      Commit changes locally with message "chore: add CopilotOutline store contract".
+
+    assigned_to: mavis
+    max_retries: 1
+
+  - id: frontend-chat-homepage
+    title: "Frontend: Chat-first HomePage + Copilot Panel"
+    prompt: |
+      WORKSPACE: `C:\Users\Solai Brasil\Documents\dev\ESBOÇO PREGADOR`
+
+      You are implementing the ChatGPT-like experience for Pregador OS.
+
+      ## What already exists (READ these files first):
+      - `src/lib/ai/openai.ts` — streaming OpenAI calls via `ai-chat` edge function
+      - `src/lib/ai/agent.ts` — system prompt + message building (`SYSTEM_PROMPT`, `construirMensagens`)
+      - `src/lib/ai/prompt.ts` — the pastoral agent system prompt
+      - `src/lib/ai/router.ts` — provider routing
+      - `src/components/home/HomePage.tsx` — current home page (REPLACE this)
+      - `src/components/assistant/AssistantPage.tsx` — existing chat (REFERENCE, do not use directly)
+      - `src/components/layout/AppShell.tsx` — shell structure
+      - `src/App.tsx` — routing
+      - `src/stores/copilotOutline.ts` — READ this (design-contract creates it first)
+
+      ## Your deliverable: Replace `src/components/home/HomePage.tsx`
+
+      The new HomePage must be:
+
+      ### Layout
+      - Desktop: full-width chat area (left ~65%) + CopilotOutlinePanel (right ~35%, sticky)
+      - Mobile: full-width chat area + CopilotOutlinePanel as bottom sheet (toggle via FAB)
+      - CopilotOutlinePanel in `src/components/copilot/CopilotOutlinePanel.tsx` (CREATE)
+      - ChatContainer in `src/components/copilot/ChatContainer.tsx` (CREATE)
+      - SelectionMenu in `src/components/copilot/SelectionMenu.tsx` (CREATE)
+
+      ### ChatContainer component
+      - Greeting based on time of day: "Bom dia!", "Boa tarde!", "Boa noite!"
+      - Followed by: "Como posso ajudar na preparação da sua mensagem hoje?"
+      - Placeholder: "Pergunte qualquer coisa sobre a Bíblia..."
+      - Suggested prompts (clickable chips):
+        "Como foi a história de Sansão?", "Explique Romanos 8", "Crie um sermão sobre fé",
+        "Faça um estudo sobre Davi", "Explique Apocalipse 21", "Monte um estudo para célula",
+        "Explique João 3:16", "Crie um esboço sobre oração", "Encontre referências cruzadas",
+        "Explique o contexto histórico"
+      - Streaming responses via `openaiProvider.enviar()` with `{ stream: true, onChunk }`
+      - Text selection triggers floating `SelectionMenu` with: Adicionar ao Esboço | Copiar | Editar | Reescrever | Expandir | Favoritar
+      - Loading state: animated thinking indicator
+      - Error state with retry
+      - Messages persist in IndexedDB via AiDB class
+      - Conversation history sidebar
+      - Scroll to bottom on new messages
+
+      ### CopilotOutlinePanel component
+      - Sections: Título | Tema | Objetivo | Texto Base | Introdução | Pontos | Conclusão | Tempo
+      - Each section editable inline
+      - Points reorderable via up/down buttons (no external library)
+      - "▶ Iniciar Pregação" button → navigate to `/pulpit/{mensagemId}` or create one
+      - Mobile: bottom sheet
+
+      ### Auto-parse from chat
+      - Parse structured AI responses (Título:, Tema:, Ponto 1:) to populate outline
+      - "Add to Outline" button on structured responses
+
+      ### Session management
+      - Sessions stored in IndexedDB via AiDB
+      - Load last session or greeting on app load
+
+      ### AI Integration
+      - Use `openaiProvider.enviar()` from `src/lib/ai/openai.ts`
+      - System prompt: `SYSTEM_PROMPT` from `src/lib/ai/prompt.ts` + current outline context
+      - Never let AI ask user to choose a specialist
+
+      ### Dependencies
+      - Do NOT add new packages. Use existing: react, framer-motion, lucide-react, zustand, dexie, dexie-react-hooks
+      - Use simple up/down buttons for reordering (no drag library)
+
+      ### Routing
+      - HomePage (`/`) already the main route — replace the component
+      - Redirect `/estudo` to `/` (remove or redirect the route)
+      - Keep `/pulpit/:id`, `/esbocos`, `/editar/:id` as-is
+      - Update `src/App.tsx` accordingly
+
+      ### Style
+      - Follow existing Tailwind patterns from HomePage.tsx
+      - Use `bg-paper dark:bg-paper-dark`, `text-ink-*`, etc.
+      - ChatGPT-style chat bubbles
+      - Smooth framer-motion animations
+
+      ### Critical: implement full AiDB
+      `src/lib/ai/index.ts` is currently a stub. You MUST implement it fully:
+      - Full `AiDB` class with Dexie
+      - `sessoes` table: id, titulo, agenteId, agenteNome, createdAt, updatedAt
+      - `mensagens` table: id, sessaoId, timestamp, role, content
+      - `cache` table, `stats` table
+      - The existing stub already has the interfaces — implement the actual class
+      - Export `aiDB` instance
+
+      ### Files to create/modify:
+      1. `src/lib/ai/index.ts` — IMPLEMENT full AiDB class
+      2. `src/stores/copilotOutline.ts` — READ (created by design-contract)
+      3. `src/types/copilotOutline.ts` — READ (created by design-contract)
+      4. `src/components/copilot/CopilotOutlinePanel.tsx` — CREATE
+      5. `src/components/copilot/ChatContainer.tsx` — CREATE
+      6. `src/components/copilot/SelectionMenu.tsx` — CREATE
+      7. `src/components/home/HomePage.tsx` — REPLACE
+      8. `src/App.tsx` — UPDATE routing
+      9. `src/components/layout/DesktopShell.tsx` — READ and adapt
+      10. `src/components/layout/BottomNav.tsx` — READ
+
+      Read `src/components/layout/DesktopShell.tsx` and `src/components/layout/BottomNav.tsx` before
+      writing the new HomePage.
+
+      Commit each group locally with descriptive commit messages.
+      Do NOT run npm build — just implement and commit.
+
+    assigned_to: mavis
+    depends_on: [design-contract]
+    max_retries: 2
+
+  - id: backend-admin-enhancements
+    title: "Backend: Edge Function + Admin Agent Config + AI Memory"
+    prompt: |
+      WORKSPACE: `C:\Users\Solai Brasil\Documents\dev\ESBOÇO PREGADOR`
+
+      You are enhancing the backend for Pregador OS's single-agent architecture.
+      The Edge Function `supabase/functions/ai-chat/index.ts` already exists and works.
+      The Admin panel `src/admin/ApiKeys.tsx` already has agent management.
+
+      ## What to implement
+
+      ### 1. Global Agent Config in Edge Function
+
+      In `supabase/functions/ai-chat/index.ts`:
+      - After loading `api_keys`, also load from `ia_config` table:
+        `SELECT valor, metadata FROM ia_config WHERE id = 'agente_ministerial'`
+      - If `ia_config` has a non-empty `valor`, prepend it to the system prompt
+      - Support `session_context` in request body:
+        `{ ..., session_context: { titulo, tema, objetivo, textoBase, pontos[], introducao, conclusao } }`
+        Include as a special system message before the main prompt
+
+      ### 2. New Admin section: Agente Central Configuration
+
+      Create `src/admin/AgenteConfig.tsx`:
+      - Full configuration panel for the "Assistente Ministerial" agent
+      - Fields:
+        * Prompt Mestre (textarea, rows=12, monospace font)
+        * Temperatura (slider 0-1, step 0.05)
+        * Máximo de Tokens (slider 256-8192)
+        * Modelo (dropdown: gpt-4o, gpt-4o-mini, gpt-4-turbo)
+        * Streaming (toggle)
+        * Janela de Contexto (slider 1000-128000)
+        * Prompt de Segurança (textarea, rows=3)
+        * Prompt Bíblico (textarea, rows=3)
+        * Habilitado (toggle)
+      - Save using `callEdgeFunction('admin-save-config', { id: 'agente_ministerial', valor: promptMestre, metadata: {temperatura, max_tokens, ...} })`
+      - Dark theme matching existing admin style (slate-900 backgrounds, rounded-2xl)
+      - Load existing config on mount from `ia_config` table
+
+      ### 3. Register route in Admin
+
+      In `src/App.tsx`, add: `Route path="/admin/agente" element={<AdminAgenteConfig />}`
+      In `src/admin/AdminShell.tsx`, READ it first, then add nav item:
+      "Configuração do Agente" with Brain icon, linking to /admin/agente
+      Update `src/admin/Settings.tsx` with a link/card to the new section.
+
+      ### 4. Memory context injection
+
+      Create `src/lib/ai/memory.ts`:
+      - `construirContextoMemoria(ctx: SessionContext): string`
+      - Format current outline state as a system prompt section:
+        # Contexto atual da pregação
+        Título: [ctx.titulo]
+        Tema: [ctx.tema]
+        Objetivo: [ctx.objetivo]
+        Texto Base: [ctx.textoBase]
+        Estrutura atual:
+        - Introdução: [ctx.introducao]
+        - Ponto 1: [ctx.pontos[0]]
+        ...
+      - Return empty string if no context
+
+      ### 5. Database migration
+
+      Create `supabase/migrations/0021_ia_config_ministerial_agent.sql`:
+      ```sql
+      CREATE TABLE IF NOT EXISTS ia_config (
+        id TEXT PRIMARY KEY,
+        label TEXT,
+        valor TEXT,
+        metadata JSONB DEFAULT '{}',
+        ativo BOOLEAN DEFAULT true,
+        atualizado_em TIMESTAMPTZ DEFAULT NOW(),
+        criado_em TIMESTAMPTZ DEFAULT NOW()
+      );
+
+      INSERT INTO ia_config (id, label, valor, metadata, ativo)
+      VALUES (
+        'agente_ministerial',
+        'Assistente Ministerial',
+        '',
+        '{"temperatura": 0.7, "max_tokens": 2500, "modelo": "gpt-4o-mini", "streaming": true, "context_window": 128000}',
+        true
+      )
+      ON CONFLICT (id) DO NOTHING;
+      ```
+
+      ## Files to create/modify:
+      1. `supabase/migrations/0021_ia_config_ministerial_agent.sql` — CREATE
+      2. `supabase/functions/ai-chat/index.ts` — UPDATE (load ia_config, support session_context)
+      3. `src/lib/ai/memory.ts` — CREATE
+      4. `src/admin/AgenteConfig.tsx` — CREATE
+      5. `src/admin/AdminShell.tsx` — UPDATE (add nav item)
+      6. `src/App.tsx` — UPDATE (add route)
+      7. `src/admin/Settings.tsx` — UPDATE (add link)
+
+      Commit each group locally with descriptive messages.
+      Do NOT deploy edge functions — just implement and commit.
+
+    assigned_to: mavis
+    max_retries: 2
+
+  - id: pulpit-improvements
+    title: "Pulpit: Fullscreen mode + scroll auto + mark complete"
+    prompt: |
+      WORKSPACE: `C:\Users\Solai Brasil\Documents\dev\ESBOÇO PREGADOR`
+
+      READ `src/components/pulpit/PulpitPage.tsx` (all 1339 lines) FIRST.
+      Also read: `src/stores/pulpit.ts` and `src/stores/progressoPulpit.ts`
+      Also read: `src/lib/esbocoParser.ts`
+
+      This task improves the existing `/pulpit` module with:
+
+      ## 1. Auto-scroll to next point when current is marked complete
+      - After marking a section complete, auto-scroll so the NEXT section is centered
+      - Use `element.scrollIntoView({ behavior: 'smooth', block: 'center' })` on the next element
+      - The next element is the one after the completed one in the sections array
+
+      ## 2. "Marcar como concluído" visual improvement
+      - When a section is marked complete:
+        * Background changes to green-500/10
+        * Text opacity reduces to 60%
+        * A green check icon appears
+        * The section gets a visual "concluded" state
+
+      ## 3. Settings drawer
+      - Add font size control: slider 14px to 32px (default 18px)
+      - Add line spacing control: slider 1.2 to 2.5 (default 1.6)
+      - Settings gear icon already exists in header — use it to toggle the drawer
+      - The drawer slides from the right edge
+      - Persist settings to localStorage under key `pregador.pulpitSettings`
+
+      ## 4. Mobile fullscreen
+      - Ensure Fullscreen API works on mobile
+      - `document.documentElement.requestFullscreen()` for the fullscreen button
+      - Hide chrome in presentation mode
+
+      ## Implementation
+      - Make targeted edits to `src/components/pulpit/PulpitPage.tsx`
+      - Do NOT rewrite the entire file — surgical improvements only
+      - Add state for: `fontSize`, `lineHeight`, `showSettingsDrawer`
+      - The settings drawer can be an inline component within PulpitPage
+
+      Commit with message "feat(pulpit): add auto-scroll, settings drawer, presentation mode improvements"
+      Do NOT run npm build — just implement and commit.
+
+    assigned_to: mavis
+    max_retries: 1
+
+  - id: integration-check
+    title: "Integration: verify all changes compile + summarize"
+    prompt: |
+      WORKSPACE: `C:\Users\Solai Brasil\Documents\dev\ESBOÇO PREGADOR`
+
+      Run the following to verify the refactoring compiles:
+      1. `npm run typecheck` or `npm run build`
+      2. Check for import errors, missing types, broken routes
+      3. `npm run lint` — fix any lint errors
+
+      Verify:
+      1. No broken imports (old paths, deleted files)
+      2. `src/lib/ai/index.ts` is no longer a stub (has real AiDB implementation)
+      3. New HomePage renders without errors
+      4. CopilotOutline store is imported correctly
+      5. All new components exist and are properly exported/imported
+
+      Report PASS/FAIL with specific issues if FAIL.
+      If FAIL, create a fix task and attempt to resolve.
+
+    assigned_to: mavis
+    depends_on: [frontend-chat-homepage, backend-admin-enhancements, pulpit-improvements]
+    max_retries: 1

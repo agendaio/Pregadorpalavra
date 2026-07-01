@@ -7,7 +7,7 @@ import {
   MessageSquare, Users, Clock, User, ArrowRight, UsersRound,
   ScrollText, Info, Calendar, Star,
 } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { supabase, SUPABASE_ANON_KEY } from '@/lib/supabase';
 import { aiDB } from '@/lib/ai';
 import { useUIStore } from '@/stores/ui';
 import { cn, formatarRelativo } from '@/lib/utils';
@@ -156,11 +156,12 @@ export function AssistantPage() {
         content: m.content,
       }));
 
-      // Chamar Edge Function
+      // Chamar Edge Function — usa token do usuário logado, ou ANON_KEY se não estiver logado
       const sb = supabase();
       const { data: sessData } = await sb?.auth.getSession() ?? {};
-      const token = (sessData?.session as { access_token?: string } | null | undefined)?.access_token;
-      if (!token) throw new Error('Não autenticado');
+      const userToken = (sessData?.session as { access_token?: string } | null | undefined)?.access_token;
+      // Usa token do usuário logado; se não estiver logado, usa ANON_KEY (funciona com RLS configurado)
+      const token = userToken ?? SUPABASE_ANON_KEY;
 
       streamAbortRef.current = new AbortController();
 

@@ -26,33 +26,41 @@ export const useAuthAdminStore = create<AuthState>((set, get) => ({
 
   inicializar: async () => {
     if (!SUPABASE_CONFIGURED) {
-      set({ erro: 'Supabase não configurado (VITE_SUPABASE_URL/KEY)' });
+      set({ erro: 'Supabase não configurado (VITE_SUPABASE_URL/KEY)', carregando: false });
       return;
     }
     const sb = supabase()!;
     set({ carregando: true });
 
-    // Pega sessão atual
-    const { data: { session } } = await sb.auth.getSession();
-    if (session?.user) {
-      set({ user: { id: session.user.id, email: session.user.email ?? null } });
-      const admin = await get().checarAdmin();
-      if (!admin) {
-        // não é admin, desloga
-        await sb.auth.signOut();
-        set({ user: null, admin: null });
-      }
-    }
+    // Timeout de 10s — se Supabase não responder, abandona
+    const timeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), 10_000));
 
-    // Listener de mudanças
-    sb.auth.onAuthStateChange(async (_event, session) => {
+    try {
+      const { data: { session } } = await Promise.race([
+        sb.auth.getSession(),
+        timeout,
+      ]) ?? { data: { session: null } };
+
       if (session?.user) {
         set({ user: { id: session.user.id, email: session.user.email ?? null } });
-        await get().checarAdmin();
-      } else {
-        set({ user: null, admin: null });
+        const admin = await get().checarAdmin();
+        if (!admin) {
+          await sb.auth.signOut();
+          set({ user: null, admin: null });
+        }
       }
-    });
+
+      sb.auth.onAuthStateChange(async (_event, session) => {
+        if (session?.user) {
+          set({ user: { id: session.user.id, email: session.user.email ?? null } });
+          await get().checarAdmin();
+        } else {
+          set({ user: null, admin: null });
+        }
+      });
+    } catch {
+      // Falha de rede — segue sem sessão
+    }
 
     set({ carregando: false });
   },
