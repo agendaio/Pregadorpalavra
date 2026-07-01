@@ -163,7 +163,10 @@ export function AssistantPage() {
       // Usa token do usuário logado; se não estiver logado, usa ANON_KEY (funciona com RLS configurado)
       const token = userToken ?? SUPABASE_ANON_KEY;
 
-      streamAbortRef.current = new AbortController();
+      // Timeout de 60s — streaming de IA pode demorar na primeira requisição
+      const controller = new AbortController();
+      const timeoutId = window.setTimeout(() => controller.abort(), 60_000);
+      streamAbortRef.current = controller;
 
       const res = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-chat`,
@@ -180,16 +183,21 @@ export function AssistantPage() {
             temperature: 0.7,
             maxTokens: 2500,
           }),
-          signal: streamAbortRef.current.signal,
+          signal: controller.signal,
         },
       );
+      window.clearTimeout(timeoutId);
 
       if (!res.ok) {
         const errData = await res.json().catch(() => ({ message: 'Erro desconhecido' }));
         throw new Error(errData.message ?? `HTTP ${res.status}`);
       }
 
-      const reader = res.body!.getReader();
+      if (!res.body) {
+        throw new Error('Resposta vazia do servidor. Tente novamente.');
+      }
+
+      const reader = res.body.getReader();
       const decoder = new TextDecoder();
       const assistantMsg: ChatMessage = {
         id: streamId,
@@ -229,11 +237,12 @@ export function AssistantPage() {
       await aiDB.sessoes.update(currentSessionId, { updatedAt: Date.now() });
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Erro desconhecido';
+      console.error('[ai-chat] Erro na stream:', msg);
       setError(msg);
       const errorMsg: ChatMessage = {
         id: crypto.randomUUID(),
         role: 'assistant',
-        content: `⚠️ Não consegui responder: ${msg}`,
+        content: `⚠️ Não consegui responder: ${msg}\n\nTente novamente ou aguarde alguns segundos.`,
         timestamp: Date.now(),
       };
       setMessages((prev) => [...prev, errorMsg]);
