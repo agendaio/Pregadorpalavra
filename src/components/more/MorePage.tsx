@@ -9,8 +9,11 @@ import {
   Info,
   ChevronRight,
   Github,
+  User,
+  LogOut,
 } from 'lucide-react';
 import { useUIStore } from '@/stores/ui';
+import { useAuthStore } from '@/stores/authUser';
 import { MobileHeader } from '@/components/layout/MobileHeader';
 import { cn } from '@/lib/utils';
 import { APP_VERSION } from '@/v.config';
@@ -27,8 +30,21 @@ interface Item {
 export function MorePage() {
   const tema = useUIStore((s) => s.tema);
   const alternarTema = useUIStore((s) => s.alternarTema);
+  const { user, logout } = useAuthStore();
 
   const grupos: { titulo: string; itens: Item[] }[] = [
+    ...(user ? [{
+      titulo: 'Conta',
+      itens: [
+        { icon: User, label: user.nome || user.email || 'Usuário', description: user.email || '' },
+        { icon: LogOut, label: 'Sair da conta', onClick: () => { void logout(); }, variant: 'danger' as const },
+      ],
+    }] : [{
+      titulo: 'Conta',
+      itens: [
+        { to: '/login', icon: User, label: 'Fazer login / Cadastrar', description: 'Acesse sua conta para salvar seus esboços' },
+      ],
+    }]),
     {
       titulo: 'Acesso rápido',
       itens: [

@@ -13,12 +13,14 @@ import { SettingsPage } from '@/components/settings/SettingsPage';
 import { MorePage } from '@/components/more/MorePage';
 import { AssistantPage } from '@/components/assistant/AssistantPage';
 import { OutlinesPage } from '@/components/outlines/OutlinesPage';
+import { AuthPage } from '@/components/auth/AuthPage';
 import { Toast } from '@/components/ui/Toast';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { PWAUpdatePrompt } from '@/components/pwa/PWAUpdatePrompt';
 import { semearExemplos } from '@/db/seed';
 import { initTema } from '@/stores/ui';
 import { syncInit } from '@/lib/sync';
+import { useAuthStore } from '@/stores/authUser';
 
 // ── Code splitting: Editor (Tiptap é pesado) só carrega sob demanda ──
 const EditorPage = lazy(() =>
@@ -86,6 +88,9 @@ function AnimatedRoutes() {
             <Route path="/configuracoes" element={<SettingsPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
+
+          {/* Página de autenticação (fora do AppShell) */}
+          <Route path="/login" element={<AuthPage />} />
         </Routes>
       </AnimatePresence>
     </Suspense>
@@ -102,11 +107,14 @@ function RouteFallback() {
 }
 
 export function App() {
+  const inicializarAuth = useAuthStore((s) => s.inicializar);
+
   useEffect(() => {
     initTema();
     semearExemplos();
     void syncInit(); // inicializa sync offline-first com Supabase
-  }, []);
+    void inicializarAuth(); // inicializa auth do usuário
+  }, [inicializarAuth]);
 
   return (
     <BrowserRouter>
