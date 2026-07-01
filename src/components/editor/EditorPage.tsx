@@ -57,13 +57,23 @@ export function EditorPage() {
     return () => limpar();
   }, [id, carregar, limpar]);
 
+  // Auto-save com debounce de 4 segundos (já tratado pelo store via salvarDebounced)
+  // Removido daqui para evitar dupla execução — o store já dispara salvarDebounced no patchComIndicador()
+
+  // Indicador de salvamento automático
   useEffect(() => {
     if (!mensagem) return;
-    const t = setTimeout(async () => {
-      await salvar();
-    }, 2500);
+    const t = setTimeout(() => {
+      setSalvando(false);
+    }, 4000); // Reseta o indicador 4s após última edição
     return () => clearTimeout(t);
-  }, [mensagem, salvar]);
+  }, [mensagem?.atualizadoEm]);
+
+  // Wrapper do patch que também ativa o indicador
+  const patchComIndicador = (parcial: Parameters<typeof patch>[0]) => {
+    setSalvando(true);
+    patchComIndicador(parcial);
+  };
 
   if (!mensagem) {
     return (
@@ -93,11 +103,11 @@ export function EditorPage() {
   const adicionarTag = () => {
     const t = novaTag.trim().toLowerCase();
     if (!t) return;
-    if (!mensagem.tags.includes(t)) patch({ tags: [...mensagem.tags, t] });
+    if (!mensagem.tags.includes(t)) patchComIndicador({ tags: [...mensagem.tags, t] });
     setNovaTag('');
   };
 
-  const removerTag = (t: string) => patch({ tags: mensagem.tags.filter((x) => x !== t) });
+  const removerTag = (t: string) => patchComIndicador({ tags: mensagem.tags.filter((x) => x !== t) });
 
   return (
     <div className="flex h-full flex-col bg-paper text-ink-900 dark:bg-paper-dark dark:text-ink-100">
@@ -145,7 +155,7 @@ export function EditorPage() {
             <div className="px-5 pt-4 md:px-8 md:pt-6">
               <input
                 value={mensagem.titulo}
-                onChange={(e) => patch({ titulo: e.target.value })}
+                onChange={(e) => patchComIndicador({ titulo: e.target.value })}
                 placeholder="Título da mensagem"
                 className="w-full bg-transparent text-[22px] font-semibold tracking-[-0.018em] text-ink-900 outline-none placeholder:text-ink-300 dark:text-white md:text-[26px]"
               />
@@ -161,35 +171,35 @@ export function EditorPage() {
                 <div className="grid grid-cols-2 gap-x-4 gap-y-3 md:gap-y-4">
                   <div>
                     <Label>Tema</Label>
-                    <Input value={mensagem.tema} onChange={(e) => patch({ tema: e.target.value })} placeholder="Tema central" />
+                    <Input value={mensagem.tema} onChange={(e) => patchComIndicador({ tema: e.target.value })} placeholder="Tema central" />
                   </div>
                   <div>
                     <Label>Texto-base</Label>
-                    <Input value={mensagem.textoBase} onChange={(e) => patch({ textoBase: e.target.value })} placeholder="Ex: Romanos 8:28-30" />
+                    <Input value={mensagem.textoBase} onChange={(e) => patchComIndicador({ textoBase: e.target.value })} placeholder="Ex: Romanos 8:28-30" />
                   </div>
                   <div>
                     <Label>Livro</Label>
-                    <Input value={mensagem.livroBiblico} onChange={(e) => patch({ livroBiblico: e.target.value })} placeholder="Romanos…" />
+                    <Input value={mensagem.livroBiblico} onChange={(e) => patchComIndicador({ livroBiblico: e.target.value })} placeholder="Romanos…" />
                   </div>
                   <div>
                     <Label>Série</Label>
-                    <Input value={mensagem.serie ?? ''} onChange={(e) => patch({ serie: e.target.value || null })} placeholder="Opcional" />
+                    <Input value={mensagem.serie ?? ''} onChange={(e) => patchComIndicador({ serie: e.target.value || null })} placeholder="Opcional" />
                   </div>
                   <div>
                     <Label>Objetivo</Label>
-                    <Input value={mensagem.objetivo} onChange={(e) => patch({ objetivo: e.target.value })} placeholder="O que o ouvinte deve levar" />
+                    <Input value={mensagem.objetivo} onChange={(e) => patchComIndicador({ objetivo: e.target.value })} placeholder="O que o ouvinte deve levar" />
                   </div>
                   <div>
                     <Label>Público</Label>
-                    <Input value={mensagem.publico} onChange={(e) => patch({ publico: e.target.value })} placeholder="Igreja, jovens…" />
+                    <Input value={mensagem.publico} onChange={(e) => patchComIndicador({ publico: e.target.value })} placeholder="Igreja, jovens…" />
                   </div>
                   <div>
                     <Label>Ocasião</Label>
-                    <Input value={mensagem.ocasiao} onChange={(e) => patch({ ocasiao: e.target.value })} placeholder="Culto…" />
+                    <Input value={mensagem.ocasiao} onChange={(e) => patchComIndicador({ ocasiao: e.target.value })} placeholder="Culto…" />
                   </div>
                   <div>
                     <Label>Tempo (min)</Label>
-                    <Input type="number" min={1} value={mensagem.tempoEstimado} onChange={(e) => patch({ tempoEstimado: Number(e.target.value) || 0 })} />
+                    <Input type="number" min={1} value={mensagem.tempoEstimado} onChange={(e) => patchComIndicador({ tempoEstimado: Number(e.target.value) || 0 })} />
                   </div>
                 </div>
 
@@ -197,7 +207,7 @@ export function EditorPage() {
                   {STATUS_OPCOES.map((s) => (
                     <button
                       key={s.id}
-                      onClick={() => patch({ status: s.id })}
+                      onClick={() => patchComIndicador({ status: s.id })}
                       className={cn(
                         'rounded-full px-3 py-1 text-[12px] font-medium transition-all active:scale-95',
                         mensagem.status === s.id
@@ -260,7 +270,7 @@ export function EditorPage() {
               </div>
               <RichEditor
                 value={mensagem.esboco}
-                onChange={(html) => patch({ esboco: html })}
+                onChange={(html) => patchComIndicador({ esboco: html })}
                 placeholder="Estrutura da mensagem. Comece pelos pontos principais."
               />
             </div>
@@ -269,7 +279,7 @@ export function EditorPage() {
               <h2 className="mb-2 text-[13.5px] font-semibold tracking-tight text-ink-900 dark:text-white">Mensagem completa</h2>
               <RichEditor
                 value={mensagem.conteudo}
-                onChange={(html) => patch({ conteudo: html })}
+                onChange={(html) => patchComIndicador({ conteudo: html })}
                 placeholder="O sermão completo. Aplicações, ilustrações, conclusão."
               />
             </div>
@@ -278,7 +288,7 @@ export function EditorPage() {
             <div className="mx-auto max-w-3xl px-5 pb-6 md:px-8">
               <SlideEditor
                 slides={mensagem.slides}
-                onChange={(slides) => patch({ slides })}
+                onChange={(slides) => patchComIndicador({ slides })}
               />
             </div>
 
@@ -286,7 +296,7 @@ export function EditorPage() {
               <h2 className="mb-2 text-[13.5px] font-semibold tracking-tight text-ink-900 dark:text-white">Observações</h2>
               <Textarea
                 value={mensagem.observacoes}
-                onChange={(e) => patch({ observacoes: e.target.value })}
+                onChange={(e) => patchComIndicador({ observacoes: e.target.value })}
                 placeholder="Anotações só suas. Insights, dúvidas, próximas ações."
                 className="min-h-[100px]"
               />

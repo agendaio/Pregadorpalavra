@@ -955,7 +955,7 @@ return (
 
           {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• ORAÃ‡ÃƒO FINAL (sempre no fim) â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
           {capitulosColoridos.length > 0 && (
-            <div className="mt-12 mb-4 flex flex-col items-center text-center">
+            <div id="orcao-final" className="mt-12 mb-4 flex flex-col items-center text-center">
               <div className="mb-4 text-5xl text-amber-300">âœ</div>
               <h2 className="mb-6 text-[28px] font-bold text-amber-300 sm:text-[32px]">Oração</h2>
               <p className="max-w-md italic text-[15.5px] leading-relaxed text-white/80 sm:text-[16px]">

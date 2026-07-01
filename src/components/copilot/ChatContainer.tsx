@@ -225,14 +225,16 @@ export function ChatContainer({ onTogglePanel }: { onTogglePanel?: () => void })
     abortRef.current = new AbortController();
 
     try {
-      const sb = (await import('@/lib/supabase')).supabase();
+      const supabaseLib = await import('@/lib/supabase');
+      const sb = supabaseLib.supabase();
       const { data: sessData } = await sb?.auth.getSession() ?? {};
-      const token = (sessData?.session as { access_token?: string } | null | undefined)?.access_token;
+      const userToken = (sessData?.session as { access_token?: string } | null | undefined)?.access_token;
+      // Usa token do usuário logado; se não estiver logado, usa ANON_KEY (funciona com RLS configurado)
+      const token = userToken ?? supabaseLib.SUPABASE_ANON_KEY;
       if (!token) throw new Error('Não autenticado');
 
       const contextoMemoria = construirContextoMemoria(useCopilotOutlineStore.getState());
-      const supabaseUrl = (await import('@/lib/supabase')).SUPABASE_URL;
-      const anonKey = (await import('@/lib/supabase')).SUPABASE_ANON_KEY;
+      const supabaseUrl = supabaseLib.SUPABASE_URL;
 
       const messagesForApi: Array<{ role: 'user' | 'assistant' | 'system'; content: string }> = [
         ...(contextoMemoria ? [{ role: 'system' as const, content: contextoMemoria }] : []),
@@ -245,7 +247,7 @@ export function ChatContainer({ onTogglePanel }: { onTogglePanel?: () => void })
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
-          'apikey': anonKey,
+          'apikey': supabaseLib.SUPABASE_ANON_KEY,
         },
         body: JSON.stringify({
           messages: messagesForApi.map(m => ({ role: m.role, content: m.content })),
