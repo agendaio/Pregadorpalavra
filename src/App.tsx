@@ -14,6 +14,7 @@ import { MorePage } from '@/components/more/MorePage';
 import { AssistantPage } from '@/components/assistant/AssistantPage';
 import { OutlinesPage } from '@/components/outlines/OutlinesPage';
 import { Toast } from '@/components/ui/Toast';
+import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { PWAUpdatePrompt } from '@/components/pwa/PWAUpdatePrompt';
 import { semearExemplos } from '@/db/seed';
 import { initTema } from '@/stores/ui';
@@ -74,7 +75,7 @@ function AnimatedRoutes() {
             <Route path="/" element={<HomePage />} />
             <Route path="/biblioteca" element={<LibraryPage />} />
             <Route path="/esbocos" element={<OutlinesPage />} />
-            <Route path="/assistente" element={<AssistantPage />} />
+            <Route path="/assistente" element={<ErrorBoundary><AssistantPage /></ErrorBoundary>} />
             <Route path="/mais" element={<MorePage />} />
             <Route path="/editar/:id" element={<EditorPage />} />
             <Route path="/estudo" element={<StudyPage />} />
