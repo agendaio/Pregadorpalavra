@@ -1,18 +1,18 @@
-import { useEffect, useRef, useState, useCallback, lazy, Suspense } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search, Send, Sparkles, BookOpen, X, ChevronDown, Plus,
   RotateCcw, Trash2, Copy, CheckCheck, AlertCircle, Loader2,
-  MessageSquare, Users, Clock, User, ArrowRight, Hash,
-  ScrollText, Info, MapPin, Calendar, Star,
+  MessageSquare, Users, Clock, User, ArrowRight, UsersRound,
+  ScrollText, Info, Calendar, Star,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { aiDB } from '@/lib/ai';
 import { useUIStore } from '@/stores/ui';
 import { cn, formatarRelativo } from '@/lib/utils';
 import { MobileHeader } from '@/components/layout/MobileHeader';
-import { buscarPersonagens, PERSONAGENS, PERIODOS, CATEGORIAS, type PersonagemBiblico } from '@/lib/personagens';
+import { buscarPersonagens, CATEGORIAS, type PersonagemBiblico } from '@/lib/personagens';
 
 // ─── Tipos ─────────────────────────────────────────────────────────────────
 
@@ -32,45 +32,6 @@ interface ChatSession {
   updatedAt: number;
 }
 
-// ─── Estilos do sistema prompt do assistente ministerial ────────────────────
-
-const SISTEMA_MINISTERIAL = `Você é o **Assistente Ministerial IA** do Pregador OS — um mentor especializado em teologia bíblica, hermenêutica, homilética e preparação de mensagens.
-
-SUA MISSÃO: Auxiliar pregadores, pastores, evangelistas, missionários, professores de Escola Bíblica, líderes de células, seminaristas e estudantes da Bíblia na preparação de estudos, sermões e materiais de ensino bíblico. Você existe para servir como um assistente inteligente de estudos bíblicos e preparação ministerial.
-
-REGRAS FUNDAMENTAIS:
-1. Nunca afirme possuir autoridade espiritual. Nunca se apresente como pastor, profeta, apóstolo ou líder religioso.
-2. Nunca invente versículos, capítulos ou livros da Bíblia.
-3. Ao citar um texto bíblico, informe a referência. Mantenha fidelidade ao conteúdo.
-4. Quando houver diferentes interpretações cristãs reconhecidas, apresente-as com respeito.
-5. Sempre incentive a oração, o estudo diligente das Escrituras e o discernimento espiritual.
-6. Responda em português brasileiro, de forma clara e organizada.
-
-ESPECIALIZAÇÕES:
-• Antigo e Novo Testamento (Pentateuco, Históricos, Poéticos, Profetas Maiores/Menores, Evangelhos, Atos, Cartas, Apocalipse)
-• Hermenêutica, Exegese e Homilética
-• História Bíblica e da Igreja
-• Teologia Bíblica e Sistemática
-• Personagens Bíblicos
-• Liderança Cristã, Discipulado e Evangelismo
-• Escatologia e Apologética
-• Preparação de Esboços, Sermões e Estudos
-
-PADRÃO DE RESPOSTA para sermões/pregações:
-- Título
-- Tema
-- Objetivo
-- Texto Base
-- Introdução
-- Ponto 1 (com subpontos e aplicações)
-- Ponto 2 (com subpontos e aplicações)
-- Ponto 3 (com subpontos e aplicações)
-- Conclusão
-- Tempo estimado
-- Referências Bíblicas
-
-NUNCA entregue grandes blocos de texto desorganizados. Use títulos, listas e estrutura clara.`;
-
 // ─── Componente principal ───────────────────────────────────────────────────
 
 export function AssistantPage() {
@@ -87,7 +48,7 @@ export function AssistantPage() {
   const [filtroCategoria, setFiltroCategoria] = useState<string>('todas');
   const [showSessoes, setShowSessoes] = useState(false);
   const [copiadoId, setCopiadoId] = useState<string | null>(null);
-  const [hoveredCard, setHoveredCard] = useState<string | null>(null);
+  const [expandedCard, setExpandedCard] = useState<string | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -96,7 +57,7 @@ export function AssistantPage() {
   // Carregar sessões do IndexedDB
   const sessoes = useLiveQuery(() =>
     aiDB.sessoes.orderBy('updatedAt').reverse().limit(30).toArray() as Promise<ChatSession[]>,
-  []);
+  );
 
   // Carregar agentes do Supabase
   useEffect(() => {
@@ -134,8 +95,8 @@ export function AssistantPage() {
     const msgs = await aiDB.mensagens
       .where('sessaoId')
       .equals(sessao.id)
-      .sortBy('timestamp') as ChatMessage[];
-    setMessages(msgs);
+      .sortBy('timestamp') as unknown as ChatMessage[];
+    setMessages(msgs ?? []);
     setAgenteSelecionado(sessao.agenteId ?? null);
     setShowSessoes(false);
   }, []);
@@ -180,7 +141,7 @@ export function AssistantPage() {
     let streamContent = '';
 
     try {
-      // Obter sessão atual (pode ter sido criada agora)
+      // Obter sessão atual
       const currentSessionId = sessionId ?? (await aiDB.sessoes.orderBy('updatedAt').reverse().first())?.id;
       if (!currentSessionId) throw new Error('Sessão não encontrada');
 
@@ -223,8 +184,8 @@ export function AssistantPage() {
       );
 
       if (!res.ok) {
-        const err = await res.json().catch(() => ({ message: 'Erro desconhecido' }));
-        throw new Error(err.message ?? `HTTP ${res.status}`);
+        const errData = await res.json().catch(() => ({ message: 'Erro desconhecido' }));
+        throw new Error(errData.message ?? `HTTP ${res.status}`);
       }
 
       const reader = res.body!.getReader();
@@ -242,16 +203,14 @@ export function AssistantPage() {
         if (done) break;
 
         const chunk = decoder.decode(value, { stream: true });
-        const lines = chunk.split('\n').filter((l) => l.startsWith('data: '));
+        const lines = chunk.split('\n').filter((l: string) => l.startsWith('data: '));
 
         for (const line of lines) {
           const data = line.slice(6);
           if (data === '[DONE]') continue;
           try {
             const parsed = JSON.parse(data);
-            if (parsed.error) {
-              throw new Error(parsed.message ?? 'Erro na stream');
-            }
+            if (parsed.error) throw new Error(parsed.message ?? 'Erro na stream');
             if (parsed.content) {
               streamContent += parsed.content;
               setMessages((prev) =>
@@ -264,14 +223,12 @@ export function AssistantPage() {
         }
       }
 
-      // Persistir resposta
       assistantMsg.content = streamContent;
       await aiDB.mensagens.put({ sessaoId: currentSessionId, ...assistantMsg });
       await aiDB.sessoes.update(currentSessionId, { updatedAt: Date.now() });
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Erro desconhecido';
       setError(msg);
-
       const errorMsg: ChatMessage = {
         id: crypto.randomUUID(),
         role: 'assistant',
@@ -284,27 +241,23 @@ export function AssistantPage() {
     }
   };
 
-  // Cancelar stream
   const cancelarStream = () => {
     streamAbortRef.current?.abort();
     setLoading(false);
   };
 
-  // Copiar mensagem
   const copiarMensagem = (id: string, content: string) => {
     navigator.clipboard.writeText(content);
     setCopiadoId(id);
     setTimeout(() => setCopiadoId(null), 2000);
   };
 
-  // Personagens filtrados
   const personagensFiltrados = buscarPersonagens(personagemBusca).filter((p) => {
     if (filtroTestamento !== 'todos' && p.testamento !== filtroTestamento) return false;
     if (filtroCategoria !== 'todas' && p.categoria !== filtroCategoria) return false;
     return true;
   });
 
-  // ─── Renderização ─────────────────────────────────────────────────────────
   const agenteAtivo = agentes.find((a) => a.id === agenteSelecionado);
 
   return (
@@ -313,7 +266,6 @@ export function AssistantPage() {
         title="Estudo"
         subtitle="Assistente Ministerial"
         back
-        to="/"
         right={
           <button
             onClick={() => setShowSessoes(true)}
@@ -389,7 +341,7 @@ export function AssistantPage() {
                 'flex flex-1 items-center justify-center gap-2 border-b-2 py-3 text-[13px] font-medium transition-colors',
                 activeTab === 'chat'
                   ? 'border-ink-900 text-ink-900 dark:border-white dark:text-white'
-                  : 'border-transparent text-ink-500 hover:text-ink-700 dark:text-ink-400 dark:hover:text-ink-200',
+                  : 'border-transparent text-ink-500 hover:text-ink-700 dark:text-ink-400',
               )}
             >
               <Sparkles className="h-4 w-4" />
@@ -401,10 +353,10 @@ export function AssistantPage() {
                 'flex flex-1 items-center justify-center gap-2 border-b-2 py-3 text-[13px] font-medium transition-colors',
                 activeTab === 'personagens'
                   ? 'border-ink-900 text-ink-900 dark:border-white dark:text-white'
-                  : 'border-transparent text-ink-500 hover:text-ink-700 dark:text-ink-400 dark:hover:text-ink-200',
+                  : 'border-transparent text-ink-500 hover:text-ink-700 dark:text-ink-400',
               )}
             >
-              <Users className="h-4 w-4" />
+              <UsersRound className="h-4 w-4" />
               Personagens
             </button>
           </div>
@@ -464,7 +416,6 @@ export function AssistantPage() {
                           ? 'Agente selecionado. Digite sua pergunta.'
                           : 'Pergunte sobre textos bíblicos, sermões, esboços, personagens ou qualquer tema teológico.'}
                       </p>
-                      {/* Sugestões rápidas */}
                       <div className="mt-5 flex flex-wrap justify-center gap-2">
                         {[
                           'Prepare um esboço sobre Romanos 8:28',
@@ -500,10 +451,7 @@ export function AssistantPage() {
                         <div className="prose prose-sm dark:prose-invert max-w-none">
                           <p className="whitespace-pre-wrap">{msg.content}</p>
                         </div>
-                        <div className={cn(
-                          'mt-1.5 flex items-center gap-2',
-                          msg.role === 'user' ? 'justify-end' : '',
-                        )}>
+                        <div className={cn('mt-1.5 flex items-center gap-2', msg.role === 'user' ? 'justify-end' : '')}>
                           <span className="text-[10.5px] text-ink-400">
                             {formatarRelativo(msg.timestamp)}
                           </span>
@@ -526,17 +474,15 @@ export function AssistantPage() {
                   ))}
 
                   {loading && (
-                    <div className="mb-4 flex justify-start">
-                      <div className="flex items-center gap-2 rounded-2xl border border-ink-200 bg-white px-4 py-3 text-[13px] text-ink-500 dark:border-ink-700 dark:bg-ink-900/50 dark:text-ink-300">
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Pensando…
-                        <button
-                          onClick={cancelarStream}
-                          className="ml-2 rounded-lg border border-ink-200 px-2 py-1 text-[11px] hover:bg-ink-100 dark:border-ink-700 dark:hover:bg-ink-800"
-                        >
-                          Cancelar
-                        </button>
-                      </div>
+                    <div className="mb-4 flex items-center gap-2 rounded-2xl border border-ink-200 bg-white px-4 py-3 text-[13px] text-ink-500 dark:border-ink-700 dark:bg-ink-900/50 dark:text-ink-300">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Pensando…
+                      <button
+                        onClick={cancelarStream}
+                        className="ml-2 rounded-lg border border-ink-200 px-2 py-1 text-[11px] hover:bg-ink-100 dark:border-ink-700 dark:hover:bg-ink-800"
+                      >
+                        Cancelar
+                      </button>
                     </div>
                   )}
 
@@ -597,7 +543,6 @@ export function AssistantPage() {
                 exit={{ opacity: 0 }}
                 className="flex flex-1 flex-col overflow-hidden"
               >
-                {/* Busca */}
                 <div className="border-b border-ink-200/70 px-4 py-3 dark:border-ink-800">
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400" />
@@ -616,8 +561,6 @@ export function AssistantPage() {
                       </button>
                     )}
                   </div>
-
-                  {/* Filtros AT/NT */}
                   <div className="mt-2 flex gap-2">
                     {(['todos', 'AT', 'NT'] as const).map((t) => (
                       <button
@@ -646,17 +589,15 @@ export function AssistantPage() {
                   </div>
                 </div>
 
-                {/* Resultados */}
                 <div className="flex-1 overflow-y-auto px-4 py-3">
                   <p className="mb-3 text-[11.5px] text-ink-400">
-                    {personagensFiltrados.length} personagem{personagensFiltrados.length !== 1 ? 's' : ''} encontrado{personagensFiltrados.length !== 1 ? 's' : ''}
+                    {personagensFiltrados.length} personagem{personagensFiltrados.length !== 1 ? 's' : ''}
                   </p>
 
                   {personagensFiltrados.length === 0 && (
                     <div className="py-12 text-center">
-                      <Users className="mx-auto mb-3 h-8 w-8 text-ink-300" />
+                      <UsersRound className="mx-auto mb-3 h-8 w-8 text-ink-300" />
                       <p className="text-[13px] text-ink-500">Nenhum personagem encontrado.</p>
-                      <p className="mt-1 text-[12px] text-ink-400">Tente outro termo de busca.</p>
                     </div>
                   )}
 
@@ -666,8 +607,8 @@ export function AssistantPage() {
                         key={p.id}
                         personagem={p}
                         termo={personagemBusca}
-                        expandido={hoveredCard === p.id}
-                        onToggle={() => setHoveredCard(hoveredCard === p.id ? null : p.id)}
+                        expandido={expandedCard === p.id}
+                        onToggle={() => setExpandedCard(expandedCard === p.id ? null : p.id)}
                         onAsk={(pergunta) => {
                           setActiveTab('chat');
                           setInput(pergunta);
@@ -704,7 +645,7 @@ function PersonagemCard({
   const [copiado, setCopiado] = useState(false);
 
   const copiar = () => {
-    const texto = `${p.nome} — ${p.papel} (${p.testamento === 'AT' ? 'Antigo Testamento' : 'Novo Testamento'})\n\n${p.resumo}`;
+    const texto = `${p.nome} — ${p.papel}\n\n${p.resumo}`;
     navigator.clipboard.writeText(texto);
     setCopiado(true);
     setTimeout(() => setCopiado(false), 2000);
@@ -717,10 +658,7 @@ function PersonagemCard({
         expandido && 'shadow-soft',
       )}
     >
-      <button
-        onClick={onToggle}
-        className="flex w-full items-center gap-3 px-4 py-3 text-left"
-      >
+      <button onClick={onToggle} className="flex w-full items-center gap-3 px-4 py-3 text-left">
         <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-ink-100 text-[16px] dark:bg-ink-800 dark:text-ink-100">
           {p.testamento === 'AT' ? '📜' : '✝️'}
         </div>
@@ -746,10 +684,7 @@ function PersonagemCard({
           )}
         </div>
         <ChevronDown
-          className={cn(
-            'h-4 w-4 flex-shrink-0 text-ink-400 transition-transform',
-            expandido && 'rotate-180',
-          )}
+          className={cn('h-4 w-4 flex-shrink-0 text-ink-400 transition-transform', expandido && 'rotate-180')}
         />
       </button>
 
@@ -762,9 +697,7 @@ function PersonagemCard({
             transition={{ duration: 0.2 }}
             className="border-t border-ink-100 px-4 py-3 dark:border-ink-800"
           >
-            <p className="mb-3 text-[13px] leading-relaxed text-ink-700 dark:text-ink-300">
-              {p.resumo}
-            </p>
+            <p className="mb-3 text-[13px] leading-relaxed text-ink-700 dark:text-ink-300">{p.resumo}</p>
 
             {p.caracteristicas.length > 0 && (
               <div className="mb-3">
@@ -852,7 +785,7 @@ function PersonagemCard({
   );
 }
 
-// ─── Highlight de busca ────────────────────────────────────────────────────
+// ─── Highlight de busca ──────────────────────────────────────────────────────
 
 function highlight(text: string, termo: string): React.ReactNode {
   if (!termo.trim()) return text;
@@ -863,9 +796,7 @@ function highlight(text: string, termo: string): React.ReactNode {
       {parts.map((part, i) =>
         regex.test(part) ? (
           <mark key={i} className="rounded bg-amber-200 px-0.5 dark:bg-amber-700/60">{part}</mark>
-        ) : (
-          part
-        ),
+        ) : part,
       )}
     </>
   );

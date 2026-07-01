@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import { BottomNav } from './BottomNav';
-import { GlobalSearch } from '@/components/layout/GlobalSearch';
+import { GlobalSearch } from '@/components/library/GlobalSearch';
 import { useUIStore } from '@/stores/ui';
 import { useIsMobile } from '@/lib/responsive';
 import { DesktopShell } from './DesktopShell';
