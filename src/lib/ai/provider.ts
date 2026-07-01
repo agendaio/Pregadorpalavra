@@ -40,6 +40,8 @@ export interface AIRequest {
   onChunk?: (chunk: string) => void;
   /** Se true, aborta (usado em cancelamento) */
   signal?: AbortSignal;
+  /** ID do agente IA na tabela ia_agents — usa o prompt_sistema do agente */
+  agenteId?: string;
 }
 
 /** Resposta normalizada de qualquer provedor */

@@ -4,31 +4,29 @@ import {
   Send,
   Sparkles,
   Loader2,
-  AlertCircle,
   Trash2,
   Mic,
   MicOff,
   Copy,
-  BookmarkPlus,
+  Plus,
   RefreshCw,
   Lightbulb,
   Image as ImageIcon,
   Quote,
   StickyNote,
-  ChevronRight,
-  Cpu,
-  Coins,
-  Plus,
-  ScrollText,
   BookOpen,
   FileText,
   Mic2,
   Globe,
-  Link2,
+  Hash,
   Target,
   Users,
   Layers,
-  Hash,
+  ChevronDown,
+  X,
+  Menu,
+  Cpu,
+  Coins,
 } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import {
@@ -50,12 +48,11 @@ import {
 import { useMensagensStore } from '@/stores/mensagens';
 import { useUIStore } from '@/stores/ui';
 import { useAuthAdminStore } from '@/stores/authAdmin';
-import { MobileHeader } from '@/components/layout/MobileHeader';
+import { useIsMobile } from '@/lib/responsive';
 import { Button } from '@/components/ui/Button';
 import { cn, formatarRelogio } from '@/lib/utils';
-import { SPRING_IOS, EASE_OUT } from '@/lib/motion';
+import { EASE_OUT } from '@/lib/motion';
 
-// Gradientes por ação — cada uma com cor distinta e profissional
 const GRADIENTES: Record<string, string> = {
   esboco:            'from-violet-500 to-purple-600',
   estudo:            'from-emerald-500 to-teal-600',
@@ -72,21 +69,16 @@ const GRADIENTES: Record<string, string> = {
 };
 
 const ACOES_RAPIDAS = [
-  { id: 'esboco',            rotulo: 'Criar Esboço',       icon: ScrollText,  idAcao: 'esboco'            },
-  { id: 'estudo',            rotulo: 'Estudo Bíblico',     icon: BookOpen,   idAcao: 'estudo'            },
-  { id: 'sermao_expositivo', rotulo: 'Sermão Expositivo', icon: Mic2,       idAcao: 'sermao_expositivo' },
-  { id: 'sermao_tematico',  rotulo: 'Sermão Temático',    icon: FileText,   idAcao: 'sermao_tematico'  },
-  { id: 'sermao_textual',   rotulo: 'Sermão Textual',     icon: Quote,      idAcao: 'sermao_textual'   },
-  { id: 'versiculo',        rotulo: 'Explicar Versículo', icon: Lightbulb,  idAcao: 'versiculo'        },
-  { id: 'contexto',         rotulo: 'Contexto Histórico', icon: Globe,      idAcao: 'contexto'         },
-  { id: 'cruzamentos',       rotulo: 'Ref. Cruzadas',      icon: Hash,       idAcao: 'cruzamentos'       },
-  { id: 'aplicacoes',       rotulo: 'Aplicações',         icon: Target,     idAcao: 'aplicacoes'       },
-  { id: 'ilustracoes',      rotulo: 'Ilustrações',        icon: ImageIcon,  idAcao: 'ilustracoes'      },
-  { id: 'celula',           rotulo: 'Estudo p/ Célula',   icon: Users,      idAcao: 'celula'           },
-  { id: 'serie',            rotulo: 'Série Mensagens',    icon: Layers,     idAcao: 'serie'            },
+  { id: 'esboco',            rotulo: 'Criar Esboço',       icon: FileText,    idAcao: 'esboco'            },
+  { id: 'estudo',            rotulo: 'Estudo Bíblico',     icon: BookOpen,    idAcao: 'estudo'            },
+  { id: 'sermao_expositivo', rotulo: 'Sermão Expositivo', icon: Mic2,        idAcao: 'sermao_expositivo' },
+  { id: 'sermao_tematico',  rotulo: 'Sermão Temático',    icon: Quote,       idAcao: 'sermao_tematico'  },
+  { id: 'versiculo',        rotulo: 'Explicar Versículo', icon: Lightbulb,   idAcao: 'versiculo'        },
+  { id: 'contexto',         rotulo: 'Contexto Histórico', icon: Globe,       idAcao: 'contexto'         },
+  { id: 'cruzamentos',       rotulo: 'Ref. Cruzadas',      icon: Hash,        idAcao: 'cruzamentos'       },
+  { id: 'aplicacoes',       rotulo: 'Aplicações',         icon: Target,      idAcao: 'aplicacoes'       },
 ];
 
-// ─── MICROFONE ────────────────────────────────────────────────────────────────
 type ModoVoz = 'idle' | 'Ouvindo' | 'processando';
 
 function useMicrofone(onFinal: (texto: string) => void) {
@@ -160,98 +152,22 @@ function useMicrofone(onFinal: (texto: string) => void) {
   return { modoVoz, transcricao, setTranscricao, iniciar, parar, suportado };
 }
 
-// ─── HOME SCREEN DO ASSISTENTE ───────────────────────────────────────────────
-function AssistenteHome({
-  temContexto,
-  tituloMsg,
-  onAcao,
-  enviando,
-}: {
-  temContexto: boolean;
-  tituloMsg?: string;
-  onAcao: (texto: string, id: string) => void;
-  enviando: boolean;
-}) {
-  const saudacoes = [
-    'Como deseja preparar sua mensagem hoje?',
-    'O que o Senhor está colocando no seu coração?',
-    'Qual mensagem o Espírito Santo está revelando?',
-    'Em que posso ajudar na sua pregação?',
-  ];
-  const s = saudacoes[new Date().getDate() % saudacoes.length];
-
-  return (
-    <div className="flex flex-col items-center px-4 py-8">
-      {/* Header */}
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.32, ease: EASE_OUT }}
-        className="mb-8 text-center"
-      >
-        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-ink-900 to-ink-700 text-white shadow-lg dark:from-ink-800 dark:to-ink-700">
-          <Sparkles className="h-7 w-7" />
-        </div>
-        <h2 className="text-xl font-bold tracking-tight text-ink-900 dark:text-white">{s}</h2>
-        {temContexto && tituloMsg && (
-          <p className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-ink-100 px-4 py-1.5 text-sm text-ink-700 dark:bg-ink-800 dark:text-ink-200">
-            <BookOpen className="h-4 w-4" />
-            Contexto: {tituloMsg}
-          </p>
-        )}
-      </motion.div>
-
-      {/* Card de ações */}
-      <motion.div
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.08, duration: 0.32, ease: EASE_OUT }}
-        className="w-full max-w-xl rounded-3xl border border-ink-200/80 bg-white px-5 py-6 shadow-md dark:border-ink-800 dark:bg-ink-900/30 sm:max-w-2xl"
-      >
-        <p className="mb-4 text-center text-xs font-semibold uppercase tracking-[0.14em] text-ink-400 dark:text-ink-500">
-          Ações rápidas
-        </p>
-        {/* Grid responsivo: 3 colunas em lg, 2 em sm+ */}
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-          {ACOES_RAPIDAS.map((acao, i) => {
-            const Icon = acao.icon;
-            const gradiente = GRADIENTES[acao.idAcao] ?? 'from-ink-600 to-ink-800';
-            return (
-              <motion.button
-                key={acao.id}
-                initial={{ opacity: 0, scale: 0.94 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.1 + i * 0.022, duration: 0.22, ease: EASE_OUT }}
-                onClick={() =>
-                  onAcao(
-                    acaoParaTexto(acao.idAcao, temContexto, tituloMsg),
-                    acao.idAcao,
-                  )
-                }
-                disabled={enviando}
-                className="group flex flex-col items-center gap-2.5 rounded-2xl border border-ink-100 bg-paper px-3 py-4 text-center transition-all hover:border-ink-200 hover:shadow-sm active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50 dark:border-ink-800 dark:bg-ink-900/40 sm:flex-row sm:gap-3 sm:rounded-xl sm:border sm:px-4 sm:py-3 sm:text-left"
-              >
-                <span className={cn('flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-white shadow-sm', gradiente)}>
-                  <Icon className="h-5 w-5" />
-                </span>
-                <span className="text-sm font-medium leading-snug text-ink-800 group-hover:text-ink-900 dark:text-ink-100 dark:group-hover:text-white">
-                  {acao.rotulo}
-                </span>
-              </motion.button>
-            );
-          })}
-        </div>
-      </motion.div>
-
-      {/* Dica */}
-      <p className="mt-5 text-center text-sm text-ink-400 dark:text-ink-500">
-        Abra uma mensagem pelo editor para contexto completo
-      </p>
-    </div>
-  );
+// ─── RENDERIZADOR MINIMALISTA ─────────────────────────────────────────────────
+function parseInline(text: string): React.ReactNode[] {
+  const parts: React.ReactNode[] = [];
+  const regex = /\*\*([^*]+)\*\*/g;
+  let last = 0;
+  let match;
+  let key = 0;
+  while ((match = regex.exec(text)) !== null) {
+    if (match.index > last) parts.push(text.slice(last, match.index));
+    parts.push(<strong key={key++}>{match[1]}</strong>);
+    last = match.index + match[0].length;
+  }
+  if (last < text.length) parts.push(text.slice(last));
+  return parts.length > 0 ? parts : [text];
 }
 
-// ─── RENDERIZADOR DE MARKDOWN SEMÂNTICO ─────────────────────────────────────
 function MarkdownRenderer({ content }: { content: string }) {
   const lines = content.split('\n');
   const elements: React.ReactNode[] = [];
@@ -260,60 +176,34 @@ function MarkdownRenderer({ content }: { content: string }) {
   while (i < lines.length) {
     const line = lines[i];
 
-    // H1 — título principal do sermão
     if (line.startsWith('# ')) {
       elements.push(
-        <h1 key={i} className="mb-2 mt-1 text-[20px] font-bold leading-snug text-ink-900 dark:text-white">
+        <h1 key={i} className="mb-2 mt-1 text-[19px] font-bold leading-snug text-ink-900 dark:text-white">
           {parseInline(line.slice(2))}
         </h1>,
       );
-      i++;
-      continue;
+      i++; continue;
     }
-
-    // H2 — seção grande
     if (line.startsWith('## ')) {
       elements.push(
-        <h2 key={i} className="mb-1.5 mt-4 flex items-center gap-2 text-[15px] font-semibold text-indigo-700 dark:text-indigo-300">
-          <span className="h-1 w-6 flex-shrink-0 rounded-full bg-indigo-500" />
+        <h2 key={i} className="mb-1.5 mt-4 text-[15px] font-semibold text-ink-800 dark:text-ink-100">
           {parseInline(line.slice(3))}
         </h2>,
       );
-      i++;
-      continue;
+      i++; continue;
     }
-
-    // H3 — subseção
     if (line.startsWith('### ')) {
       elements.push(
-        <h3 key={i} className="mb-1 mt-3 flex items-center gap-2 text-[13.5px] font-semibold text-amber-600 dark:text-amber-400">
-          <span className="h-px w-4 flex-shrink-0 bg-amber-400" />
+        <h3 key={i} className="mb-1 mt-3 text-[13.5px] font-semibold text-amber-700 dark:text-amber-400">
           {parseInline(line.slice(4))}
         </h3>,
       );
-      i++;
-      continue;
+      i++; continue;
     }
-
-    // H4 — sub-subseção
-    if (line.startsWith('#### ')) {
-      elements.push(
-        <h4 key={i} className="mb-0.5 mt-2 text-[13px] font-semibold text-ink-700 dark:text-ink-300">
-          {parseInline(line.slice(5))}
-        </h4>,
-      );
-      i++;
-      continue;
-    }
-
-    // Divider
     if (line.match(/^---+$/) || line.match(/^\*\*\*+$/)) {
       elements.push(<hr key={i} className="my-3 border-ink-200 dark:border-ink-700" />);
-      i++;
-      continue;
+      i++; continue;
     }
-
-    // Lista de itens com traço ou asterisco
     if (line.match(/^(\-|\*|\•)\s+/)) {
       const items: string[] = [];
       while (i < lines.length && lines[i].match(/^(\-|\*|\•)\s+/)) {
@@ -332,8 +222,6 @@ function MarkdownRenderer({ content }: { content: string }) {
       );
       continue;
     }
-
-    // Lista numerada
     if (line.match(/^\d+\.\s+/)) {
       const items: string[] = [];
       while (i < lines.length && lines[i].match(/^\d+\.\s+/)) {
@@ -354,14 +242,7 @@ function MarkdownRenderer({ content }: { content: string }) {
       );
       continue;
     }
-
-    // Linha vazia
-    if (!line.trim()) {
-      i++;
-      continue;
-    }
-
-    // Parágrafo normal
+    if (!line.trim()) { i++; continue; }
     elements.push(
       <p key={i} className="my-1.5 text-[13.5px] leading-relaxed text-ink-700 dark:text-ink-200">
         {parseInline(line)}
@@ -369,34 +250,10 @@ function MarkdownRenderer({ content }: { content: string }) {
     );
     i++;
   }
-
   return <>{elements}</>;
 }
 
-function parseInline(text: string): React.ReactNode[] {
-  const parts: React.ReactNode[] = [];
-  const regex = /\*\*([^*]+)\*\*/g;
-  let last = 0;
-  let match;
-  let key = 0;
-
-  while ((match = regex.exec(text)) !== null) {
-    if (match.index > last) {
-      parts.push(text.slice(last, match.index));
-    }
-    parts.push(<strong key={key++}>{match[1]}</strong>);
-    last = match.index + match[0].length;
-  }
-  if (last < text.length) {
-    parts.push(text.slice(last));
-  }
-
-  return parts.length > 0 ? parts : [text];
-}
-
-// ─── BLOCO DE AÇÃO DO ASSISTENTE ─────────────────────────────────────────────
-type BlocoAberto = string | null;
-
+// ─── MENSAGEM DO ASSISTENTE — ESTILO CHATGPT ─────────────────────────────────
 function BlocoIA({
   m,
   onAcaoBloco,
@@ -404,117 +261,67 @@ function BlocoIA({
   m: MensagemPersistida;
   onAcaoBloco: (acao: string, texto: string) => void;
 }) {
-  const [blocoAberto, setBlocoAberto] = useState<BlocoAberto>(null);
+  const [mostrarAcoes, setMostrarAcoes] = useState(false);
   const isUser = m.role === 'user';
 
   if (isUser) {
     return (
-      <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex flex-row-reverse gap-2.5"
-      >
-        <div className="max-w-[88%] rounded-2xl rounded-tr-sm bg-ink-900 px-4 py-3 text-[14px] leading-relaxed text-white dark:bg-white dark:text-ink-950">
+      <div className="flex justify-end">
+        <div className="max-w-[82%] rounded-2xl rounded-br-md bg-ink-900 px-4 py-3 text-[14px] leading-relaxed text-white dark:bg-white dark:text-ink-950">
           {m.content}
         </div>
-      </motion.div>
+      </div>
     );
   }
 
-  const acoes = [
-    { id: 'adicionar_esboco', rotulo: 'Esboço', icon: Plus,       cor: 'text-amber-600' },
-    { id: 'fixar',           rotulo: 'Fixar',  icon: BookmarkPlus, cor: 'text-blue-600' },
-    { id: 'copiar',          rotulo: 'Copiar', icon: Copy,       cor: 'text-ink-600' },
-    { id: 'reescrever',      rotulo: 'Reescrever', icon: RefreshCw, cor: 'text-purple-600' },
-    { id: 'aplicacao',       rotulo: 'Aplicação', icon: Lightbulb, cor: 'text-yellow-600' },
-    { id: 'ilustracao',      rotulo: 'Ilustração', icon: ImageIcon, cor: 'text-pink-600' },
-    { id: 'texto_base',      rotulo: 'Texto-base', icon: Quote,    cor: 'text-teal-600' },
-    { id: 'observacao',      rotulo: 'Observação', icon: StickyNote, cor: 'text-orange-600' },
-  ];
-
   return (
     <motion.div
-      initial={{ opacity: 0, y: 8 }}
+      initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
-      className="flex gap-2.5"
+      className="group flex gap-3"
     >
-      <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-ink-900 to-ink-700 text-white dark:from-white dark:to-ink-100 dark:text-ink-950">
-        <Sparkles className="h-3.5 w-3.5" />
+      {/* Avatar */}
+      <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow-sm">
+        <Sparkles className="h-4 w-4" />
       </div>
 
-      <div className="min-w-0 max-w-[88%] flex-1">
-        <div
-          className={cn(
-            'rounded-2xl rounded-tl-sm border border-ink-200/80 bg-white px-4 py-3 dark:border-ink-800 dark:bg-ink-900/40',
-            m.resposta && 'rounded-br-sm',
-          )}
-        >
-          <MarkdownRenderer content={m.content} />
-        </div>
+      {/* Conteúdo */}
+      <div className="min-w-0 flex-1 max-w-[82%]">
+        <MarkdownRenderer content={m.content} />
 
-        <div className="mt-1.5 flex flex-wrap items-center gap-1">
-          {acoes.map((acao) => {
-            const Icon = acao.icon;
-            const aberto = blocoAberto === acao.id;
-            return (
-              <div key={acao.id} className="relative">
-                <button
-                  onClick={() => {
-                    if (acao.id === 'copiar') {
-                      navigator.clipboard.writeText(m.content);
-                      onAcaoBloco('copiado', m.content);
-                      return;
-                    }
-                    if (acao.id === 'reescrever') {
-                      onAcaoBloco('reescrever', m.content);
-                      return;
-                    }
-                    if (acao.id === 'adicionar_esboco') {
-                      onAcaoBloco('adicionar_esboco', m.content);
-                      return;
-                    }
-                    if (acao.id === 'aplicacao') {
-                      onAcaoBloco('aplicacao', m.content);
-                      return;
-                    }
-                    if (acao.id === 'ilustracao') {
-                      onAcaoBloco('ilustracao', m.content);
-                      return;
-                    }
-                    if (acao.id === 'observacao') {
-                      onAcaoBloco('observacao', m.content);
-                      return;
-                    }
-                    setBlocoAberto(aberto ? null : acao.id);
-                  }}
-                  className={cn(
-                    'inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors active:scale-95',
-                    aberto
-                      ? 'bg-ink-900 text-white dark:bg-white dark:text-ink-950'
-                      : 'bg-ink-100 text-ink-600 hover:bg-ink-200 dark:bg-ink-800 dark:text-ink-300 dark:hover:bg-ink-700',
-                  )}
-                >
-                  <Icon className={cn('h-3 w-3', acao.cor && !aberto && acao.cor)} />
-                  {acao.rotulo}
-                </button>
-              </div>
-            );
-          })}
+        {/* Ações — aparecem no hover, estilo ChatGPT */}
+        <div className="mt-2 flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+          <button
+            onClick={() => {
+              navigator.clipboard.writeText(m.content);
+              onAcaoBloco('copiado', m.content);
+            }}
+            className="inline-flex h-7 items-center gap-1 rounded-md px-2 text-[11px] text-ink-400 transition-colors hover:bg-ink-100 hover:text-ink-700 dark:hover:bg-ink-800 dark:hover:text-ink-200"
+          >
+            <Copy className="h-3 w-3" /> Copiar
+          </button>
+          <button
+            onClick={() => onAcaoBloco('reescrever', m.content)}
+            className="inline-flex h-7 items-center gap-1 rounded-md px-2 text-[11px] text-ink-400 transition-colors hover:bg-ink-100 hover:text-ink-700 dark:hover:bg-ink-800 dark:hover:text-ink-200"
+          >
+            <RefreshCw className="h-3 w-3" /> Reescrever
+          </button>
+          <button
+            onClick={() => onAcaoBloco('adicionar_esboco', m.content)}
+            className="inline-flex h-7 items-center gap-1 rounded-md px-2 text-[11px] text-ink-400 transition-colors hover:bg-ink-100 hover:text-ink-700 dark:hover:bg-ink-800 dark:hover:text-ink-200"
+          >
+            <Plus className="h-3 w-3" /> Adicionar
+          </button>
         </div>
 
         {m.resposta && (
-          <div className="mt-2 flex flex-wrap items-center gap-2 border-t border-ink-100 pt-1.5 text-[10.5px] text-ink-500 dark:border-ink-800 dark:text-ink-400">
-            <span className="inline-flex items-center gap-1">
-              <Cpu className="h-3 w-3" />
-              {m.resposta.provider}
-            </span>
+          <div className="mt-2 flex items-center gap-2 text-[10.5px] text-ink-400">
+            <Cpu className="h-3 w-3" />
+            <span>{m.resposta.provider}</span>
             <span>·</span>
-            <span className="tabular-nums">{m.resposta.tokensTotal} tok</span>
+            <span>{m.resposta.tokensTotal} tok</span>
             <span>·</span>
-            <span className="tabular-nums">${m.resposta.custoUSD.toFixed(5)}</span>
-            <span>·</span>
-            <span className="tabular-nums">{(m.resposta.duracaoMs / 1000).toFixed(1)}s</span>
-            <span className="ml-auto">{formatarRelogio(m.timestamp ?? Date.now())}</span>
+            <span>${m.resposta.custoUSD.toFixed(5)}</span>
           </div>
         )}
       </div>
@@ -522,20 +329,117 @@ function BlocoIA({
   );
 }
 
-// ─── ASSISTANT PAGE PRINCIPAL ─────────────────────────────────────────────────
+// ─── HOME DO ASSISTENTE — ESTILO CHATGPT ─────────────────────────────────────
+function AssistenteHome({
+  temContexto,
+  tituloMsg,
+  onAcao,
+  enviando,
+}: {
+  temContexto: boolean;
+  tituloMsg?: string;
+  onAcao: (texto: string, id: string) => void;
+  enviando: boolean;
+}) {
+  const saudacoes = [
+    'Como posso te ajudar hoje?',
+    'O que o Senhor está colocando no seu coração?',
+    'Qual mensagem o Espírito Santo está revelando?',
+    'Em que posso ajudar na sua pregação?',
+  ];
+  const s = saudacoes[new Date().getDate() % saudacoes.length];
+
+  const exemplos = [
+    { texto: 'Criar um esboço para pregação sobre amor', id: 'esboco' },
+    { texto: 'Explicar o contexto histórico de Gênesis 1', id: 'contexto' },
+    { texto: 'Sugerir aplicações práticas de Romanos 8', id: 'aplicacoes' },
+    { texto: 'Criar um sermão expositivo sobre João 3', id: 'sermao_expositivo' },
+  ];
+
+  return (
+    <div className="flex h-full flex-col items-center justify-start px-4 pt-12">
+      {/* Título minimalista */}
+      <div className="mb-8 w-full max-w-2xl text-center">
+        <h1 className="text-2xl font-semibold tracking-tight text-ink-900 dark:text-white">
+          {s}
+        </h1>
+        {temContexto && tituloMsg && (
+          <p className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-800 dark:bg-amber-500/20 dark:text-amber-300">
+            <BookOpen className="h-3.5 w-3.5" />
+            Contexto: {tituloMsg}
+          </p>
+        )}
+      </div>
+
+      {/* Ações rápidas — grid minimalista estilo ChatGPT */}
+      <div className="grid w-full max-w-2xl grid-cols-2 gap-2 sm:grid-cols-4">
+        {ACOES_RAPIDAS.map((acao, i) => {
+          const Icon = acao.icon;
+          const gradiente = GRADIENTES[acao.idAcao] ?? 'from-ink-600 to-ink-800';
+          return (
+            <motion.button
+              key={acao.id}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.04 * i, duration: 0.25, ease: EASE_OUT }}
+              onClick={() =>
+                onAcao(acaoParaTexto(acao.idAcao, temContexto, tituloMsg), acao.idAcao)
+              }
+              disabled={enviando}
+              className="group flex items-center gap-2.5 rounded-xl border border-ink-200/80 bg-white px-4 py-3 text-left transition-all hover:border-ink-300 hover:shadow-sm active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 dark:border-ink-800 dark:bg-ink-900/30 dark:hover:border-ink-700"
+            >
+              <span className={cn(
+                'flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-gradient-to-br text-white shadow-sm',
+                gradiente,
+              )}>
+                <Icon className="h-4 w-4" />
+              </span>
+              <span className="text-[13px] font-medium text-ink-700 dark:text-ink-200">
+                {acao.rotulo}
+              </span>
+            </motion.button>
+          );
+        })}
+      </div>
+
+      {/* Exemplos minimalistas */}
+      <div className="mt-6 w-full max-w-2xl space-y-2">
+        <p className="text-center text-xs text-ink-400">ou tente um destes:</p>
+        <div className="space-y-1.5">
+          {exemplos.map((ex, i) => (
+            <motion.button
+              key={i}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.2 + i * 0.05 }}
+              onClick={() => onAcao(ex.texto, ex.id)}
+              disabled={enviando}
+              className="w-full rounded-xl border border-ink-200/60 bg-white/80 px-4 py-2.5 text-left text-[13px] text-ink-600 transition-all hover:border-ink-300 hover:bg-white dark:border-ink-800 dark:bg-ink-900/20 dark:text-ink-300 dark:hover:bg-ink-900/40 disabled:opacity-40"
+            >
+              {ex.texto}
+            </motion.button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── ASSISTANT PAGE — CHATGPT STYLE ──────────────────────────────────────────
 export function AssistantPage() {
   const mensagem = useMensagensStore((s) => s.atual);
   const patch = useMensagensStore((s) => s.patch);
   const mostrarToast = useUIStore((s) => s.mostrarToast);
+  const isMobile = useIsMobile();
 
   const [sessaoId, setSessaoId] = useState<string | null>(null);
   const [mensagens, setMensagens] = useState<MensagemPersistida[]>([]);
   const [input, setInput] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [streamAtual, setStreamAtual] = useState('');
-  const [fallbackAviso, setFallbackAviso] = useState<string | null>(null);
   const [stats, setStats] = useState<StatsIA | null>(null);
   const [providerAtivo, setProviderAtivo] = useState<string>(obterProviderAtivoId());
+  const [mostrarSidebar, setMostrarSidebar] = useState(!isMobile);
   const admin = useAuthAdminStore((s) => s.admin);
 
   const fimRef = useRef<HTMLDivElement>(null);
@@ -545,6 +449,8 @@ export function AssistantPage() {
     () => (sessaoId ? aiDB.sessoes.get(sessaoId) : undefined),
     [sessaoId],
   );
+
+  const todasSessoes = useLiveQuery(() => aiDB.sessoes.orderBy('atualizadoEm').reverse().limit(20).toArray(), []) ?? [];
 
   const { modoVoz, transcricao, setTranscricao, iniciar, parar, suportado } = useMicrofone((texto) => {
     setInput((prev) => prev + (prev ? ' ' : '') + texto);
@@ -562,14 +468,10 @@ export function AssistantPage() {
       const ms = await listarMensagens(s.id);
       setMensagens(ms);
     })();
-    return () => {
-      cancelado = true;
-    };
+    return () => { cancelado = true; };
   }, [mensagem?.id]);
 
-  useEffect(() => {
-    obterStats().then(setStats);
-  }, [mensagens.length]);
+  useEffect(() => { obterStats().then(setStats); }, [mensagens.length]);
 
   useEffect(() => {
     fimRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
@@ -586,13 +488,19 @@ export function AssistantPage() {
     if (transcricao) setInput(transcricao);
   }, [transcricao]);
 
+  const carregarSessao = async (sid: string) => {
+    setSessaoId(sid);
+    const ms = await listarMensagens(sid);
+    setMensagens(ms);
+    setMostrarSidebar(false);
+  };
+
   const enviar = useCallback(
     async (texto: string, acao?: string) => {
       if (!sessaoId || (!texto.trim() && !transcricao) || enviando) return;
       const textoLimpo = (texto || transcricao).trim();
       if (!textoLimpo) return;
 
-      setFallbackAviso(null);
       setStreamAtual('');
       setEnviando(true);
 
@@ -617,16 +525,11 @@ export function AssistantPage() {
           const cached = await aiDB.cache.get(cacheKey);
           if (cached && Date.now() - cached.cacheadaEm < 1000 * 60 * 60 * 24 * 7) {
             const aiMsg: MensagemPersistida = {
-              id: crypto.randomUUID(),
-              sessaoId,
-              role: 'assistant',
-              content: cached.resposta.content,
-              timestamp: Date.now(),
-              resposta: cached.resposta,
+              id: crypto.randomUUID(), sessaoId, role: 'assistant',
+              content: cached.resposta.content, timestamp: Date.now(), resposta: cached.resposta,
             };
             setMensagens((m) => [...m, aiMsg]);
             await adicionarMensagem(aiMsg);
-            await aiDB.cache.update(cacheKey, { reutilizacoes: (cached.reutilizacoes ?? 0) + 1 });
             setEnviando(false);
             mostrarToast('Resposta do cache', 'sucesso');
             return;
@@ -634,7 +537,6 @@ export function AssistantPage() {
         }
 
         const sysAppend = acao ? SYSTEM_APPENDS[acao] : undefined;
-
         const { response, fallbackUsado, providerUsado } = await enviarComFallback({
           messages: [
             ...mensagens.map((m) => ({ role: m.role, content: m.content })),
@@ -648,38 +550,16 @@ export function AssistantPage() {
           temperature: 0.75,
         });
 
-        if (fallbackUsado && admin) {
-          // Só mostra aviso pro admin — usuário comum não pode fazer nada sobre a chave da API
-          setFallbackAviso(
-            providerUsado === 'local'
-              ? 'Modo local ativo — a IA real não está configurada. Acesse /admin/api-keys para cadastrar uma chave OpenAI.'
-              : `Provedor principal indisponível. Usando ${providerUsado}.`,
-          );
-        } else if (fallbackUsado && !admin) {
-          // Modo local funciona silenciosamente — sem panic pro usuário comum
-          setFallbackAviso(null);
-        }
-
         setProviderAtivo(providerUsado);
-
         const aiMsg: MensagemPersistida = {
-          id: crypto.randomUUID(),
-          sessaoId,
-          role: 'assistant',
-          content: response.content,
-          timestamp: Date.now(),
-          resposta: response,
+          id: crypto.randomUUID(), sessaoId, role: 'assistant',
+          content: response.content, timestamp: Date.now(), resposta: response,
         };
         setMensagens((m) => [...m, aiMsg]);
         await adicionarMensagem(aiMsg);
 
         if (cacheKey) {
-          await aiDB.cache.put({
-            chave: cacheKey,
-            resposta: response,
-            cacheadaEm: Date.now(),
-            reutilizacoes: 1,
-          });
+          await aiDB.cache.put({ chave: cacheKey, resposta: response, cacheadaEm: Date.now(), reutilizacoes: 1 });
         }
 
         await registrarUso(response);
@@ -691,12 +571,8 @@ export function AssistantPage() {
         }
       } catch (err) {
         const msg: MensagemPersistida = {
-          id: crypto.randomUUID(),
-          sessaoId,
-          role: 'assistant',
-          content:
-            `**Erro do Assistente**\n\n${(err as Error).message}\n\n` +
-            `Revise a chave da API em Configurações.`,
+          id: crypto.randomUUID(), sessaoId, role: 'assistant',
+          content: `**Erro do Assistente**\n\n${(err as Error).message}`,
           timestamp: Date.now(),
         };
         setMensagens((m) => [...m, msg]);
@@ -717,36 +593,10 @@ export function AssistantPage() {
         break;
       case 'adicionar_esboco':
         if (mensagem) {
-          patch({
-            esboco:
-              mensagem.esboco +
-              (mensagem.esboco ? '\n\n' : '') +
-              '## ' +
-              texto.split('\n')[0].replace(/^#+\s*/, '') +
-              '\n' +
-              texto,
-          });
+          patch({ esboco: mensagem.esboco + (mensagem.esboco ? '\n\n' : '') + '## ' + texto.split('\n')[0].replace(/^#+\s*/, '') + '\n' + texto });
           mostrarToast('Adicionado ao esboço', 'sucesso');
         } else {
           mostrarToast('Abra uma mensagem para adicionar ao esboço', 'info');
-        }
-        break;
-      case 'aplicacao':
-        if (mensagem) {
-          patch({ aplicacoes: [...mensagem.aplicacoes, texto] });
-          mostrarToast('Aplicação salva', 'sucesso');
-        }
-        break;
-      case 'ilustracao':
-        if (mensagem) {
-          patch({ ilustracoes: [...mensagem.ilustracoes, texto] });
-          mostrarToast('Ilustração salva', 'sucesso');
-        }
-        break;
-      case 'observacao':
-        if (mensagem) {
-          patch({ observacoes: mensagem.observacoes + (mensagem.observacoes ? '\n\n' : '') + texto });
-          mostrarToast('Observação salva', 'sucesso');
         }
         break;
       case 'reescrever':
@@ -763,165 +613,207 @@ export function AssistantPage() {
     mostrarToast('Conversa limpa', 'sucesso');
   };
 
+  const handleNovaConversa = async () => {
+    const s = await obterOuCriarSessao(null);
+    setSessaoId(s.id);
+    setMensagens([]);
+    setMostrarSidebar(false);
+  };
+
   const temContexto = !!mensagem;
 
   return (
-    <div className="flex h-full flex-col bg-paper text-ink-900 dark:bg-paper-dark dark:text-ink-100">
-      <MobileHeader
-        title={temConversa ? (sessao?.titulo ?? 'Assistente') : 'Assistente Ministerial'}
-        subtitle={temContexto ? mensagem!.titulo || 'Com contexto' : 'Sem contexto'}
-        right={
-          <div className="flex items-center gap-0.5">
+    <div className="flex h-full overflow-hidden bg-paper dark:bg-paper-dark">
+      {/* ── Sidebar de conversas ── */}
+      <AnimatePresence>
+        {mostrarSidebar && (
+          <motion.aside
+            initial={{ width: 0, opacity: 0 }}
+            animate={{ width: 260, opacity: 1 }}
+            exit={{ width: 0, opacity: 0 }}
+            transition={{ duration: 0.2, ease: EASE_OUT }}
+            className="flex flex-col border-r border-ink-200/70 bg-paper dark:border-ink-800 dark:bg-paper-dark overflow-hidden"
+          >
+            <div className="flex items-center justify-between px-4 h-14 border-b border-ink-200/70">
+              <span className="text-[13px] font-semibold text-ink-700 dark:text-ink-200">Conversas</span>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={handleNovaConversa}
+                  className="flex h-7 w-7 items-center justify-center rounded-md text-ink-400 transition-colors hover:bg-ink-100 hover:text-ink-700 dark:hover:bg-ink-800"
+                  title="Nova conversa"
+                >
+                  <Plus className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => setMostrarSidebar(false)}
+                  className="flex h-7 w-7 items-center justify-center rounded-md text-ink-400 transition-colors hover:bg-ink-100 hover:text-ink-700 dark:hover:bg-ink-800"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto py-2">
+              {todasSessoes.map((sess) => (
+                <button
+                  key={sess.id}
+                  onClick={() => carregarSessao(sess.id)}
+                  className={cn(
+                    'flex w-full items-start gap-2 px-4 py-2.5 text-left text-[13px] transition-colors',
+                    sess.id === sessaoId
+                      ? 'bg-ink-100 text-ink-900 dark:bg-ink-800 dark:text-white'
+                      : 'text-ink-600 hover:bg-ink-50 dark:text-ink-300 dark:hover:bg-ink-900/30',
+                    sess.id !== sessaoId && 'border-b border-ink-100 dark:border-ink-800',
+                  )}
+                >
+                  <Sparkles className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-ink-400" />
+                  <span className="line-clamp-1 flex-1">{sess.titulo || 'Nova conversa'}</span>
+                </button>
+              ))}
+              {todasSessoes.length === 0 && (
+                <p className="px-4 py-8 text-center text-xs text-ink-400">Nenhuma conversa ainda.</p>
+              )}
+            </div>
+          </motion.aside>
+        )}
+      </AnimatePresence>
+
+      {/* ── Área principal ── */}
+      <div className="flex flex-1 flex-col overflow-hidden">
+        {/* Header minimalista */}
+        <header className="flex h-14 flex-shrink-0 items-center gap-2 border-b border-ink-200/70 bg-paper px-4 dark:border-ink-800 dark:bg-paper-dark">
+          {/* Toggle sidebar (desktop) */}
+          <button
+            onClick={() => setMostrarSidebar((v) => !v)}
+            className="flex h-8 w-8 items-center justify-center rounded-md text-ink-500 transition-colors hover:bg-ink-100 dark:hover:bg-ink-800"
+            title="Conversas"
+          >
+            <Menu className="h-4 w-4" />
+          </button>
+
+          <div className="flex items-center gap-2">
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow-sm">
+              <Sparkles className="h-3.5 w-3.5" />
+            </div>
+            <span className="text-[14px] font-semibold text-ink-800 dark:text-white">
+              {temConversa ? (sessao?.titulo ?? 'Assistente') : 'Assistente Ministerial'}
+            </span>
+          </div>
+
+          {temContexto && (
+            <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-medium text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300">
+              <BookOpen className="h-3 w-3" />
+              contexto ativo
+            </span>
+          )}
+
+          <div className="ml-auto flex items-center gap-2">
+            {stats && (
+              <span className="hidden text-[11px] text-ink-400 sm:block">
+                {stats.requisicoes} req
+              </span>
+            )}
             {temConversa && (
-              <Button
-                variant="ghost"
-                size="icon-sm"
+              <button
                 onClick={handleLimpar}
-                aria-label="Limpar conversa"
+                className="flex h-8 w-8 items-center justify-center rounded-md text-ink-400 transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10"
+                title="Limpar conversa"
               >
                 <Trash2 className="h-4 w-4" />
-              </Button>
-            )}
-          </div>
-        }
-      />
-
-      <div className="ios-blur flex flex-shrink-0 items-center gap-2 border-b border-ink-200/70 bg-paper/80 px-4 py-2 text-[11px] dark:border-ink-800 dark:bg-paper-dark/80">
-        <div className="flex items-center gap-1.5">
-          {providerAtivo === 'openai' || providerAtivo === 'anthropic' ? (
-            <>
-              <span className="relative flex h-2 w-2">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
-              </span>
-              <span className="font-semibold text-emerald-700 dark:text-emerald-400">
-                Assistente Ministerial
-              </span>
-            </>
-          ) : (
-            <>
-              <span className="h-2 w-2 rounded-full bg-amber-400" />
-              <span className="font-semibold text-amber-700 dark:text-amber-400">
-                {providerAtivo === 'local' ? 'Respostas locais' : providerAtivo}
-              </span>
-            </>
-          )}
-          {temContexto && (
-            <>
-              <span className="text-ink-300 dark:text-ink-600">·</span>
-              <span className="text-emerald-600 dark:text-emerald-400">contexto ativo</span>
-            </>
-          )}
-        </div>
-        <div className="ml-auto flex items-center gap-1.5 text-ink-400 tabular-nums">
-          <Coins className="h-3 w-3" />
-          <span>{stats?.requisicoes ?? 0} req</span>
-        </div>
-      </div>
-
-      <div className="flex-1 overflow-y-auto pb-32">
-        {!temConversa ? (
-          <AssistenteHome
-            temContexto={temContexto}
-            tituloMsg={mensagem?.titulo}
-            onAcao={enviar}
-            enviando={enviando}
-          />
-        ) : (
-          <div className="mx-auto max-w-2xl space-y-4 px-4 py-4">
-            {mensagens.map((m) => (
-              <BlocoIA key={m.id} m={m} onAcaoBloco={handleAcaoBloco} />
-            ))}
-
-            {enviando && streamAtual && (
-              <BlocoIA
-                m={{
-                  id: 'stream',
-                  sessaoId: sessaoId ?? '',
-                  role: 'assistant',
-                  content: streamAtual,
-                  timestamp: Date.now(),
-                }}
-                onAcaoBloco={handleAcaoBloco}
-              />
-            )}
-            {enviando && !streamAtual && (
-              <div className="flex items-center gap-2.5">
-                <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-ink-900 to-ink-700 text-white dark:from-white dark:to-ink-100 dark:text-ink-950">
-                  <Sparkles className="h-3.5 w-3.5" />
-                </div>
-                <div className="flex items-center gap-2 rounded-2xl border border-ink-200/80 bg-white px-4 py-3 text-[13px] text-ink-500 dark:border-ink-800 dark:bg-ink-900/40 dark:text-ink-400">
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  Pensando…
-                </div>
-              </div>
-            )}
-
-            {fallbackAviso && (
-              <div className="flex items-start gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-[12.5px] text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
-                <AlertCircle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-amber-600 dark:text-amber-400" />
-                <div>{fallbackAviso}</div>
-              </div>
-            )}
-
-            <div ref={fimRef} />
-          </div>
-        )}
-      </div>
-
-      <div className="fixed bottom-0 left-0 right-0 z-30 bg-paper/95 pb-[calc(env(safe-area-inset-bottom)+8px)] ios-blur">
-        <div className="mx-auto max-w-2xl px-3 pt-2">
-          <AnimatePresence>
-            {modoVoz === 'Ouvindo' && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                className="mb-2 flex items-center gap-2 overflow-hidden rounded-2xl border border-red-200 bg-red-50 px-3 py-2 dark:border-red-500/30 dark:bg-red-500/10"
-              >
-                <motion.span
-                  animate={{ scale: [1, 1.2, 1] }}
-                  transition={{ duration: 0.8, repeat: Infinity }}
-                  className="h-2 w-2 flex-shrink-0 rounded-full bg-red-500"
-                />
-                <span className="flex-1 text-[12.5px] text-red-700 dark:text-red-300">
-                  {transcricao || 'Ouvindo…'}
-                </span>
-                <button
-                  onClick={parar}
-                  className="flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-[11px] font-medium text-red-700 dark:bg-red-500/20 dark:text-red-200"
-                >
-                  <MicOff className="h-3 w-3" /> Parar
-                </button>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          <div className="relative flex items-end gap-2">
-            {suportado && (
-              <button
-                onClick={modoVoz === 'Ouvindo' ? parar : iniciar}
-                disabled={enviando && modoVoz !== 'Ouvindo'}
-                aria-label={modoVoz === 'Ouvindo' ? 'Parar gravação' : 'Gravar com voz'}
-                className={cn(
-                  'flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full transition-all active:scale-95',
-                  modoVoz === 'Ouvindo'
-                    ? 'bg-red-500 text-white shadow-lg'
-                    : 'text-ink-400 hover:bg-ink-100 hover:text-ink-700 dark:hover:bg-ink-800/60 dark:hover:text-ink-200',
-                  enviando && modoVoz !== 'Ouvindo' && 'opacity-40 cursor-not-allowed',
-                )}
-              >
-                {modoVoz === 'Ouvindo' ? (
-                  <motion.div animate={{ scale: [1, 0.85, 1] }} transition={{ duration: 0.6, repeat: Infinity }}>
-                    <MicOff className="h-4 w-4" />
-                  </motion.div>
-                ) : (
-                  <Mic className="h-4 w-4" />
-                )}
               </button>
             )}
+          </div>
+        </header>
 
-            <div className="relative flex-1 overflow-hidden rounded-full border border-ink-200/80 bg-white shadow-sm transition-all focus-within:border-ink-300 focus-within:shadow-md dark:border-ink-800 dark:bg-ink-900/40">
+        {/* Área de mensagens */}
+        <div className="flex-1 overflow-y-auto">
+          {!temConversa ? (
+            <AssistenteHome
+              temContexto={temContexto}
+              tituloMsg={mensagem?.titulo}
+              onAcao={enviar}
+              enviando={enviando}
+            />
+          ) : (
+            <div className="mx-auto max-w-3xl space-y-6 px-4 py-6">
+              {mensagens.map((m) => (
+                <BlocoIA key={m.id} m={m} onAcaoBloco={handleAcaoBloco} />
+              ))}
+
+              {enviando && streamAtual && (
+                <BlocoIA
+                  m={{ id: 'stream', sessaoId: sessaoId ?? '', role: 'assistant', content: streamAtual, timestamp: Date.now() }}
+                  onAcaoBloco={handleAcaoBloco}
+                />
+              )}
+              {enviando && !streamAtual && (
+                <div className="flex gap-3">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow-sm">
+                    <Sparkles className="h-4 w-4" />
+                  </div>
+                  <div className="flex items-center gap-2 pt-1.5">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin text-ink-400" />
+                    <span className="text-[13px] text-ink-400">Pensando…</span>
+                  </div>
+                </div>
+              )}
+
+              <div ref={fimRef} />
+            </div>
+          )}
+        </div>
+
+        {/* Input — estilo ChatGPT: centralizado, flutuante */}
+        <div className="flex-shrink-0 border-t border-ink-200/70 bg-paper px-4 pb-5 pt-3 dark:border-ink-800 dark:bg-paper-dark">
+          <div className="mx-auto max-w-3xl">
+            <AnimatePresence>
+              {modoVoz === 'Ouvindo' && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="mb-2 flex items-center gap-2 overflow-hidden rounded-xl border border-red-200 bg-red-50 px-3 py-2 dark:border-red-500/30 dark:bg-red-500/10"
+                >
+                  <motion.span
+                    animate={{ scale: [1, 1.2, 1] }}
+                    transition={{ duration: 0.8, repeat: Infinity }}
+                    className="h-2 w-2 flex-shrink-0 rounded-full bg-red-500"
+                  />
+                  <span className="flex-1 text-[13px] text-red-700 dark:text-red-300">
+                    {transcricao || 'Ouvindo…'}
+                  </span>
+                  <button
+                    onClick={parar}
+                    className="flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-[11px] font-medium text-red-700 dark:bg-red-500/20 dark:text-red-200"
+                  >
+                    <MicOff className="h-3 w-3" /> Parar
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Campo de input estilo ChatGPT */}
+            <div className="relative flex items-end gap-2 rounded-2xl border border-ink-200/80 bg-white shadow-sm transition-all focus-within:border-ink-300 focus-within:shadow dark:border-ink-800 dark:bg-ink-900/40">
+              {suportado && (
+                <button
+                  onClick={modoVoz === 'Ouvindo' ? parar : iniciar}
+                  disabled={enviando && modoVoz !== 'Ouvindo'}
+                  className={cn(
+                    'flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-l-2xl transition-colors active:scale-95',
+                    modoVoz === 'Ouvindo'
+                      ? 'text-red-500'
+                      : 'text-ink-400 hover:text-ink-700 dark:hover:text-ink-200',
+                    enviando && modoVoz !== 'Ouvindo' && 'opacity-40 cursor-not-allowed',
+                  )}
+                >
+                  {modoVoz === 'Ouvindo' ? (
+                    <MicOff className="h-4 w-4" />
+                  ) : (
+                    <Mic className="h-4 w-4" />
+                  )}
+                </button>
+              )}
+
               <textarea
                 ref={inputRef}
                 value={input}
@@ -929,50 +821,41 @@ export function AssistantPage() {
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
-                    enviar(input);
+                    void enviar(input);
                   }
                 }}
                 placeholder={
                   temContexto
-                    ? 'Digite sua pergunta…'
+                    ? 'Digite sua mensagem…'
                     : 'Abra uma mensagem para contexto completo'
                 }
                 rows={1}
                 disabled={enviando}
-                className="max-h-48 w-full resize-none bg-transparent px-4 py-2.5 pr-14 text-[14.5px] leading-relaxed text-ink-900 outline-none placeholder:text-ink-400 disabled:opacity-50 dark:text-white dark:placeholder:text-ink-500"
+                className="max-h-48 flex-1 resize-none bg-transparent px-2 py-3 text-[14.5px] leading-relaxed text-ink-900 outline-none placeholder:text-ink-400 disabled:opacity-50 dark:text-white dark:placeholder:text-ink-500"
               />
 
-              <div className="absolute bottom-1.5 right-1.5 flex items-center gap-1">
-                <button
-                  onClick={() => enviar(input)}
-                  disabled={(!input.trim() && modoVoz === 'idle') || enviando}
-                  aria-label="Enviar mensagem"
-                  className={cn(
-                    'flex h-9 w-9 items-center justify-center rounded-full transition-all active:scale-90',
-                    input.trim() && !enviando
-                      ? 'bg-ink-900 text-white hover:bg-ink-700 dark:bg-white dark:text-ink-950'
-                      : 'bg-ink-100 text-ink-400 dark:bg-ink-800 dark:text-ink-500',
-                  )}
-                >
-                  {enviando ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Send className="h-4 w-4" />
-                  )}
-                </button>
-              </div>
+              <button
+                onClick={() => void enviar(input)}
+                disabled={(!input.trim() && modoVoz === 'idle') || enviando}
+                className={cn(
+                  'm-1.5 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl transition-all',
+                  input.trim() && !enviando
+                    ? 'bg-ink-900 text-white hover:bg-ink-700 dark:bg-white dark:text-ink-950'
+                    : 'bg-ink-100 text-ink-400 dark:bg-ink-800 dark:text-ink-500',
+                )}
+              >
+                {enviando ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
+              </button>
             </div>
-          </div>
 
-          <p className="mb-1 mt-1.5 text-center text-[10px] text-ink-400 dark:text-ink-500">
-            <span className="hidden sm:inline">
-              Enter envia · Shift+Enter nova linha
-              {suportado && ' · Microfone ativado'}
-            </span>
-            <span className="sm:hidden">
-              Enter envia{suportado && ' · Mic ativado'}
-            </span>
-          </p>
+            <p className="mt-1.5 text-center text-[10px] text-ink-400">
+              Enter envia · Shift+Enter nova linha{suportado && ' · Mic ativado'}
+            </p>
+          </div>
         </div>
       </div>
     </div>
@@ -985,8 +868,7 @@ function acaoParaTexto(acao: string, temContexto: boolean, tituloMsg?: string): 
     esboco: `Monte um esboço completo e estruturado${ref}. Inclua: introdução, pontos principais com subpontos, aplicações e conclusão.`,
     estudo: `Faça um estudo bíblico profundo${ref}. Analise: contexto histórico, hebraico/grego de palavras-chave, cruzamentos, aplicações e perguntas para reflexão.`,
     sermao_expositivo: `Crie um sermão expositivo completo${ref}. Estrutura: texto-base, contexto histórico, divisão em pontos expositivos, aplicações práticas e conclusão.`,
-    sermao_tematico: `Elabore um sermão temático estruturado${ref}. Estrutura: tema, texto-base, 3 pontos desenvolvidos, ilustrações, aplicações e apelo.`,
-    sermao_textual: `Prepare um sermão textual${ref}. Análise: passagem, contexto, significado original, aplicação contemporânea e esboço.`,
+    sermao_tematico: `Elabore um sermão temático${ref}. Estrutura: tema, texto-base, 3 pontos desenvolvidos, ilustrações, aplicações e apelo.`,
     versiculo: `Explique este versículo em profundidade${ref}: significado original, contexto, aplicações para hoje e como pregá-lo.`,
     contexto: `Descreva o contexto histórico-cultural desta passagem${ref}. Inclua: época, geografia, costumes, personagens envolvidos e relevância.`,
     cruzamentos: `Liste referências bíblicas cruzadas${ref}: passagens paralelas, profecias, tipo/antítipo, eco no Novo Testamento e conexões temáticas.`,
