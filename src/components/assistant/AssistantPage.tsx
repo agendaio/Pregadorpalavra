@@ -766,7 +766,7 @@ export function AssistantPage() {
   const temContexto = !!mensagem;
 
   return (
-    <div className="flex flex-col bg-paper text-ink-900 dark:bg-paper-dark dark:text-ink-100">
+    <div className="flex h-full flex-col bg-paper text-ink-900 dark:bg-paper-dark dark:text-ink-100">
       <MobileHeader
         title={temConversa ? (sessao?.titulo ?? 'Assistente') : 'Assistente Ministerial'}
         subtitle={temContexto ? mensagem!.titulo || 'Com contexto' : 'Sem contexto'}

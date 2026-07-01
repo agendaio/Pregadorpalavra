@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import {
   Download,
@@ -37,7 +37,7 @@ export function SettingsPage() {
 
   const [iaStatus, setIaStatus] = useState<{ tipo: 'ok' | 'erro' | 'loading'; msg: string }>({
     tipo: 'loading',
-    msg: 'Verificando…',
+    msg: 'Verificandoâ€¦',
   });
 
   useEffect(() => {
@@ -51,9 +51,9 @@ export function SettingsPage() {
   const verificarIA = async () => {
     const pr = await openaiProvider.pronto();
     if (pr.ok) {
-      setIaStatus({ tipo: 'ok', msg: 'Respostas completas via IA — configuradas pelo administrador.' });
+      setIaStatus({ tipo: 'ok', msg: 'Respostas completas via IA â€” configuradas pelo administrador.' });
     } else {
-      setIaStatus({ tipo: 'erro', msg: pr.motivo ?? 'Indisponível' });
+      setIaStatus({ tipo: 'erro', msg: pr.motivo ?? 'IndisponÃ­vel' });
     }
   };
 
@@ -91,14 +91,14 @@ export function SettingsPage() {
         }
         mostrarToast(`Importado: ${dados.mensagens?.length ?? 0} mensagens`, 'sucesso');
       } catch {
-        mostrarToast('Arquivo inválido', 'erro');
+        mostrarToast('Arquivo invÃ¡lido', 'erro');
       }
     };
     input.click();
   };
 
   const limparTudo = async () => {
-    if (!confirm('Apagar TODAS as mensagens e histórico? Esta ação é irreversível.')) return;
+    if (!confirm('Apagar TODAS as mensagens e histÃ³rico? Esta aÃ§Ã£o Ã© irreversÃ­vel.')) return;
     await db.mensagens.clear();
     await db.historico.clear();
     await aiDB.mensagens.clear();
@@ -108,13 +108,13 @@ export function SettingsPage() {
   };
 
   return (
-    <div className="flex flex-col bg-paper text-ink-900 dark:bg-paper-dark dark:text-ink-100">
-      <MobileHeader title="Configurações" subtitle="IA, aparência, dados" />
+    <div className="flex h-full flex-col bg-paper text-ink-900 dark:bg-paper-dark dark:text-ink-100">
+      <MobileHeader title="ConfiguraÃ§Ãµes" subtitle="IA, aparÃªncia, dados" />
 
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto pb-32">
         <div className="mx-auto max-w-2xl space-y-6 px-4 py-4">
 
-          {/* IA — Status */}
+          {/* IA â€” Status */}
           <section>
             <h2 className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-500 dark:text-ink-400">
               Assistente Ministerial
@@ -138,8 +138,8 @@ export function SettingsPage() {
                     {iaStatus.tipo === 'ok'
                       ? 'Assistente ativo'
                       : iaStatus.tipo === 'loading'
-                      ? 'Verificando…'
-                      : 'Configuração necessária'}
+                      ? 'Verificandoâ€¦'
+                      : 'ConfiguraÃ§Ã£o necessÃ¡ria'}
                   </div>
                   <p className="mt-1 text-[12.5px] leading-relaxed text-ink-500 dark:text-ink-400">
                     {iaStatus.msg}
@@ -158,7 +158,7 @@ export function SettingsPage() {
                     href="/admin/api-keys"
                     className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-ink-900 px-4 text-[12.5px] font-medium text-white transition-colors hover:bg-ink-800 dark:bg-white dark:text-ink-950"
                   >
-                    Configurar IA →
+                    Configurar IA â†’
                   </a>
                 )}
               </div>
@@ -172,7 +172,7 @@ export function SettingsPage() {
               </h2>
               <div className="rounded-2xl border border-ink-200/80 bg-white p-4 shadow-soft dark:border-ink-800 dark:bg-ink-900/40">
                 <div className="grid grid-cols-3 gap-2">
-                  <Stat label="Requisições" valor={String(stats.requisicoes)} icon={Sparkles} />
+                  <Stat label="RequisiÃ§Ãµes" valor={String(stats.requisicoes)} icon={Sparkles} />
                   <Stat label="Tokens" valor={stats.tokensTotal.toLocaleString('pt-BR')} icon={Cpu} />
                   <Stat label="Custo" valor={`$${stats.custoTotalUSD.toFixed(4)}`} icon={Coins} />
                 </div>
@@ -182,7 +182,7 @@ export function SettingsPage() {
                       <div key={prov} className="flex items-center justify-between text-ink-600 dark:text-ink-300">
                         <span>{prov}</span>
                         <span className="tabular-nums">
-                          {s.requisicoes} req · {s.tokens.toLocaleString('pt-BR')} tok · ${s.custo.toFixed(4)}
+                          {s.requisicoes} req Â· {s.tokens.toLocaleString('pt-BR')} tok Â· ${s.custo.toFixed(4)}
                         </span>
                       </div>
                     ))}
@@ -192,17 +192,17 @@ export function SettingsPage() {
             </section>
           )}
 
-          {/* Aparência */}
+          {/* AparÃªncia */}
           <section>
             <h2 className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-500 dark:text-ink-400">
-              Aparência
+              AparÃªncia
             </h2>
             <div className="space-y-3 rounded-2xl border border-ink-200/80 bg-white p-4 shadow-soft dark:border-ink-800 dark:bg-ink-900/40">
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0 flex-1">
                   <div className="text-[14px] font-medium tracking-tight text-ink-900 dark:text-white">Tema</div>
                   <p className="text-[12px] text-ink-500 dark:text-ink-400">
-                    Claro pra luz forte. Escuro pro púlpito à noite.
+                    Claro pra luz forte. Escuro pro pÃºlpito Ã  noite.
                   </p>
                 </div>
                 <Switch
@@ -218,7 +218,7 @@ export function SettingsPage() {
                     Tamanho da fonte
                   </div>
                   <p className="text-[12px] text-ink-500 dark:text-ink-400">
-                    Ajuste para leitura prolongada mais confortável.
+                    Ajuste para leitura prolongada mais confortÃ¡vel.
                   </p>
                 </div>
                 <div className="grid grid-cols-3 gap-2">
@@ -252,7 +252,7 @@ export function SettingsPage() {
                   <span className="font-semibold tabular-nums text-ink-900 dark:text-white">{total ?? 0}</span>{' '}
                   mensagens armazenadas
                 </span>
-                <span className="text-[10.5px] text-ink-400 dark:text-ink-500">IndexedDB · offline-first</span>
+                <span className="text-[10.5px] text-ink-400 dark:text-ink-500">IndexedDB Â· offline-first</span>
               </div>
               <div className="grid grid-cols-3 gap-2">
                 <button
@@ -289,7 +289,7 @@ export function SettingsPage() {
                     Apagar tudo
                   </div>
                   <p className="text-[12px] text-ink-500 dark:text-ink-400">
-                    Mensagens, histórico e conversas de IA.
+                    Mensagens, histÃ³rico e conversas de IA.
                   </p>
                 </div>
                 <button
@@ -303,7 +303,7 @@ export function SettingsPage() {
           </section>
 
           <div className="pb-6 text-center text-[10.5px] text-ink-400 dark:text-ink-500">
-            Pregador OS · v{APP_VERSION} · Mobile-first + PWA
+            Pregador OS Â· v{APP_VERSION} Â· Mobile-first + PWA
           </div>
         </div>
       </div>

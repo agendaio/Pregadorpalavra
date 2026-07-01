@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+﻿import { useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { Link, useNavigate } from 'react-router-dom';
 import {
@@ -91,7 +91,7 @@ export function LibraryPage() {
   ];
 
   return (
-    <div className="flex flex-col bg-paper text-ink-900 dark:bg-paper-dark dark:text-ink-100">
+    <div className="flex h-full flex-col bg-paper text-ink-900 dark:bg-paper-dark dark:text-ink-100">
       <MobileHeader
         title="Biblioteca"
         subtitle={`${contadores.todas} mensagens`}
@@ -128,14 +128,14 @@ export function LibraryPage() {
             <input
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
-              placeholder="Buscar mensagem, tema, versículo…"
+              placeholder="Buscar mensagem, tema, versÃ­culoâ€¦"
               className="flex-1 bg-transparent text-[14px] outline-none placeholder:text-ink-400 dark:placeholder:text-ink-500"
             />
           </div>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto pb-32">
         <div className="mx-auto max-w-2xl px-4 py-3">
           {mensagens === undefined && (
             <div className="space-y-2">
@@ -180,7 +180,7 @@ export function LibraryPage() {
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
                           <h3 className="truncate text-[14.5px] font-semibold tracking-tight text-ink-900 dark:text-white">
-                            {m.titulo || 'Sem título'}
+                            {m.titulo || 'Sem tÃ­tulo'}
                           </h3>
                           <StatusBadge status={m.status} />
                         </div>
@@ -263,7 +263,7 @@ function EmptyState({ onNova }: { onNova: () => void }) {
         <BookOpen className="h-6 w-6" />
       </motion.div>
       <h3 className="text-[15px] font-semibold tracking-tight text-ink-900 dark:text-white">
-        Sua biblioteca está vazia
+        Sua biblioteca estÃ¡ vazia
       </h3>
       <p className="mt-1 max-w-xs text-[13px] leading-relaxed text-ink-500 dark:text-ink-400">
         Comece criando sua primeira mensagem. Tudo funciona offline.

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+﻿import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import {
@@ -66,17 +66,17 @@ export function HomePage() {
   };
 
   return (
-    <div className="flex flex-col bg-paper text-ink-900 dark:bg-paper-dark dark:text-ink-100">
+    <div className="flex h-full flex-col bg-paper text-ink-900 dark:bg-paper-dark dark:text-ink-100">
       <MobileHeader
         title={saudacao}
         subtitle="Pregador OS"
         back={false}
       />
 
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto pb-32">
         <div className="mx-auto max-w-2xl px-5 pb-32 pt-2">
 
-          {/* Hero card — CTA primária */}
+          {/* Hero card â€” CTA primÃ¡ria */}
           <motion.div
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
@@ -89,10 +89,10 @@ export function HomePage() {
               </div>
               <div className="min-w-0 flex-1">
                 <h2 className="text-[16px] font-semibold leading-tight tracking-tight">
-                  Pronto para o próximo passo?
+                  Pronto para o prÃ³ximo passo?
                 </h2>
                 <p className="mt-1 text-[13px] leading-snug text-white/65">
-                  Comece uma nova mensagem ou peça ajuda ao assistente ministerial.
+                  Comece uma nova mensagem ou peÃ§a ajuda ao assistente ministerial.
                 </p>
               </div>
             </div>
@@ -101,7 +101,7 @@ export function HomePage() {
                 onClick={() => setShowGallery(true)}
                 className="flex items-center justify-center gap-2 rounded-xl bg-white px-3 py-2.5 text-[13.5px] font-semibold text-ink-900 transition-all hover:bg-white/95 active:scale-[0.98]"
               >
-                <Plus className="h-4 w-4" /> Novo Sermão
+                <Plus className="h-4 w-4" /> Novo SermÃ£o
               </button>
               <Link
                 to="/assistente"
@@ -124,7 +124,7 @@ export function HomePage() {
             <StatPill icon={Clock}      label="Prontas"   valor={stats.prontas}   cor="text-emerald-600" />
           </motion.div>
 
-          {/* Atalhos rápidos */}
+          {/* Atalhos rÃ¡pidos */}
           <motion.section
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
@@ -136,9 +136,9 @@ export function HomePage() {
             </h2>
             <div className="grid grid-cols-2 gap-2.5">
               <AtalhoCard to="/biblioteca" icon={BookOpen}  label="Biblioteca" desc="Todas as mensagens" />
-              <AtalhoCard to="/esbocos"    icon={ScrollText} label="Esboços"    desc="Estruturas prontas" />
+              <AtalhoCard to="/esbocos"    icon={ScrollText} label="EsboÃ§os"    desc="Estruturas prontas" />
               <AtalhoCard to="/assistente" icon={Sparkles}   label="Assistente" desc="IA ministerial" />
-              <AtalhoCard to="/analista"   icon={TrendingUp} label="Analista"   desc="Avaliação estrutural" />
+              <AtalhoCard to="/analista"   icon={TrendingUp} label="Analista"   desc="AvaliaÃ§Ã£o estrutural" />
             </div>
           </motion.section>
 
@@ -157,14 +157,14 @@ export function HomePage() {
                 to="/biblioteca"
                 className="text-[12px] font-medium text-ink-700 hover:text-ink-900 dark:text-ink-300 dark:hover:text-white"
               >
-                Ver todas →
+                Ver todas â†’
               </Link>
             </div>
             {recentes.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-ink-200 bg-white p-10 text-center dark:border-ink-800 dark:bg-ink-900/40">
                 <BookOpen className="mx-auto mb-3 h-6 w-6 text-ink-400" />
                 <p className="text-[13px] text-ink-500 dark:text-ink-400">
-                  Nenhuma mensagem ainda. Toque em "Novo Sermão" pra começar.
+                  Nenhuma mensagem ainda. Toque em "Novo SermÃ£o" pra comeÃ§ar.
                 </p>
               </div>
             ) : (
@@ -185,7 +185,7 @@ export function HomePage() {
                       </div>
                       <div className="min-w-0 flex-1">
                         <h3 className="truncate text-[14.5px] font-semibold tracking-tight text-ink-900 dark:text-white">
-                          {m.titulo || 'Sem título'}
+                          {m.titulo || 'Sem tÃ­tulo'}
                         </h3>
                         {m.tema && (
                           <p className="mt-0.5 truncate text-[12.5px] text-ink-600 dark:text-ink-300">

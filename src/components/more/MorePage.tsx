@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+﻿import { Link } from 'react-router-dom';
 import {
   Compass,
   Sparkles,
@@ -30,15 +30,15 @@ export function MorePage() {
 
   const grupos: { titulo: string; itens: Item[] }[] = [
     {
-      titulo: 'Acesso rápido',
+      titulo: 'Acesso rÃ¡pido',
       itens: [
-        { to: '/estudo',    icon: Compass,  label: 'Modo Estudo',         description: 'Personagens, mapas, cronologias, léxico' },
-        { to: '/analista',  icon: Sparkles, label: 'Analista de Sermões', description: 'Avaliação estrutural de cada mensagem' },
+        { to: '/estudo',    icon: Compass,  label: 'Modo Estudo',         description: 'Personagens, mapas, cronologias, lÃ©xico' },
+        { to: '/analista',  icon: Sparkles, label: 'Analista de SermÃµes', description: 'AvaliaÃ§Ã£o estrutural de cada mensagem' },
         { to: '/biblioteca', icon: Library, label: 'Biblioteca completa', description: 'Todas as mensagens com filtros' },
       ],
     },
     {
-      titulo: 'Aparência',
+      titulo: 'AparÃªncia',
       itens: [
         {
           icon: tema === 'light' ? Moon : Sun,
@@ -50,11 +50,11 @@ export function MorePage() {
     {
       titulo: 'Sistema',
       itens: [
-        { to: '/configuracoes', icon: SettingsIcon, label: 'Configurações', description: 'API da IA, backup, limpeza' },
+        { to: '/configuracoes', icon: SettingsIcon, label: 'ConfiguraÃ§Ãµes', description: 'API da IA, backup, limpeza' },
         {
           icon: Github,
-          label: 'Código-fonte',
-          description: `v${APP_VERSION} · Mobile-first + PWA`,
+          label: 'CÃ³digo-fonte',
+          description: `v${APP_VERSION} Â· Mobile-first + PWA`,
           onClick: () => window.open('https://github.com/solabrasil/solabrasil', '_blank'),
         },
         { to: '/sobre', icon: Info, label: 'Sobre', description: 'O sistema operacional para pregadores' },
@@ -63,10 +63,10 @@ export function MorePage() {
   ];
 
   return (
-    <div className="flex flex-col bg-paper text-ink-900 dark:bg-paper-dark dark:text-ink-100">
-      <MobileHeader title="Mais" subtitle={`Pregador OS · v${APP_VERSION}`} back={false} />
+    <div className="flex h-full flex-col bg-paper text-ink-900 dark:bg-paper-dark dark:text-ink-100">
+      <MobileHeader title="Mais" subtitle={`Pregador OS Â· v${APP_VERSION}`} back={false} />
 
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto pb-32">
         <div className="mx-auto max-w-2xl space-y-6 px-4 py-5">
           {grupos.map((g) => (
             <section key={g.titulo}>
@@ -134,7 +134,7 @@ export function MorePage() {
           ))}
 
           <div className="pb-4 text-center text-[11px] text-ink-400 dark:text-ink-500">
-            Pregador OS · Sistema Operacional para Pregadores
+            Pregador OS Â· Sistema Operacional para Pregadores
           </div>
         </div>
       </div>

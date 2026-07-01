@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import {
   BookOpen,
   Map,
@@ -39,21 +39,21 @@ interface RecursoConfig {
 const RECURSOS: RecursoConfig[] = [
   {
     id: 'personagem',
-    titulo: 'Personagens bíblicos',
-    descricao: 'Pesquise por nome, livro, período ou papel na narrativa.',
-    placeholder: 'Ex: Davi, Maria, Paulo, Pedro…',
+    titulo: 'Personagens bÃ­blicos',
+    descricao: 'Pesquise por nome, livro, perÃ­odo ou papel na narrativa.',
+    placeholder: 'Ex: Davi, Maria, Paulo, Pedroâ€¦',
     systemAppend:
-      'Quando o usuário pedir um personagem bíblico, forneça: nome, significado do nome, livro principal, período histórico, papel na narrativa, pontos fortes, fraquezas, lições de vida e versículos-chave. Seja conciso, organizado e use markdown.',
+      'Quando o usuÃ¡rio pedir um personagem bÃ­blico, forneÃ§a: nome, significado do nome, livro principal, perÃ­odo histÃ³rico, papel na narrativa, pontos fortes, fraquezas, liÃ§Ãµes de vida e versÃ­culos-chave. Seja conciso, organizado e use markdown.',
     icon: Users,
     cor: 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300',
   },
   {
     id: 'mapa',
-    titulo: 'Mapas e cenários',
-    descricao: 'Atlas dos lugares onde a história aconteceu.',
-    placeholder: 'Ex: Belém, Jerusalém, Éfeso, Egito…',
+    titulo: 'Mapas e cenÃ¡rios',
+    descricao: 'Atlas dos lugares onde a histÃ³ria aconteceu.',
+    placeholder: 'Ex: BelÃ©m, JerusalÃ©m, Ã‰feso, Egitoâ€¦',
     systemAppend:
-      'Quando o usuário pedir um local bíblico, forneça: nome antigo e moderno, localização, importância histórica, eventos bíblicos relevantes, contexto arqueológico e aplicação pastoral.',
+      'Quando o usuÃ¡rio pedir um local bÃ­blico, forneÃ§a: nome antigo e moderno, localizaÃ§Ã£o, importÃ¢ncia histÃ³rica, eventos bÃ­blicos relevantes, contexto arqueolÃ³gico e aplicaÃ§Ã£o pastoral.',
     icon: Map,
     cor: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300',
   },
@@ -61,9 +61,9 @@ const RECURSOS: RecursoConfig[] = [
     id: 'cronologia',
     titulo: 'Cronologias',
     descricao: 'Linha do tempo de eventos do AT e NT, com paralelos.',
-    placeholder: 'Ex: Êxodo, cativeiro, vida de Cristo…',
+    placeholder: 'Ex: ÃŠxodo, cativeiro, vida de Cristoâ€¦',
     systemAppend:
-      'Quando o usuário pedir uma cronologia, monte uma linha do tempo detalhada com datas aproximadas, eventos-chave, personagens e conexões entre AT e NT.',
+      'Quando o usuÃ¡rio pedir uma cronologia, monte uma linha do tempo detalhada com datas aproximadas, eventos-chave, personagens e conexÃµes entre AT e NT.',
     icon: ScrollText,
     cor: 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300',
   },
@@ -71,29 +71,29 @@ const RECURSOS: RecursoConfig[] = [
     id: 'hebraico_grego',
     titulo: 'Hebraico e Grego',
     descricao: 'Conceitos originais e ferramentas de estudo.',
-    placeholder: 'Ex: agape, hesed, shalom, logos…',
+    placeholder: 'Ex: agape, hesed, shalom, logosâ€¦',
     systemAppend:
-      'Quando o usuário pedir uma palavra grega ou hebraica, forneça: transliteração, escrita original, significado, Strong, ocorrências bíblicas, contexto teológico.',
+      'Quando o usuÃ¡rio pedir uma palavra grega ou hebraica, forneÃ§a: transliteraÃ§Ã£o, escrita original, significado, Strong, ocorrÃªncias bÃ­blicas, contexto teolÃ³gico.',
     icon: Languages,
     cor: 'bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-300',
   },
   {
     id: 'comentario',
-    titulo: 'Comentário de texto',
-    descricao: 'Análise exegética e pastoral de uma passagem.',
-    placeholder: 'Ex: João 3:16, Romanos 8:28…',
+    titulo: 'ComentÃ¡rio de texto',
+    descricao: 'AnÃ¡lise exegÃ©tica e pastoral de uma passagem.',
+    placeholder: 'Ex: JoÃ£o 3:16, Romanos 8:28â€¦',
     systemAppend:
-      'Faça um comentário exegético e pastoral: contexto histórico, análise do texto original, divisão por versículos, teologia, aplicação contemporânea e ilustrações.',
+      'FaÃ§a um comentÃ¡rio exegÃ©tico e pastoral: contexto histÃ³rico, anÃ¡lise do texto original, divisÃ£o por versÃ­culos, teologia, aplicaÃ§Ã£o contemporÃ¢nea e ilustraÃ§Ãµes.',
     icon: BookOpen,
     cor: 'bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300',
   },
   {
     id: 'genealogia',
     titulo: 'Genealogias',
-    descricao: 'Linhagens bíblicas, de Adão a Cristo.',
-    placeholder: 'Ex: genealogia de Jesus…',
+    descricao: 'Linhagens bÃ­blicas, de AdÃ£o a Cristo.',
+    placeholder: 'Ex: genealogia de Jesusâ€¦',
     systemAppend:
-      'Apresente a genealogia em formato organizado: patriarcas principais, esposas e eventos relevantes, simbolismo teológico, profecias cumpridas.',
+      'Apresente a genealogia em formato organizado: patriarcas principais, esposas e eventos relevantes, simbolismo teolÃ³gico, profecias cumpridas.',
     icon: Library,
     cor: 'bg-teal-100 text-teal-700 dark:bg-teal-500/20 dark:text-teal-300',
   },
@@ -141,15 +141,15 @@ export function StudyPage() {
   };
 
   return (
-    <div className="flex flex-col bg-paper text-ink-900 dark:bg-paper-dark dark:text-ink-100">
-      <MobileHeader title="Modo Estudo" subtitle="Recursos exegéticos com IA" />
+    <div className="flex h-full flex-col bg-paper text-ink-900 dark:bg-paper-dark dark:text-ink-100">
+      <MobileHeader title="Modo Estudo" subtitle="Recursos exegÃ©ticos com IA" />
 
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto pb-32">
         <div className="mx-auto max-w-2xl space-y-5 px-4 py-4">
 
           <section>
             <h2 className="mb-3 px-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-500 dark:text-ink-400">
-              Recursos disponíveis
+              Recursos disponÃ­veis
             </h2>
             <div className="grid grid-cols-2 gap-2.5">
               {RECURSOS.map((r) => {
@@ -251,7 +251,7 @@ export function StudyPage() {
                   {carregando && !resposta && (
                     <div className="flex items-center gap-2.5 p-4 text-[13.5px] text-ink-500 dark:text-ink-400">
                       <Loader2 className="h-4 w-4 animate-spin" />
-                      Consultando fontes exegéticas…
+                      Consultando fontes exegÃ©ticasâ€¦
                     </div>
                   )}
 
@@ -285,7 +285,7 @@ export function StudyPage() {
                       </pre>
                       {stats && (
                         <div className="mt-3 border-t border-ink-100 pt-2 text-[10.5px] text-ink-500 dark:border-ink-800 dark:text-ink-400 tabular-nums">
-                          {(stats.duracaoMs / 1000).toFixed(1)}s · {formatarRelogio(Date.now())}
+                          {(stats.duracaoMs / 1000).toFixed(1)}s Â· {formatarRelogio(Date.now())}
                         </div>
                       )}
                     </div>
@@ -296,7 +296,7 @@ export function StudyPage() {
           </AnimatePresence>
 
           <p className="pb-4 text-center text-[10.5px] text-ink-400 dark:text-ink-500">
-            Alimentado por IA · Configure a chave em Configurações
+            Alimentado por IA Â· Configure a chave em ConfiguraÃ§Ãµes
           </p>
         </div>
       </div>
