@@ -63,6 +63,12 @@ class IADB extends Dexie {
   constructor() {
     super('PregadorOSIA');
     this.version(1).stores({
+      sessoes: '&id, criadaEm',
+      mensagens: '&id, sessaoId, timestamp, [sessaoId+timestamp]',
+      cache: '&chave, cacheadaEm',
+      stats: '&id',
+    });
+    this.version(2).stores({
       sessoes: '&id, criadaEm, atualizadaEm, mensagemId',
       mensagens: '&id, sessaoId, timestamp, [sessaoId+timestamp]',
       cache: '&chave, cacheadaEm',
