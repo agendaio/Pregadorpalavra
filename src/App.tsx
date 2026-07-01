@@ -19,6 +19,11 @@ const EditorPage = lazy(() =>
   import('@/components/editor/EditorPage').then((m) => ({ default: m.EditorPage })),
 );
 
+// ── Code splitting: Assistente Ministerial (carregado sob demanda) ──
+const AssistantPage = lazy(() =>
+  import('@/components/assistant/AssistantPage').then((m) => ({ default: m.AssistantPage })),
+);
+
 // ── Code splitting: Admin inteiro fica em chunk separado ──
 const AdminLoginPage = lazy(() =>
   import('@/admin/Login').then((m) => ({ default: m.AdminLoginPage })),
@@ -69,6 +74,7 @@ function AnimatedRoutes() {
             <Route path="/" element={<HomePage />} />
             <Route path="/esbocos" element={<OutlinesPage />} />
             <Route path="/editar/:id" element={<EditorPage />} />
+            <Route path="/estudo" element={<ErrorBoundary><AssistantPage /></ErrorBoundary>} />
             <Route path="/configuracoes" element={<SettingsPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>

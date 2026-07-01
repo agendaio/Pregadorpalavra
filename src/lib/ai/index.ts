@@ -8,14 +8,14 @@
 
 import Dexie, { type Table } from 'dexie';
 
-/** Sessão stub */
+/** Sessão de chat */
 export interface Sessao {
   id: string;
-  mensagemId?: string | null;
-  criadaEm: number;
-  atualizadaEm: number;
-  titulo?: string;
-  provider: string;
+  titulo: string;
+  agenteId?: string | null;
+  agenteNome?: string | null;
+  createdAt: number;
+  updatedAt: number;
 }
 
 /** Mensagem persistida stub */
