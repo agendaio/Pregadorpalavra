@@ -52,6 +52,8 @@ import { useProgressoStore, type Capitulo } from '@/stores/progressoPulpit';
 import { useUIStore } from '@/stores/ui';
 import { parsearEsboco } from '@/lib/esbocoParser';
 import { cn, formatarRelogio, formatarDuracao } from '@/lib/utils';
+import { SlideRenderer } from './SlideRenderer';
+import type { Slide } from '@/types/mensagem';
 
 // â”€â”€â”€ Tipos internos â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
@@ -518,6 +520,7 @@ export function PulpitPage() {
   const [temaEscuro, setTemaEscuro] = useState(true); // /pulpit é sempre dark por design
   const [settingsAberta, setSettingsAberta] = useState(false);
   const [modoApresentacao, setModoApresentacao] = useState(false);
+  const [slideIndex, setSlideIndex] = useState(0);
   const [espacamentoLinhas, setEspacamentoLinhas] = useState(1.55);
 
   const mostrarToast = useUIStore((s) => s.mostrarToast);
@@ -725,6 +728,7 @@ export function PulpitPage() {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'p') {
         e.preventDefault();
         setModoApresentacao((v) => !v);
+        if (!modoApresentacao) setSlideIndex(0);
       }
       if (e.key === 'ArrowDown' || e.key === 'j') {
         const next = Math.min(totalCaps - 1, primeiroNaoFeitoIdx + 1);
@@ -734,16 +738,38 @@ export function PulpitPage() {
         const prev = Math.max(0, primeiroNaoFeitoIdx - 1);
         if (prev !== primeiroNaoFeitoIdx) abrirCapitulo(prev);
       }
+      // Navegação de slides na apresentação
+      if (modoApresentacao && mensagem?.slides?.length) {
+        if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') {
+          e.preventDefault();
+          setSlideIndex((i) => Math.min(mensagem.slides.length - 1, i + 1));
+        }
+        if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+          e.preventDefault();
+          setSlideIndex((i) => Math.max(0, i - 1));
+        }
+        if (e.key === 'Home') {
+          e.preventDefault();
+          setSlideIndex(0);
+        }
+        if (e.key === 'End') {
+          e.preventDefault();
+          setSlideIndex(mensagem.slides.length - 1);
+        }
+      }
     };
     window.addEventListener('keydown', fn);
     return () => window.removeEventListener('keydown', fn);
-  }, [
+  },     [
     handleIniciarOuPausar,
     tamanhoFonte,
     setTamanhoFonte,
     primeiroNaoFeitoIdx,
     totalCaps,
     abrirCapitulo,
+    modoApresentacao,
+    setSlideIndex,
+    mensagem?.slides,
   ]);
 
   // â”€â”€â”€ Cronômetro derivado â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -1099,103 +1125,147 @@ return (
         )}
       </AnimatePresence>
 
-      {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• PRESENTATION MODE â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
+      {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• PRESENTATION MODE (SLIDES) â•�â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
       <AnimatePresence>
         {modoApresentacao && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[60] flex flex-col items-center justify-center"
-            style={{ background: '#07070d' }}
-            onClick={() => setModoApresentacao(false)}
+            className="fixed inset-0 z-[60] flex flex-col items-center justify-center overflow-hidden"
+            style={{ background: '#05050a' }}
           >
-            {/* Barra sutil no topo com botão sair */}
-            <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-between px-6 py-4">
-              <span className="text-[11px] font-medium uppercase tracking-widest text-white/30">
-                {mensagem.titulo || 'Sem título'}
-              </span>
+            {/* Barra superior */}
+            <div className="absolute inset-x-0 top-0 z-20 flex items-center justify-between px-4 py-3 sm:px-8">
+              <div className="flex items-center gap-3">
+                <span className="font-mono text-[11px] tabular-nums text-white/30">
+                  {slideIndex + 1} / {mensagem.slides?.length ?? 0}
+                </span>
+                <span className="hidden text-[11px] font-medium uppercase tracking-widest text-white/30 sm:block">
+                  {mensagem.titulo || 'Sem título'}
+                </span>
+              </div>
               <button
                 type="button"
                 onClick={() => setModoApresentacao(false)}
                 className="flex h-9 w-9 items-center justify-center rounded-full text-white/40 transition-colors hover:bg-white/10 hover:text-white"
+                aria-label="Sair da apresentação"
               >
                 <Minimize2 className="h-5 w-5" />
               </button>
             </div>
 
-            {/* Conteúdo scrollável */}
-            <div
-              className="flex-1 overflow-y-auto overscroll-contain px-8 py-20"
-              style={{ width: 'min(900px, 100%)' }}
-            >
-              {capitulosColoridos.map((cap, idx) => {
-                const feito = capitulosFeitos.has(cap.id);
-                return (
-                  <div
-                    key={cap.id}
-                    className="mb-16"
-                    style={{ opacity: feito ? 0.4 : 1 }}
-                  >
-                    <h2
-                      className="mb-8 font-serif text-5xl font-bold leading-tight text-amber-300"
-                      style={{ fontSize: `${Math.min(tamanhoFonte + 12, 72)}px` }}
-                    >
-                      {idx + 1}. {cap.titulo}
-                    </h2>
-                    {cap.blocos.map((bloco, bi) => (
-                      <p
-                        key={bloco.id}
-                        className={cn(
-                          'mb-4 font-serif leading-relaxed text-white/80',
-                          bloco.texto.startsWith('▌') ? 'text-amber-100 font-semibold' : '',
-                        )}
-                        style={{
-                          fontSize: `${tamanhoFonte}px`,
-                          lineHeight: espacamentoLinhas,
-                        }}
-                      >
-                        {bloco.texto}
-                      </p>
-                    ))}
-                  </div>
-                );
-              })}
-              {/* Oração */}
-              <div className="mt-12 mb-8 text-center">
-                <div className="mb-6 text-6xl text-amber-300">✝</div>
-                <h2
-                  className="mb-8 font-serif font-bold text-amber-300"
-                  style={{ fontSize: `${Math.min(tamanhoFonte + 12, 72)}px` }}
+            {/* Área de slides */}
+            {mensagem.slides && mensagem.slides.length > 0 ? (
+              <>
+                {/* Botão anterior */}
+                <button
+                  type="button"
+                  onClick={() => setSlideIndex((i) => Math.max(0, i - 1))}
+                  disabled={slideIndex === 0}
+                  aria-label="Slide anterior"
+                  className={cn(
+                    'absolute left-2 top-1/2 z-20 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full backdrop-blur-sm transition-all active:scale-95 sm:left-6',
+                    slideIndex === 0
+                      ? 'cursor-not-allowed text-white/10'
+                      : 'text-white/50 hover:bg-white/10 hover:text-white/80',
+                  )}
                 >
-                  Oração
-                </h2>
-                <p
-                  className="italic leading-relaxed text-white/70"
-                  style={{ fontSize: `${tamanhoFonte}px`, lineHeight: espacamentoLinhas }}
-                >
-                  Senhor, que a Tua Palavra seja luz nos nossos caminhos.
-                  <br />
-                  Que a fé que ouvimos hoje se faça obra em nossas vidas.
-                  <br />
-                  Em nome de Jesus.{' '}
-                  <span className="font-semibold text-amber-300">Amém.</span>
-                </p>
-              </div>
-            </div>
+                  <ChevronRight className="h-6 w-6 rotate-180" />
+                </button>
 
-            {/* Indicador de progresso na base */}
-            <div className="absolute bottom-0 inset-x-0 flex items-center gap-3 px-8 py-4">
-              <div className="h-1 flex-1 overflow-hidden rounded-full bg-white/10">
+                {/* Slide atual */}
                 <div
-                  className="h-full rounded-full bg-amber-300/60 transition-all duration-500"
-                  style={{ width: `${totalCaps > 0 ? (totalFeitos / totalCaps) * 100 : 0}%` }}
-                />
+                  className="flex h-full w-full items-center justify-center px-4 py-16 sm:px-20"
+                  onClick={() => {
+                    if (slideIndex < mensagem.slides.length - 1) {
+                      setSlideIndex((i) => i + 1);
+                    }
+                  }}
+                >
+                  <div className="h-full w-full max-w-5xl overflow-hidden rounded-2xl sm:max-h-[85vh]">
+                    <AnimatePresence mode="wait">
+                      <SlideRenderer
+                        key={slideIndex}
+                        slide={mensagem.slides[slideIndex] as Slide}
+                        indice={slideIndex}
+                        total={mensagem.slides.length}
+                        className="rounded-2xl"
+                      />
+                    </AnimatePresence>
+                  </div>
+                </div>
+
+                {/* Botão próximo */}
+                <button
+                  type="button"
+                  onClick={() => setSlideIndex((i) => Math.min(mensagem.slides.length - 1, i + 1))}
+                  disabled={slideIndex === mensagem.slides.length - 1}
+                  aria-label="Próximo slide"
+                  className={cn(
+                    'absolute right-2 top-1/2 z-20 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full backdrop-blur-sm transition-all active:scale-95 sm:right-6',
+                    slideIndex === mensagem.slides.length - 1
+                      ? 'cursor-not-allowed text-white/10'
+                      : 'text-white/50 hover:bg-white/10 hover:text-white/80',
+                  )}
+                >
+                  <ChevronRight className="h-6 w-6" />
+                </button>
+
+                {/* Barra de progresso inferior */}
+                <div className="absolute bottom-0 inset-x-0 z-20 flex items-center gap-3 px-6 py-4">
+                  {/* Miniaturas clicáveis */}
+                  <div className="flex flex-1 items-center gap-1 overflow-x-auto scrollbar-none">
+                    {mensagem.slides.map((slide, idx) => {
+                      const tipo = slide.content.tipo;
+                      const cores: Record<string, string> = {
+                        capa: 'bg-amber-400',
+                        verso: 'bg-blue-400',
+                        conteudo: 'bg-indigo-400',
+                        categorias: 'bg-emerald-400',
+                        chamada: 'bg-orange-400',
+                        oracao: 'bg-rose-400',
+                      };
+                      return (
+                        <button
+                          key={slide.id}
+                          type="button"
+                          onClick={() => setSlideIndex(idx)}
+                          className={cn(
+                            'flex-shrink-0 h-1.5 rounded-full transition-all duration-300',
+                            idx === slideIndex
+                              ? cn('w-6', cores[tipo] ?? 'bg-white')
+                              : 'w-1.5 bg-white/20 hover:bg-white/40',
+                          )}
+                          aria-label={`Ir para slide ${idx + 1}`}
+                        />
+                      );
+                    })}
+                  </div>
+                  <span className="flex-shrink-0 font-mono text-[11px] tabular-nums text-white/30">
+                    {slideIndex + 1}/{mensagem.slides.length}
+                  </span>
+                </div>
+              </>
+            ) : (
+              /* Nenhum slide — mensagem amigável */
+              <div className="flex flex-col items-center justify-center text-center">
+                <div className="mb-6 text-6xl">📊</div>
+                <h2 className="mb-3 font-serif text-3xl font-bold text-white/70">
+                  Nenhum slide criado
+                </h2>
+                <p className="mb-8 max-w-sm text-[15px] text-white/45">
+                  Vá ao editor de slides e crie os slides para esta mensagem antes de entrar na apresentação.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setModoApresentacao(false)}
+                  className="rounded-full bg-white/10 px-6 py-3 text-[14px] font-semibold text-white/70 hover:bg-white/15"
+                >
+                  Voltar
+                </button>
               </div>
-              <span className="text-[11px] tabular-nums text-white/40">
-                {totalFeitos}/{totalCaps}
-              </span>
-            </div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
@@ -1270,7 +1340,7 @@ return (
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-[12.5px] text-white/80">Modo Apresentação</p>
-                    <p className="text-[10.5px] text-white/40">Tela cheia, texto grande</p>
+                    <p className="text-[10.5px] text-white/40">Slides em tela cheia (Ctrl+P)</p>
                   </div>
                   <button
                     type="button"
@@ -1295,6 +1365,8 @@ return (
                     <span>F</span><span>Modo foco</span>
                     <span>Esc</span><span>Voltar ao editor</span>
                     <span>↑↓</span><span>Navegar seções</span>
+                    <span>Ctrl+P</span><span>Apresentação</span>
+                    <span>←→</span><span>Slides (na apresentação)</span>
                   </div>
                 </div>
               </div>
