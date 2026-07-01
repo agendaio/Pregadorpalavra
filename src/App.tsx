@@ -17,6 +17,7 @@ import { Toast } from '@/components/ui/Toast';
 import { PWAUpdatePrompt } from '@/components/pwa/PWAUpdatePrompt';
 import { semearExemplos } from '@/db/seed';
 import { initTema } from '@/stores/ui';
+import { syncInit } from '@/lib/sync';
 
 // ── Code splitting: Editor (Tiptap é pesado) só carrega sob demanda ──
 const EditorPage = lazy(() =>
@@ -101,6 +102,7 @@ export function App() {
   useEffect(() => {
     initTema();
     semearExemplos();
+    void syncInit(); // inicializa sync offline-first com Supabase
   }, []);
 
   return (

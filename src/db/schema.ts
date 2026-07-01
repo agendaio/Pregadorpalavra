@@ -1,5 +1,6 @@
 import Dexie, { type Table } from 'dexie';
 import type { Mensagem, MensagemHistorico, Serie, Tag } from '@/types/mensagem';
+import { syncSalvarMensagem, syncRemoverMensagem } from '@/lib/sync';
 
 /**
  * Banco local do Pregador OS.
@@ -33,6 +34,9 @@ class PregadorDB extends Dexie {
   /**
    * Salva uma mensagem criando snapshot anterior quando há mudança real.
    * Mantém no máximo 50 versões por mensagem para não estourar storage.
+   */
+  /**
+   * Salva uma mensagem no IndexedDB E agenda sync com Supabase (offline-first).
    */
   async salvarMensagem(m: Mensagem): Promise<void> {
     const existente = await this.mensagens.get(m.id);
@@ -74,6 +78,8 @@ class PregadorDB extends Dexie {
     }
 
     await this.mensagens.put(atualizada);
+    // Sync com Supabase em background (offline-first: IndexedDB é fonte da verdade)
+    void syncSalvarMensagem(atualizada);
   }
 
   async removerMensagem(id: string): Promise<void> {
@@ -81,6 +87,7 @@ class PregadorDB extends Dexie {
       await this.mensagens.delete(id);
       await this.historico.where('mensagemId').equals(id).delete();
     });
+    void syncRemoverMensagem(id);
   }
 }
 
