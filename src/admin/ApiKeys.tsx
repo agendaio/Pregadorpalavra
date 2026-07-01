@@ -8,7 +8,7 @@ import {
   Sliders, Brain, Database, Shield, FileText, Zap as ZapIcon,
   Globe, ScrollText, Eye as EyeIcon, Beaker,
 } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { supabase, callEdgeFunction } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
 
 // ─── Tipos ─────────────────────────────────────────────────────────────────
@@ -175,98 +175,36 @@ function ApiKeysSection() {
     setTestando(true);
     setTestResults([]);
     setTestOk(false);
-    const sb = supabase();
-    if (!sb) {
-      setTestResults([{
-        name: 'Cliente Supabase',
-        passed: false,
-        message: 'Cliente Supabase não inicializou. Verifique VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no .env.',
-      }]);
-      setTestando(false);
-      return;
-    }
-
-    const session = await sb.auth.getSession();
-    if (!session.data.session) {
-      setTestResults([{
-        name: 'Autenticação',
-        passed: false,
-        message: 'Você não está logado como admin. Faça login em /admin/login antes de testar.',
-      }]);
-      setTestando(false);
-      return;
-    }
 
     try {
-      const { data, error } = await sb.functions.invoke('test-key', {
-        body: { provider, apiKey: apiKeyRaw.trim(), model: modelo },
-      });
+      const { data, error } = await callEdgeFunction<{ success: boolean; tests: TestResult[] }>(
+        'test-key',
+        { provider, apiKey: apiKeyRaw.trim(), model: modelo },
+      );
 
-      // Função retornou OK e tem tests[]
-      if (data && typeof data === 'object' && Array.isArray((data as any).tests)) {
-        const r = data as { success: boolean; tests: TestResult[] };
-        setTestResults(r.tests);
-        setTestOk(r.success);
+      if (data && Array.isArray(data.tests)) {
+        setTestResults(data.tests);
+        setTestOk(data.success);
         return;
       }
 
-      // Erro veio do wrapper — tenta extrair body e status reais
-      if (error) {
-        const err: any = error;
-        const ctx = err.context ?? {};
-        const status: number | undefined = ctx.status;
-        const rawBody = ctx.body;
-        const errBody = typeof rawBody === 'string'
-          ? (() => { try { return JSON.parse(rawBody); } catch { return rawBody; } })()
-          : rawBody ?? null;
+      const msg = error?.message ?? 'Erro desconhecido';
+      const status = error?.status ?? 0;
 
-        const detail = errBody?.message ?? err.message ?? String(error).slice(0, 200);
-
-        // 401/403 da Edge Function
-        if (status === 401) {
-          setTestResults([{
-            name: 'HTTP 401 — não autorizado',
-            passed: false,
-            message: 'Sua sessão de admin expirou. Faça logout e login novamente em /admin/login.',
-          }]);
-          return;
-        }
-        if (status === 403) {
-          setTestResults([{
-            name: 'HTTP 403 — proibido',
-            passed: false,
-            message: 'Você não tem permissão admin. A função test-key exige JWT de admin.',
-          }]);
-          return;
-        }
-
-        // Erros de rede / DNS / CORS
-        const netMatch = String(detail).match(/Failed to send|FetchError|network|fetch|ECONNREFUSED|ENOTFOUND|CORS|TypeError/i);
-        if (netMatch) {
-          setTestResults([{
-            name: 'Falha de rede',
-            passed: false,
-            message: `🌐 Não foi possível chamar a Edge Function. Detalhes: ${detail}\n\nVerifique:\n• Sua internet está ok?\n• VPN/proxy/firewall não está bloqueando supabase.co?\n• Extensão bloqueadora (uBlock, Privacy Badger) desativada?\n• Abra DevTools → Network e veja o status real da requisição`,
-          }]);
-          return;
-        }
-
-        setTestResults([{ name: status ? `HTTP ${status}` : 'Erro', passed: false, message: detail }]);
-        return;
+      if (status === 429) {
+        setTestResults([{ name: `HTTP 429`, passed: false, message: `💳 Sem crédito na conta ${provider}. Adicione saldo em platform.openai.com → Billing.` }]);
+      } else if (status === 401) {
+        setTestResults([{ name: 'HTTP 401', passed: false, message: `🔑 Chave inválida ou expirada.` }]);
+      } else if (status === 403) {
+        setTestResults([{ name: 'HTTP 403', passed: false, message: `⛔ Sem permissão para este modelo.` }]);
+      } else if (status >= 400) {
+        setTestResults([{ name: `HTTP ${status}`, passed: false, message: msg }]);
+      } else {
+        setTestResults([{ name: 'Falha de rede', passed: false, message: `🌐 Não foi possível conectar. Detalhes: ${msg}\n\nVerifique: proxy/firewall/extensões bloqueadoras.` }]);
       }
-
-      // Caso raro: sem data e sem error
-      setTestResults([{ name: 'Sem resposta', passed: false, message: 'Edge Function não retornou dados. Verifique se está deployada.' }]);
+      setTestOk(false);
     } catch (e) {
-      const msg = (e as Error)?.message ?? String(e);
-      const netMatch = msg.match(/Failed to send|FetchError|network|fetch|ECONNREFUSED|ENOTFOUND|CORS|TypeError/i);
-      setTestResults([{
-        name: 'Erro interno',
-        passed: false,
-        message: netMatch
-          ? `🌐 Falha de rede: ${msg}\n\nVerifique internet/proxy/VPN/Adblock.`
-          : msg,
-      }]);
+      setTestResults([{ name: 'Erro interno', passed: false, message: (e as Error).message }]);
     } finally {
       setTestando(false);
     }
@@ -1009,7 +947,24 @@ function TestesSection() {
         body: { mensagem: input, modo: 'test' },
       });
       const elapsed = Date.now() - t0;
-      if (error) throw new Error(String(error));
+      if (error) {
+        const err: any = error;
+        const status: number | undefined = err.context?.status;
+        const rawBody = err.context?.body;
+        const errBody = typeof rawBody === 'string'
+          ? (() => { try { return JSON.parse(rawBody); } catch { return rawBody; } })()
+          : rawBody ?? null;
+        const detail = errBody?.message ?? errBody?.error ?? err.message ?? String(error).slice(0, 300);
+
+        let hint = '';
+        if (status === 401) hint = '\n💡 Sua sessão de admin expirou. Faça logout/login em /admin/login.';
+        else if (status === 429) hint = '\n💳 Limite mensal atingido. Verifique o plano do usuário.';
+        else if (status === 500 && String(detail).includes('no_api_key')) hint = '\n🔑 Nenhuma chave cadastrada. Vá em /admin/api-keys e cadastre uma chave OpenAI.';
+        else if (String(detail).match(/Failed to send|FetchError|network|fetch/i)) hint = '\n🌐 Falha de rede. Verifique VPN/proxy/adblock.';
+
+        setOutput(`❌ HTTP ${status ?? '?'} em ${elapsed}ms\n\n${detail}${hint}`);
+        return;
+      }
       setOutput(`✅ Respondido em ${elapsed}ms\n\n${JSON.stringify(data, null, 2)}`);
     } catch (e) {
       setOutput(`❌ Erro: ${(e as Error).message}`);
@@ -1032,6 +987,215 @@ function TestesSection() {
         </button>
         {output && <pre className="mt-4 max-h-96 overflow-auto rounded-xl border border-ink-200 bg-ink-50 p-3 text-[11.5px] font-mono whitespace-pre-wrap text-ink-800">{output}</pre>}
       </Card>
+    </div>
+  );
+}
+
+// ─── Seção: Modelos ──────────────────────────────────────────────────────────
+
+function ModelosSection() {
+  const [configs, setConfigs] = useState<ApiKeyConfig[]>([]);
+  const [usage, setUsage] = useState<{ total: number; byModel: Record<string, { calls: number; tokens: number; custo: number }> }>({ total: 0, byModel: {} });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => { void carregar(); }, []);
+
+  async function carregar() {
+    setLoading(true);
+    const sb = supabase();
+    const [{ data: cfgs }, { data: logs }] = await Promise.all([
+      sb!.from('api_keys').select('*').eq('ativo', true),
+      sb!.from('usage_log').select('meta, custo_usd').eq('tipo', 'ia_request').gte('criado_em', new Date(Date.now() - 30 * 86400_000).toISOString()),
+    ]);
+    setConfigs(cfgs ?? []);
+    const byModel: Record<string, { calls: number; tokens: number; custo: number }> = {};
+    let total = 0;
+    for (const l of logs ?? []) {
+      const m = (l.meta as { model?: string } | null)?.model ?? 'desconhecido';
+      const custo = Number(l.custo_usd ?? 0);
+      if (!byModel[m]) byModel[m] = { calls: 0, tokens: 0, custo: 0 };
+      byModel[m].calls += 1;
+      byModel[m].custo += custo;
+      total += custo;
+    }
+    setUsage({ total, byModel });
+    setLoading(false);
+  }
+
+  if (loading) return <div className="flex items-center justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-ink-300" /></div>;
+
+  return (
+    <div className="space-y-4">
+      <SectionTitle>Modelos Configurados</SectionTitle>
+      {configs.length === 0 ? (
+        <Card className="flex flex-col items-center gap-3 p-10 text-center">
+          <Cpu className="h-10 w-10 text-ink-200" />
+          <p className="text-[13px] text-ink-500">Nenhuma chave cadastrada.</p>
+          <p className="text-[11.5px] text-ink-400">Vá em <strong>API Keys</strong> e cadastre uma chave OpenAI/Anthropic/Google.</p>
+        </Card>
+      ) : (
+        <div className="space-y-2">
+          {configs.map(c => {
+            const prov = PROVIDERS.find(p => p.id === c.provider);
+            return (
+              <Card key={c.id} className="p-4">
+                <div className="mb-3 flex items-center gap-3">
+                  <span className="text-2xl">{prov?.logo}</span>
+                  <div className="flex-1">
+                    <div className="text-[13px] font-semibold text-ink-900">{prov?.label}</div>
+                    <div className="text-[11px] text-ink-500">{c.modelo_padrao}</div>
+                  </div>
+                  <StatusBadge ok={c.ativo} label={c.ativo ? 'Ativo' : 'Inativo'} />
+                </div>
+                <div className="grid grid-cols-3 gap-2 text-[11px]">
+                  <div className="rounded-lg bg-ink-50 p-2"><div className="text-ink-400">Temperatura</div><div className="font-mono text-ink-800">{c.temperature ?? '—'}</div></div>
+                  <div className="rounded-lg bg-ink-50 p-2"><div className="text-ink-400">Max tokens</div><div className="font-mono text-ink-800">{c.max_tokens ?? '—'}</div></div>
+                  <div className="rounded-lg bg-ink-50 p-2"><div className="text-ink-400">Contexto</div><div className="font-mono text-ink-800">{c.context_window ?? '—'}</div></div>
+                </div>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+
+      <SectionTitle>Uso por Modelo (últimos 30 dias)</SectionTitle>
+      <Card className="p-4">
+        {Object.keys(usage.byModel).length === 0 ? (
+          <p className="text-[12px] text-ink-500">Nenhuma requisição registrada ainda.</p>
+        ) : (
+          <div className="space-y-2">
+            {Object.entries(usage.byModel).map(([modelo, u]) => (
+              <div key={modelo} className="flex items-center gap-3 rounded-lg bg-ink-50 p-2.5">
+                <Cpu className="h-4 w-4 text-ink-500" />
+                <div className="flex-1">
+                  <div className="text-[12px] font-semibold text-ink-800">{modelo}</div>
+                  <div className="text-[10.5px] text-ink-500">{u.calls} chamadas</div>
+                </div>
+                <div className="text-right">
+                  <div className="text-[12px] font-mono text-ink-800">${u.custo.toFixed(4)}</div>
+                  <div className="text-[10px] text-ink-400">custo total</div>
+                </div>
+              </div>
+            ))}
+            <div className="mt-3 flex items-center justify-between border-t border-ink-200 pt-3 text-[12px]">
+              <span className="font-semibold text-ink-700">Total</span>
+              <span className="font-mono font-bold text-ink-900">${usage.total.toFixed(4)}</span>
+            </div>
+          </div>
+        )}
+      </Card>
+    </div>
+  );
+}
+
+// ─── Seção: Limites ──────────────────────────────────────────────────────────
+
+function LimitesSection() {
+  const [stats, setStats] = useState<{ usado: number; limite: number; plano: string } | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => { void carregar(); }, []);
+
+  async function carregar() {
+    setLoading(true);
+    const sb = supabase();
+    const session = await sb!.auth.getSession();
+    const userId = session.data.session?.user.id;
+    if (!userId) { setLoading(false); return; }
+
+    const inicioMes = new Date();
+    inicioMes.setDate(1); inicioMes.setHours(0, 0, 0, 0);
+
+    const [{ count }, { data: sub }] = await Promise.all([
+      sb!.from('usage_log').select('*', { count: 'exact', head: true }).eq('user_id', userId).eq('tipo', 'ia_request').gte('criado_em', inicioMes.toISOString()),
+      sb!.from('subscriptions').select('plans(limite_ia_mes, nome)').eq('user_id', userId).in('status', ['active', 'trialing']).order('criado_em', { ascending: false }).limit(1).maybeSingle(),
+    ]);
+
+    // @ts-ignore
+    const limite = sub?.plans?.limite_ia_mes ?? 30;
+    // @ts-ignore
+    const plano = sub?.plans?.nome ?? 'Free (sem assinatura)';
+    setStats({ usado: count ?? 0, limite, plano });
+    setLoading(false);
+  }
+
+  if (loading) return <div className="flex items-center justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-ink-300" /></div>;
+  if (!stats) return <Card className="p-6 text-center"><p className="text-[12px] text-ink-500">Faça login para ver seus limites.</p></Card>;
+
+  const pct = Math.min(100, (stats.usado / Math.max(stats.limite, 1)) * 100);
+  const cor = pct > 90 ? 'bg-red-500' : pct > 70 ? 'bg-amber-500' : 'bg-emerald-500';
+
+  return (
+    <div className="space-y-4">
+      <SectionTitle>Limite Mensal de IA</SectionTitle>
+      <Card className="p-5">
+        <div className="mb-1 flex items-center justify-between text-[12px]">
+          <span className="text-ink-500">Plano atual</span>
+          <span className="font-semibold text-ink-800">{stats.plano}</span>
+        </div>
+        <div className="mb-3 mt-4 flex items-end justify-between">
+          <div className="text-3xl font-bold text-ink-900">{stats.usado}</div>
+          <div className="text-[13px] text-ink-500">de {stats.limite} requisições</div>
+        </div>
+        <div className="h-3 w-full overflow-hidden rounded-full bg-ink-100">
+          <div className={`h-full transition-all ${cor}`} style={{ width: `${pct}%` }} />
+        </div>
+        <p className="mt-3 text-[11px] text-ink-500">
+          {pct >= 100
+            ? '⚠️ Limite atingido. Faça upgrade do plano.'
+            : pct >= 80
+            ? '⚠️ Próximo do limite. Considere upgrade.'
+            : `Restam ${stats.limite - stats.usado} requisições este mês.`}
+        </p>
+      </Card>
+    </div>
+  );
+}
+
+// ─── Seção: Ferramentas ──────────────────────────────────────────────────────
+
+const FERRAMENTAS = [
+  { id: 'web_search', nome: 'Pesquisa Web', descricao: 'Busca na internet por contexto atualizado.', icon: Globe, plano: 'premium' },
+  { id: 'cross_refs', nome: 'Referências Cruzadas', descricao: 'Sugere versículos relacionados ao texto-base.', icon: Hash, plano: 'todos' },
+  { id: 'illustrations', nome: 'Banco de Ilustrações', descricao: 'Histórias e paráfrases ilustrativas.', icon: FileText, plano: 'todos' },
+  { id: 'prayer_gen', nome: 'Gerador de Oração', descricao: 'Cria oração baseada no sermão.', icon: MessageSquare, plano: 'essencial' },
+  { id: 'outline_check', nome: 'Auditoria de Esboço', descricao: 'Analisa coerência e equilíbrio.', icon: CheckCircle2, plano: 'premium' },
+  { id: 'series_planner', nome: 'Planejador de Séries', descricao: 'Sugere séries temáticas completas.', icon: GitBranch, plano: 'premium' },
+];
+
+function FerramentasSection() {
+  return (
+    <div className="space-y-4">
+      <SectionTitle>Ferramentas de IA Disponíveis</SectionTitle>
+      <p className="text-[12px] text-ink-500">
+        Cada ferramenta é injetada como capacidade ao agente quando habilitada na aba Agentes.
+        O plano do usuário controla o que ele vê.
+      </p>
+      <div className="grid gap-3 sm:grid-cols-2">
+        {FERRAMENTAS.map(f => (
+          <Card key={f.id} className="p-4">
+            <div className="mb-2 flex items-start gap-3">
+              <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-ink-100 text-ink-700">
+                <f.icon className="h-4 w-4" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-[13px] font-semibold text-ink-900">{f.nome}</span>
+                  <span className={cn(
+                    'rounded-full px-2 py-0.5 text-[10px] font-semibold',
+                    f.plano === 'todos' ? 'bg-emerald-50 text-emerald-700' :
+                    f.plano === 'essencial' ? 'bg-sky-50 text-sky-700' :
+                    'bg-violet-50 text-violet-700'
+                  )}>
+                    {f.plano === 'todos' ? 'Todos' : f.plano}
+                  </span>
+                </div>
+                <p className="mt-1 text-[11px] text-ink-500">{f.descricao}</p>
+              </div>
+            </div>
+          </Card>
+        ))}
+      </div>
     </div>
   );
 }
@@ -1087,11 +1251,11 @@ export default function ApiKeysPage() {
             transition={{ duration: 0.15 }}
           >
             {activeTab === 'apikeys'    && <ApiKeysSection />}
-            {activeTab === 'modelos'    && <PlaceholderSection name="Modelos" />}
+            {activeTab === 'modelos'    && <ModelosSection />}
             {activeTab === 'agentes'    && <AgentesSection />}
             {activeTab === 'prompt'     && <PromptGlobalSection />}
-            {activeTab === 'ferramentas'&& <PlaceholderSection name="Ferramentas" />}
-            {activeTab === 'limites'    && <PlaceholderSection name="Limites" />}
+            {activeTab === 'ferramentas'&& <FerramentasSection />}
+            {activeTab === 'limites'    && <LimitesSection />}
             {activeTab === 'logs'       && <LogsSection />}
             {activeTab === 'testes'     && <TestesSection />}
             {activeTab === 'stats'      && <StatsSection />}
