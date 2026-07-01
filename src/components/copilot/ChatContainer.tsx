@@ -452,7 +452,7 @@ export function ChatContainer({ onTogglePanel }: { onTogglePanel?: () => void })
               className={cn(
                 'group relative max-w-[85%] rounded-2xl px-4 py-3 text-[13.5px] leading-relaxed',
                 msg.role === 'user'
-                  ? 'ml-auto bg-ink-900 text-white dark:bg-ink-700'
+                  ? 'ml-auto bg-sky-100 text-sky-900 dark:bg-sky-200 dark:text-sky-900'
                   : 'border border-ink-200 bg-white text-ink-900 dark:border-ink-700 dark:bg-sky-50 dark:text-ink-900',
               )}
             >
@@ -485,7 +485,7 @@ export function ChatContainer({ onTogglePanel }: { onTogglePanel?: () => void })
           <div className="mb-4 flex justify-start animate-fade-in">
             <div className="flex items-start gap-2 rounded-2xl border border-ink-200 bg-white px-4 py-3 dark:border-ink-700 dark:bg-sky-50/50">
               <Loader2 className="mt-0.5 h-4 w-4 animate-spin text-ink-400" />
-              <span className="text-[13px] text-ink-500 dark:text-ink-300">Pensando…</span>
+              <span className="text-[13px] text-ink-500">Pensando…</span>
               <button
                 onClick={cancelarStream}
                 className="ml-2 rounded-lg border border-ink-200 px-2 py-1 text-[11px] hover:bg-ink-100 dark:border-ink-700 dark:hover:bg-ink-800"
@@ -524,7 +524,7 @@ export function ChatContainer({ onTogglePanel }: { onTogglePanel?: () => void })
             }}
             placeholder="Pergunte qualquer coisa sobre a Bíblia..."
             rows={1}
-            className="flex-1 resize-none bg-transparent text-[14px] text-ink-900 outline-none placeholder:text-ink-400 dark:text-white dark:placeholder:text-ink-500"
+            className="flex-1 resize-none bg-transparent text-[14px] text-ink-900 outline-none placeholder:text-ink-400"
             style={{ maxHeight: '140px' }}
           />
           <button
