@@ -162,6 +162,35 @@ export function RichEditor({ value, onChange, placeholder, className }: Props) {
 
         <div className="mx-1 h-5 w-px bg-ink-200 dark:bg-ink-700" />
 
+        {/* Blocos especiais de conteúdo */}
+        <Btn
+          onClick={() => {
+            editor.chain().focus().insertContent('<h3 class="conteudo-1"><span class="block-label">Conteúdo 1</span></h3><p class="conteudo-desc">Descrição do conteúdo 1 aqui...</p>').run();
+          }}
+          title="Conteúdo 1 com descrição"
+          active={editor.isActive('heading', { level: 3 })}
+        >
+          <span className="text-[10px] font-bold">C1</span>
+        </Btn>
+        <Btn
+          onClick={() => {
+            editor.chain().focus().insertContent('<h3 class="conteudo-2"><span class="block-label">Conteúdo 2</span></h3><p class="conteudo-desc">Descrição do conteúdo 2 aqui...</p>').run();
+          }}
+          title="Conteúdo 2 com descrição"
+        >
+          <span className="text-[10px] font-bold">C2</span>
+        </Btn>
+        <Btn
+          onClick={() => {
+            editor.chain().focus().insertContent('<h3 class="pautas"><span class="block-label">Pautas</span></h3>').run();
+          }}
+          title="Pautas da ministração"
+        >
+          <span className="text-[10px] font-bold">PT</span>
+        </Btn>
+
+        <div className="mx-1 h-5 w-px bg-ink-200 dark:bg-ink-700" />
+
         {/* Listas */}
         <Btn
           onClick={() => editor.chain().focus().toggleBulletList().run()}

@@ -9,6 +9,14 @@
 
 import type { Capitulo, Bloco } from '@/stores/progressoPulpit';
 
+/** Tipo de bloco reconhecido pelo parser */
+export type TipoBloco = 'normal' | 'subtitulo' | 'sub-subtitulo' | 'citacao' | 'lista' | 'conteudo-1' | 'conteudo-2' | 'pautas';
+
+/** Bloco com texto e tipo opcional */
+export interface BlocoTyped extends Bloco {
+  tipo?: TipoBloco;
+}
+
 function nodeText(node: ChildNode): string {
   return (node.textContent ?? '').trim();
 }

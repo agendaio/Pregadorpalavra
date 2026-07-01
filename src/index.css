@@ -138,6 +138,51 @@
     padding-top: 0.2rem;
     padding-bottom: 0.2rem;
   }
+  /* Blocos especiais: Conteúdo 1 — verde esmeralda */
+  .tiptap h3.conteudo-1 {
+    @apply text-[15px] font-bold mt-5 mb-1 leading-snug;
+    @apply text-emerald-700 dark:text-emerald-300;
+    border-left: 3px solid #10b981;
+    padding-left: 0.6rem;
+    margin-left: -0.6rem;
+    background: rgba(16, 185, 129, 0.06);
+    border-radius: 0 4px 4px 0;
+    padding-top: 0.3rem;
+    padding-bottom: 0.3rem;
+  }
+  .tiptap h3.conteudo-1 .block-label {
+    @apply font-bold tracking-wide;
+  }
+  /* Blocos especiais: Conteúdo 2 — azul royal */
+  .tiptap h3.conteudo-2 {
+    @apply text-[15px] font-bold mt-5 mb-1 leading-snug;
+    @apply text-blue-700 dark:text-blue-300;
+    border-left: 3px solid #3b82f6;
+    padding-left: 0.6rem;
+    margin-left: -0.6rem;
+    background: rgba(59, 130, 246, 0.06);
+    border-radius: 0 4px 4px 0;
+    padding-top: 0.3rem;
+    padding-bottom: 0.3rem;
+  }
+  /* Blocos especiais: Pautas — laranja */
+  .tiptap h3.pautas {
+    @apply text-[15px] font-bold mt-5 mb-1 leading-snug;
+    @apply text-orange-700 dark:text-orange-300;
+    border-left: 3px solid #f97316;
+    padding-left: 0.6rem;
+    margin-left: -0.6rem;
+    background: rgba(249, 115, 22, 0.06);
+    border-radius: 0 4px 4px 0;
+    padding-top: 0.3rem;
+    padding-bottom: 0.3rem;
+  }
+  /* Descrição que acompanha conteúdo 1 e 2 */
+  .tiptap p.conteudo-desc {
+    @apply text-[13.5px] mt-1 mb-3 leading-relaxed italic;
+    @apply text-ink-500 dark:text-ink-400;
+    padding-left: 0.6rem;
+  }
   .tiptap ul { @apply list-disc pl-6 my-3; }
   .tiptap ol { @apply list-decimal pl-6 my-3; }
   .tiptap blockquote {

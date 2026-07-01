@@ -7,6 +7,78 @@
 
 export type ID = string;
 
+// ─── Tipos de Slide do Púlpito ──────────────────────────────────────────────
+
+/** Tipos visuais disponíveis para slides do púlpito */
+export type SlideType =
+  | 'capa'
+  | 'verso'
+  | 'conteudo'
+  | 'categorias'
+  | 'chamada'
+  | 'oracao';
+
+/** Conteúdo de cada tipo de slide */
+export type SlideContent =
+  | SlideCapa
+  | SlideVerso
+  | SlideConteudo
+  | SlideCategorias
+  | SlideChamada
+  | SlideOracao;
+
+/** Capa — título + referência bíblica */
+export interface SlideCapa {
+  tipo: 'capa';
+  titulo: string;
+  referencia?: string;
+  subtitulo?: string;
+}
+
+/** Verso bíblico — citação destacada */
+export interface SlideVerso {
+  tipo: 'verso';
+  citacao: string;
+  referencia: string;
+  fundo?: string; // cor de fundo opcional
+}
+
+/** Conteúdo — título + N pontos numerados */
+export interface SlideConteudo {
+  tipo: 'conteudo';
+  titulo: string;
+  pontos: Array<{ numero: number; titulo: string; descricao: string }>;
+}
+
+/** Categorias — grid de cards (ex: Doença, Crise, Relacionamentos) */
+export interface SlideCategorias {
+  tipo: 'categorias';
+  titulo: string;
+  cards: Array<{ titulo: string; descricao: string; referencia?: string }>;
+}
+
+/** Chamada — texto livre + chamada para ação */
+export interface SlideChamada {
+  tipo: 'chamada';
+  titulo: string;
+  texto: string;
+  cta?: string; // texto do botão (ex: "Vamos orar")
+}
+
+/** Oração — texto de oração final */
+export interface SlideOracao {
+  tipo: 'oracao';
+  titulo?: string;
+  texto: string;
+}
+
+/** Slide completo */
+export interface Slide {
+  id: string;
+  tipo: SlideType;
+  content: SlideContent;
+}
+
 export type AnexoTipo = 'imagem' | 'pdf' | 'audio' | 'video' | 'link' | 'arquivo';
 
 export interface Anexo {
@@ -75,6 +147,9 @@ export interface Mensagem {
   /** Conteúdo rico (Tiptap JSON serializado em string) */
   esboco: string;
   conteudo: string;
+
+  /** Slides do púlpito (layout tipo PowerPoint) */
+  slides: Slide[];
 
   /** Anexos */
   arquivos: Anexo[];
@@ -157,6 +232,7 @@ export const novaMensagem = (parcial: Partial<Mensagem> = {}): Mensagem => ({
   observacoes: parcial.observacoes ?? '',
   esboco: parcial.esboco ?? '',
   conteudo: parcial.conteudo ?? '',
+  slides: parcial.slides ?? [],
   arquivos: parcial.arquivos ?? [],
   igreja: parcial.igreja,
   dataPregacao: parcial.dataPregacao ?? null,

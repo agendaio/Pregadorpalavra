@@ -17,6 +17,7 @@ import { db } from '@/db/schema';
 import { useMensagensStore } from '@/stores/mensagens';
 import { useUIStore } from '@/stores/ui';
 import { RichEditor } from '@/components/editor/RichEditor';
+import { SlideEditor } from '@/components/slides/SlideEditor';
 import { AIPanel } from '@/components/ai/AIPanel';
 import { MobileHeader } from '@/components/layout/MobileHeader';
 import { Input, Label, Textarea } from '@/components/ui/Input';
@@ -270,6 +271,14 @@ export function EditorPage() {
                 value={mensagem.conteudo}
                 onChange={(html) => patch({ conteudo: html })}
                 placeholder="O sermão completo. Aplicações, ilustrações, conclusão."
+              />
+            </div>
+
+            {/* Slides do púlpito */}
+            <div className="mx-auto max-w-3xl px-5 pb-6 md:px-8">
+              <SlideEditor
+                slides={mensagem.slides}
+                onChange={(slides) => patch({ slides })}
               />
             </div>
 
