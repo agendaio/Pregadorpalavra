@@ -829,11 +829,11 @@ export function ChatContainer({ onTogglePanel, onEsboçoPending }: ChatContainer
             placeholder={
               speech.isListening
                 ? 'Fale algo…'
-                : 'Pergunte qualquer coisa sobre a Bíblia...'
+                : 'Pergunte qualquer coisa…'
             }
             rows={1}
             disabled={speech.isListening}
-            className="flex-1 resize-none bg-transparent px-1 text-[15px] font-medium leading-relaxed text-ink-900 outline-none placeholder:font-normal placeholder:text-ink-500 disabled:opacity-60 dark:text-ink-900 dark:placeholder:text-ink-600"
+            className="flex-1 resize-none bg-transparent px-1 text-[14px] leading-relaxed text-ink-900 outline-none placeholder:text-[12.5px] placeholder:text-ink-400 disabled:opacity-60 dark:text-ink-900 dark:placeholder:text-ink-500"
             style={{ maxHeight: '160px' }}
           />
 
