@@ -1,6 +1,10 @@
 /**
  * ChatContainer — Interface de chat estilo ChatGPT para o Pregador OS.
  *
+ * Arquitetura dual-path:
+ * - Chat mode: IndexedDB cache (instantâneo) → Vercel Edge Function (~50ms cold start)
+ * - Sermon mode: Supabase Edge Function (contexto completo, parsing, esboço)
+ *
  * Funcionalidades:
  * - Saudação personalizada por horário
  * - Streaming de respostas (SSE)
@@ -25,6 +29,7 @@ import {
   aiDB, listarSessoesRecentes, adicionarMensagem,
   obterOuCriarSessao, atualizarSessao, excluirSessao,
   listarMensagens, limparMensagens,
+  obterCache, salvarCache,
 } from '@/lib/ai';
 import type { Sessao } from '@/lib/ai';
 import { cn, formatarRelativo } from '@/lib/utils';
@@ -60,9 +65,14 @@ function getSaudação(): string {
   return 'Boa noite!';
 }
 
+/** Gera chave de cache (mesma fórmula do edge function — precisa bater) */
+function buildCacheKey(systemPrompt: string, lastUserMsg: string): string {
+  const norm = (s: string) => s.toLowerCase().trim().replace(/\s+/g, ' ');
+  return `${norm(systemPrompt).slice(0, 80)}|${norm(lastUserMsg)}`;
+}
+
 interface ChatContainerProps {
   onTogglePanel?: () => void;
-  /** Disparado assim que a intenção da mensagem é classificada como sermon — usado para abrir o painel automaticamente, mesmo antes da resposta terminar. */
   onEsboçoPending?: (pending: boolean) => void;
 }
 
@@ -85,7 +95,6 @@ export function ChatContainer({ onTogglePanel, onEsboçoPending }: ChatContainer
     ação?: SeleçãoAção;
   } | null>(null);
 
-  /** Estado do FolderPicker — mostra quando usuário seleciona uma ação de esboço */
   const [folderPickerState, setFolderPickerState] = useState<{
     ação: SeleçãoAção;
     açãoLabel: string;
@@ -98,19 +107,14 @@ export function ChatContainer({ onTogglePanel, onEsboçoPending }: ChatContainer
   const abortRef = useRef<AbortController | null>(null);
   const outline = useCopilotOutlineStore();
 
-  // Carregar sessões
   const sessoes = useLiveQuery(() => aiDB.sessoes.orderBy('updatedAt').reverse().limit(20).toArray(), []);
 
-  // Scroll para fim
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, []);
 
-  useEffect(() => {
-    scrollToBottom();
-  }, [mensagens, loading, scrollToBottom]);
+  useEffect(() => { scrollToBottom(); }, [mensagens, loading, scrollToBottom]);
 
-  // Carregar sessão existente
   const carregarSessao = useCallback(async (sessao: Sessao) => {
     setSessaoId(sessao.id);
     const msgs = await listarMensagens(sessao.id);
@@ -118,7 +122,6 @@ export function ChatContainer({ onTogglePanel, onEsboçoPending }: ChatContainer
     setSidebarAberta(false);
   }, []);
 
-  // Nova sessão
   const novaSessao = useCallback(async () => {
     const sessao = await obterOuCriarSessao();
     setSessaoId(sessao.id);
@@ -127,22 +130,16 @@ export function ChatContainer({ onTogglePanel, onEsboçoPending }: ChatContainer
     setSidebarAberta(false);
   }, [outline]);
 
-  // Deletar sessão
   const deletarSessao = useCallback(async (id: string) => {
     await excluirSessao(id);
-    if (sessaoId === id) {
-      await novaSessao();
-    }
+    if (sessaoId === id) { await novaSessao(); }
   }, [sessaoId, novaSessao]);
 
-  // Selecionar texto → menu
+  // ─── Seleção de texto ───────────────────────────────────────────────────
   useEffect(() => {
     const handleMouseUp = () => {
       const sel = window.getSelection();
-      if (!sel || sel.isCollapsed || !sel.toString().trim()) {
-        setSelection(null);
-        return;
-      }
+      if (!sel || sel.isCollapsed || !sel.toString().trim()) { setSelection(null); return; }
       const range = sel.getRangeAt(0);
       const rect = range.getBoundingClientRect();
       setSelection({
@@ -155,37 +152,23 @@ export function ChatContainer({ onTogglePanel, onEsboçoPending }: ChatContainer
     return () => document.removeEventListener('mouseup', handleMouseUp);
   }, []);
 
-  // Parse da resposta da IA para auto-popular outline
-  // Acumula tudo num único patch — evita um re-render do painel por campo extraído.
+  // ─── Parsing do outline (sermon mode) ──────────────────────────────────
   const parseRespostaParaOutline = useCallback((content: string) => {
     const store = useCopilotOutlineStore.getState();
     const patch: Partial<SessionContext> = {};
 
-    // Título
     const tituloMatch = content.match(/^#?\s*(?:Título|Title)[:\s]+(.+)/im);
-    if (tituloMatch && !store.titulo) {
-      patch.titulo = tituloMatch[1].trim();
-    }
+    if (tituloMatch && !store.titulo) patch.titulo = tituloMatch[1].trim();
 
-    // Subtítulo
     const subtituloMatch = content.match(/Subtítulo|Subtítulo|Subtitulo[:\s]+(.+)/im);
-    if (subtituloMatch && !store.subtitulo) {
-      patch.subtitulo = subtituloMatch[1].trim();
-    }
+    if (subtituloMatch && !store.subtitulo) patch.subtitulo = subtituloMatch[1].trim();
 
-    // Tema
     const temaMatch = content.match(/^[*_]?Tema[*_]?[:\s]+(.+)/im);
-    if (temaMatch && !store.tema) {
-      patch.tema = temaMatch[1].trim();
-    }
+    if (temaMatch && !store.tema) patch.tema = temaMatch[1].trim();
 
-    // Texto base
     const textoMatch = content.match(/Text[oO]\s*(?:Base|base)[:\s]+(.+)/im);
-    if (textoMatch && !store.textoBase) {
-      patch.textoBase = textoMatch[1].trim();
-    }
+    if (textoMatch && !store.textoBase) patch.textoBase = textoMatch[1].trim();
 
-    // Pontos — padrão "1. Título do ponto" ou "- Título do ponto"
     const pontoRegex = /^[#]?\s*(?:\d+[.)]\s*|\-\s*)(.+)/gm;
     let match;
     const novosPontos: PontoEsboço[] = [];
@@ -198,48 +181,83 @@ export function ChatContainer({ onTogglePanel, onEsboçoPending }: ChatContainer
         }
       }
     }
-    if (novosPontos.length > 0) {
-      patch.pontos = [...store.pontos, ...novosPontos];
-    }
+    if (novosPontos.length > 0) patch.pontos = [...store.pontos, ...novosPontos];
 
-    // Introdução
     if (content.includes('Introdução') || content.includes('## Introdução')) {
       const introMatch = content.match(/Introdução[:\s]*\n([\s\S]+?)(?=\n##|\n#|$)/i);
-      if (introMatch && !store.introducao) {
-        patch.introducao = introMatch[1].trim().slice(0, 500);
-      }
+      if (introMatch && !store.introducao) patch.introducao = introMatch[1].trim().slice(0, 500);
     }
 
-    // Conclusão
     if (content.includes('Conclusão') || content.includes('## Conclusão')) {
       const conclMatch = content.match(/Conclus(?:ão|ao)[:\s]*\n([\s\S]+?)(?=\n##|\n#|$)/i);
-      if (conclMatch && !store.conclusao) {
-        patch.conclusao = conclMatch[1].trim().slice(0, 500);
-      }
+      if (conclMatch && !store.conclusao) patch.conclusao = conclMatch[1].trim().slice(0, 500);
     }
 
-    if (Object.keys(patch).length > 0) {
-      store.importar(patch);
-    }
+    if (Object.keys(patch).length > 0) store.importar(patch);
   }, []);
 
-  // Enviar mensagem
+  // ─── Stream SSE genérico (com acumulador de conteúdo) ───────────────────
+  const streamSSE = useCallback((
+    res: Response,
+    assistantId: string,
+  ): Promise<string> => {
+    return new Promise(async (resolve, reject) => {
+      if (!res.body) { reject(new Error('Resposta vazia.')); return; }
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let acc = '';
+
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const events = buffer.split('\n\n');
+          buffer = events.pop() ?? '';
+
+          for (const evt of events) {
+            const data = evt.replace(/^data:\s*/, '').trim();
+            if (!data || data === '[DONE]') continue;
+            try {
+              const parsed = JSON.parse(data) as { content?: string; error?: string; message?: string };
+              if (parsed.error) throw new Error(parsed.message ?? parsed.error);
+              if (parsed.content) {
+                acc += parsed.content;
+                setStreamContent(prev => prev + parsed.content!);
+                setMensagens(prev => {
+                  const exists = prev.some(m => m.id === assistantId);
+                  if (exists) {
+                    return prev.map(m => m.id === assistantId ? { ...m, content: m.content + parsed.content! } : m);
+                  } else {
+                    return [...prev, { id: assistantId, role: 'assistant' as const, content: acc, timestamp: Date.now() }];
+                  }
+                });
+              }
+            } catch { /* skip */ }
+          }
+        }
+      } catch (err) { reject(err); return; }
+
+      resolve(acc);
+    });
+  }, []);
+
+  // ─── Enviar mensagem — DUAL PATH ───────────────────────────────────────
   const enviarMensagem = useCallback(async (texto?: string) => {
     const textoFinal = (texto ?? input).trim();
     if (!textoFinal || loading) return;
 
-    // ── 1. Detectar intenção ───────────────────────────────────────────
+    // 1. Detectar intenção (síncrono, <1ms)
     const intent = detectarIntencao(textoFinal);
     const isSermonMode = intent.modo === 'sermon';
     setModo(isSermonMode ? 'sermon' : 'chat');
 
-    // Se ativou sermon mode pela primeira vez, marca visualmente
     if (isSermonMode) setSermonAtivado(true);
-
-    // Abre o painel de esboço imediatamente — não espera a resposta terminar
     if (isSermonMode) onEsboçoPending?.(true);
 
-    // ── 2. Setup de sessão ────────────────────────────────────────────
+    // 2. Setup de sessão
     let sid = sessaoId;
     if (!sid) {
       const sessao = await obterOuCriarSessao();
@@ -248,29 +266,85 @@ export function ChatContainer({ onTogglePanel, onEsboçoPending }: ChatContainer
       outline.setConversaId(sid);
     }
 
-    const userMsg: ChatMessage = {
-      id: crypto.randomUUID(),
-      role: 'user',
-      content: textoFinal,
-      timestamp: Date.now(),
-    };
+    const userMsg: ChatMessage = { id: crypto.randomUUID(), role: 'user', content: textoFinal, timestamp: Date.now() };
+    const todasMensagens = [...mensagens, userMsg];
     setMensagens(prev => [...prev, userMsg]);
     setInput('');
     setLoading(true);
     setError(null);
     setStreamContent('');
-    setStreamId(crypto.randomUUID());
+    const assistantId = crypto.randomUUID();
+    setStreamId(assistantId);
 
     await adicionarMensagem(sid, 'user', textoFinal);
     await atualizarSessao(sid, {});
 
-    const todasMensagens = [...mensagens, userMsg];
-
     const controller = new AbortController();
-    const timeoutId = window.setTimeout(() => controller.abort(), 60_000);
     abortRef.current = controller;
 
     try {
+      // ════════════════════════════════════════════════════════
+      // CAMINHO RÁPIDO — Chat mode (sem contexto, sem esboço)
+      // ════════════════════════════════════════════════════════
+      if (!isSermonMode) {
+        const systemPrompt = SYSTEM_PROMPT_CHAT;
+        const cacheK = buildCacheKey(systemPrompt, textoFinal);
+
+        // 2a. Cache local (instantâneo — 0ms de rede)
+        const cachedResp = await obterCache(cacheK);
+        if (cachedResp) {
+          const cachedMsg: ChatMessage = { id: assistantId, role: 'assistant', content: cachedResp, timestamp: Date.now() };
+          setMensagens(prev => [...prev.slice(0, -1), cachedMsg]);
+          setLoading(false);
+          setStreamId(null);
+          await adicionarMensagem(sid, 'assistant', cachedResp);
+          await atualizarSessao(sid, {});
+          return;
+        }
+
+        // 2b. Vercel Edge Function — cold start ~50ms (vs ~8s do Supabase)
+        const messagesForApi = todasMensagens.map(m => ({
+          role: m.role as 'user' | 'assistant',
+          content: m.content,
+        }));
+
+        const timeoutId = window.setTimeout(() => controller.abort(), 90_000);
+        const vercelRes = await fetch('/api/chat-fast', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-stream': 'true' },
+          body: JSON.stringify({ messages: messagesForApi, systemPrompt, temperature: 0.7, maxTokens: 600 }),
+          signal: controller.signal,
+        });
+        window.clearTimeout(timeoutId);
+
+        if (!vercelRes.ok) {
+          const errData = await vercelRes.json().catch(() => ({})) as { error?: string };
+          throw new Error(errData.error ?? `Erro HTTP ${vercelRes.status}`);
+        }
+
+        const acc = await streamSSE(vercelRes, assistantId);
+
+        // Salva no cache IndexedDB (24h) + persiste mensagem
+        if (acc) {
+          await salvarCache(cacheK, acc).catch(() => {});
+          await adicionarMensagem(sid, 'assistant', acc);
+          await atualizarSessao(sid, {});
+        }
+        setLoading(false);
+        setStreamContent('');
+        setStreamId(null);
+        return;
+      }
+
+      // ════════════════════════════════════════════════════════
+      // CAMINHO COMPLETO — Sermon mode (contexto + parsing + esboço)
+      // ════════════════════════════════════════════════════════
+      const contextoMemoria = construirContextoMemoria(useCopilotOutlineStore.getState());
+      const systemPrompt = SYSTEM_PROMPT;
+      const systemAppend = contextoMemoria
+        ? `${contextoMemoria}\n\n${SERMON_PARSING_INSTRUCTION}`
+        : SERMON_PARSING_INSTRUCTION;
+
       const supabaseLib = await import('@/lib/supabase');
       const sb = supabaseLib.supabase();
       const { data: sessData } = await sb?.auth.getSession() ?? {};
@@ -278,35 +352,13 @@ export function ChatContainer({ onTogglePanel, onEsboçoPending }: ChatContainer
       const token = userToken ?? supabaseLib.SUPABASE_ANON_KEY;
       if (!token) throw new Error('Não autenticado');
 
-      const supabaseUrl = supabaseLib.SUPABASE_URL;
-
-      // ── 3. Construir prompt baseado no modo ──────────────────────────
-      let systemPrompt: string;
-      let systemAppend: string;
-
-      if (isSermonMode) {
-        // Sermon mode: prompt completo + contexto do esboço + instrução de parsing
-        const contextoMemoria = construirContextoMemoria(useCopilotOutlineStore.getState());
-        systemPrompt = SYSTEM_PROMPT;
-        systemAppend = contextoMemoria
-          ? `${contextoMemoria}\n\n${SERMON_PARSING_INSTRUCTION}`
-          : SERMON_PARSING_INSTRUCTION;
-      } else {
-        // Chat mode: prompt leve, sem contexto, sem parsing
-        systemPrompt = SYSTEM_PROMPT_CHAT;
-        systemAppend = '';
-      }
-
-      // O system prompt vai no campo `systemPrompt` do body — o backend monta
-      // o system message. Não embutir em messages[], senão a chamada sai com
-      // dois prompts de sistema (tokens duplicados, latência maior).
       const messagesForApi = todasMensagens.map(m => ({
         role: m.role as 'user' | 'assistant',
         content: m.content,
       }));
 
-      // ── 4. Enviar para a Edge Function ────────────────────────────
-      const res = await fetch(`${supabaseUrl}/functions/v1/ai-chat`, {
+      const timeoutId = window.setTimeout(() => controller.abort(), 120_000);
+      const res = await fetch(`${supabaseLib.SUPABASE_URL}/functions/v1/ai-chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -317,11 +369,11 @@ export function ChatContainer({ onTogglePanel, onEsboçoPending }: ChatContainer
           messages: messagesForApi,
           stream: true,
           temperature: 0.7,
-          maxTokens: isSermonMode ? 2500 : 800,
-          modo: isSermonMode ? 'sermon' : 'chat',
+          maxTokens: 2500,
+          modo: 'sermon',
           systemPrompt,
-          // Só manda contexto se for sermon mode
-          ...(isSermonMode ? { session_context: useCopilotOutlineStore.getState(), systemAppend } : { systemAppend }),
+          session_context: useCopilotOutlineStore.getState(),
+          systemAppend,
         }),
         signal: controller.signal,
       });
@@ -332,72 +384,27 @@ export function ChatContainer({ onTogglePanel, onEsboçoPending }: ChatContainer
         throw new Error(errData.message ?? `Erro HTTP ${res.status}`);
       }
 
-      if (!res.body) {
-        throw new Error('Resposta vazia do servidor. Tente novamente.');
-      }
+      const acc = await streamSSE(res, assistantId);
 
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
-      let acc = '';
-      const currentStreamId = streamId!;
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const events = buffer.split('\n\n');
-        buffer = events.pop() ?? '';
-
-        for (const evt of events) {
-          const data = evt.replace(/^data:\s*/, '').trim();
-          if (!data || data === '[DONE]') continue;
-          try {
-            const parsed = JSON.parse(data) as { content?: string; error?: string; message?: string };
-            if (parsed.error) throw new Error(parsed.message ?? parsed.error);
-            if (parsed.content) {
-              acc += parsed.content;
-              setStreamContent(prev => prev + parsed.content!);
-              setMensagens(prev =>
-                prev.map(m => m.id === currentStreamId ? { ...m, content: acc } : m),
-              );
-            }
-          } catch { /* skip */ }
-        }
-      }
-
-      // ── 5. Pós-resposta ────────────────────────────────────────────
-      // Só faz parsing do esboço se estiver em modo sermon
-      if (isSermonMode) {
-        parseRespostaParaOutline(acc);
-      }
-
+      parseRespostaParaOutline(acc);
       await adicionarMensagem(sid, 'assistant', acc);
       await atualizarSessao(sid, {});
-
       setLoading(false);
       setStreamContent('');
       setStreamId(null);
-      if (isSermonMode) onEsboçoPending?.(false);
+      onEsboçoPending?.(false);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Erro desconhecido';
       setError(msg);
       setLoading(false);
-
-      const errorMsg: ChatMessage = {
-        id: crypto.randomUUID(),
-        role: 'assistant',
-        content: `⚠️ Não consegui responder: ${msg}`,
-        timestamp: Date.now(),
-      };
+      const errorMsg: ChatMessage = { id: crypto.randomUUID(), role: 'assistant', content: `⚠️ Não consegui responder: ${msg}`, timestamp: Date.now() };
       setMensagens(prev => [...prev, errorMsg]);
-      await adicionarMensagem(sid, 'assistant', errorMsg.content);
+      await adicionarMensagem(sid, 'assistant', errorMsg.content).catch(() => {});
       setStreamContent('');
       setStreamId(null);
       if (isSermonMode) onEsboçoPending?.(false);
     }
-  }, [input, loading, sessaoId, mensagens, streamId, parseRespostaParaOutline, outline, onEsboçoPending]);
+  }, [input, loading, sessaoId, mensagens, streamSSE, parseRespostaParaOutline, outline, onEsboçoPending]);
 
   const cancelarStream = () => {
     abortRef.current?.abort();
@@ -438,7 +445,7 @@ export function ChatContainer({ onTogglePanel, onEsboçoPending }: ChatContainer
                 Assistente Ministerial
               </div>
               <div className="text-[11px] text-emerald-600 dark:text-emerald-400">
-                Online
+                {loading ? 'Digitando…' : 'Online'}
               </div>
             </div>
           </div>
@@ -557,7 +564,7 @@ export function ChatContainer({ onTogglePanel, onEsboçoPending }: ChatContainer
           </div>
         ))}
 
-        {loading && (
+        {loading && !streamContent && (
           <div className="mb-4 flex justify-start animate-fade-in">
             <div className="flex items-start gap-2 rounded-2xl border border-ink-200 bg-white px-4 py-3 dark:border-ink-700 dark:bg-sky-50/50">
               <Loader2 className="mt-0.5 h-4 w-4 animate-spin text-ink-400" />
@@ -617,7 +624,7 @@ export function ChatContainer({ onTogglePanel, onEsboçoPending }: ChatContainer
           </button>
         </div>
         <p className="mt-1.5 text-center text-[10.5px] text-ink-400">
-          IA pode cometer erros. Verifique sempre as referências bíblicas.
+          {modo === 'chat' ? 'Resposta rápida — sem contexto de esboço.' : 'Modo pregação — criando esboço.'} Verifique sempre as referências bíblicas.
         </p>
       </div>
 
@@ -628,7 +635,6 @@ export function ChatContainer({ onTogglePanel, onEsboçoPending }: ChatContainer
           position={selection.position}
           onAction={(ação, _texto) => {
             setSelection(null);
-            // Só abre o FolderPicker para ações de esboço (não "copiar", "editar", etc.)
             const açõesDeEsboço: SeleçãoAção[] = [
               'adicionar_esboco', 'adicionar_introducao', 'adicionar_ponto',
               'adicionar_subponto', 'adicionar_aplicacao', 'adicionar_ilustracao',
@@ -667,20 +673,18 @@ export function ChatContainer({ onTogglePanel, onEsboçoPending }: ChatContainer
         />
       )}
 
-      {/* Folder picker — modal de seleção de pasta */}
+      {/* Folder picker */}
       <AnimatePresence>
         {folderPickerState && (
           <FolderPicker
             textoSelecionado={folderPickerState.texto}
             açãoLabel={folderPickerState.açãoLabel}
             açãoIcon={folderPickerState.açãoIcon}
-            onConfirm={async (pastaId, pastaNome) => {
+            onConfirm={async () => {
               setFolderPickerState(null);
-              // Auto-gera slides em background
               try {
                 const store = useCopilotOutlineStore.getState();
                 await autoGenerateSlides(store);
-                // Feedback visual — pode mostrar toast
               } catch (err) {
                 console.warn('[autoGenerateSlides]', err);
               }
@@ -725,9 +729,7 @@ function Greeting({ onSugestão }: { onSugestão: (s: string) => void }) {
 // ─── Markdown renderer simples ─────────────────────────────────────────────
 
 function MarkdownRenderer({ content }: { content: string }) {
-  // Parser simples de markdown para exibição
   const parts = parseMarkdown(content);
-
   return (
     <div className="space-y-2">
       {parts.map((part, i) => {
@@ -753,10 +755,7 @@ function parseMarkdown(content: string): Array<{ type: string; text: string }> {
   for (const line of lines) {
     const trimmed = line.trim();
     if (!trimmed) {
-      if (inList) {
-        inList = false;
-        parts.push({ type: 'blank', text: '' });
-      }
+      if (inList) { inList = false; parts.push({ type: 'blank', text: '' }); }
       continue;
     }
     if (trimmed.startsWith('# ')) {
@@ -773,17 +772,14 @@ function parseMarkdown(content: string): Array<{ type: string; text: string }> {
       inList = true;
     } else {
       if (inList) inList = false;
-      // Process inline formatting
       let processed = trimmed
         .replace(/\*\*(.+?)\*\*/g, '§§bold§§$1§§endbold§§')
         .replace(/\*(.+?)\*/g, '§§italic§§$1§§enditalic§§')
         .replace(/`(.+?)`/g, '§§code§§$1§§endcode§§');
-      
-      // Extract verses
       processed = processed.replace(/([\w\s]+:\s*)([\d]+[,:;\s\d]+)/g, '§§ref§§$1$2§§endref§§');
-      
-      // Split by markers and create parts
-      const segments = processed.split(/§§(bold|italic|code|ref)§§/);
+      // O split precisa incluir também os marcadores de fechamento — senão
+      // "§§endref§§" fica colado no texto e aparece cru na tela.
+      const segments = processed.split(/§§(bold|endbold|italic|enditalic|code|endcode|ref|endref)§§/);
       let currentType = 'text';
       for (const seg of segments) {
         if (seg === 'bold') { currentType = 'bold'; continue; }
