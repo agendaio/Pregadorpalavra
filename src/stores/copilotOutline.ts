@@ -26,7 +26,7 @@ function saveToStorage(state: SessionContext) {
   } catch { /* ignore */ }
 }
 
-interface CopilotOutlineState extends SessionContext {
+export interface CopilotOutlineState extends SessionContext {
   pastaId: string | null;
   pastaNome: string | null;
   pastaCor: string | null;
@@ -91,16 +91,11 @@ export const useCopilotOutlineStore = create<CopilotOutlineState>()((set, get) =
     // ── Pasta ─────────────────────────────────────────────────────
     setPasta: (id, nome, cor) => {
       set({ pastaId: id, pastaNome: nome, pastaCor: cor });
-      // pastaId/pastaNome/pastaCor são campos extras (não em SessionContext)
-      localStorage.setItem('pregador.pastaId', id ?? '');
-      localStorage.setItem('pregador.pastaNome', nome ?? '');
-      localStorage.setItem('pregador.pastaCor', cor ?? '');
+      persist({} as Partial<SessionContext>); // Persiste via STORAGE_KEY
     },
     clearPasta: () => {
       set({ pastaId: null, pastaNome: null, pastaCor: null });
-      localStorage.removeItem('pregador.pastaId');
-      localStorage.removeItem('pregador.pastaNome');
-      localStorage.removeItem('pregador.pastaCor');
+      persist({} as Partial<SessionContext>);
     },
 
     // ── Patches simples ────────────────────────────────────────────

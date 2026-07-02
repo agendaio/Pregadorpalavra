@@ -74,6 +74,15 @@ export function ChatContainer({ onTogglePanel }: { onTogglePanel?: () => void })
     text: string;
     position: { x: number; y: number };
     messageId: string;
+    ação?: SeleçãoAção;
+  } | null>(null);
+
+  /** Estado do FolderPicker — mostra quando usuário seleciona uma ação de esboço */
+  const [folderPickerState, setFolderPickerState] = useState<{
+    ação: SeleçãoAção;
+    açãoLabel: string;
+    açãoIcon: string;
+    texto: string;
   } | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -566,10 +575,69 @@ export function ChatContainer({ onTogglePanel }: { onTogglePanel?: () => void })
         <SelectionMenu
           selectedText={selection.text}
           position={selection.position}
-          onAction={() => {}}
+          onAction={(ação, _texto) => {
+            setSelection(null);
+            // Só abre o FolderPicker para ações de esboço (não "copiar", "editar", etc.)
+            const açõesDeEsboço: SeleçãoAção[] = [
+              'adicionar_esboco', 'adicionar_introducao', 'adicionar_ponto',
+              'adicionar_subponto', 'adicionar_aplicacao', 'adicionar_ilustracao',
+              'adicionar_conclusao', 'adicionar_referencia',
+            ];
+            if (!açõesDeEsboço.includes(ação as SeleçãoAção)) return;
+
+            const AÇÃO_LABELS: Record<string, string> = {
+              adicionar_esboco: 'Adicionar ao Esboço',
+              adicionar_introducao: 'Adicionar como Introdução',
+              adicionar_ponto: 'Adicionar como Ponto',
+              adicionar_subponto: 'Adicionar como Subponto',
+              adicionar_aplicacao: 'Adicionar Aplicação',
+              adicionar_ilustracao: 'Adicionar Ilustração',
+              adicionar_conclusao: 'Adicionar como Conclusão',
+              adicionar_referencia: 'Adicionar Referência',
+            };
+            const AÇÃO_ICONS: Record<string, string> = {
+              adicionar_esboco: '📋',
+              adicionar_introducao: '📖',
+              adicionar_ponto: '1️⃣',
+              adicionar_subponto: '2️⃣',
+              adicionar_aplicacao: '✅',
+              adicionar_ilustracao: '💡',
+              adicionar_conclusao: '🏁',
+              adicionar_referencia: '📚',
+            };
+            setFolderPickerState({
+              ação,
+              açãoLabel: AÇÃO_LABELS[ação] ?? ação,
+              açãoIcon: AÇÃO_ICONS[ação] ?? '📋',
+              texto: selection.text,
+            });
+          }}
           onClose={() => setSelection(null)}
         />
       )}
+
+      {/* Folder picker — modal de seleção de pasta */}
+      <AnimatePresence>
+        {folderPickerState && (
+          <FolderPicker
+            textoSelecionado={folderPickerState.texto}
+            açãoLabel={folderPickerState.açãoLabel}
+            açãoIcon={folderPickerState.açãoIcon}
+            onConfirm={async (pastaId, pastaNome) => {
+              setFolderPickerState(null);
+              // Auto-gera slides em background
+              try {
+                const store = useCopilotOutlineStore.getState();
+                await autoGenerateSlides(store);
+                // Feedback visual — pode mostrar toast
+              } catch (err) {
+                console.warn('[autoGenerateSlides]', err);
+              }
+            }}
+            onClose={() => setFolderPickerState(null)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

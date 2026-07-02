@@ -6,12 +6,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { useCopilotOutlineStore } from '@/stores/copilotOutline';
 import type { SeleçãoAção } from '@/types/copilotOutline';
 
 interface SelectionMenuProps {
   selectedText: string;
   position: { x: number; y: number };
+  /** Chamado quando usuário clica em qualquer ação do menu.
+   * Para ações de esboço, o ChatContainer abre o FolderPicker.
+   * Para ações utilitárias (copiar, etc.), pode ser tratada inline aqui. */
   onAction: (ação: SeleçãoAção, text: string) => void;
   onClose: () => void;
 }
@@ -19,7 +21,6 @@ interface SelectionMenuProps {
 export function SelectionMenu({ selectedText, position, onAction, onClose }: SelectionMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
   const [activeGroup, setActiveGroup] = useState<'outline' | 'content' | 'utility'>('outline');
-  const { addPonto, addSubponto, addAplicacao } = useCopilotOutlineStore.getState();
 
   // Fecha ao clicar fora
   useEffect(() => {
@@ -58,59 +59,37 @@ export function SelectionMenu({ selectedText, position, onAction, onClose }: Sel
   }, [position]);
 
   const handleAction = (action: SeleçãoAção) => {
-    if (selectedText.trim()) {
-      // Auto-add to outline for outline actions
-      switch (action) {
-        case 'adicionar_esboco':
-          // Fallback: adiciona como ponto
-          useCopilotOutlineStore.getState().addPonto(selectedText.trim());
-          break;
-        case 'adicionar_introducao':
-          useCopilotOutlineStore.getState().patchIntroducao(selectedText.trim());
-          break;
-        case 'adicionar_ponto':
-          useCopilotOutlineStore.getState().addPonto(selectedText.trim());
-          break;
-        case 'adicionar_subponto':
-          // Adiciona ao último ponto como subponto, ou cria novo ponto
-          {
-            const store = useCopilotOutlineStore.getState();
-            if (store.pontos.length > 0) {
-              const lastPonto = store.pontos[store.pontos.length - 1];
-              store.addSubponto(lastPonto.id, selectedText.trim());
-            } else {
-              store.addPonto(selectedText.trim());
-            }
-          }
-          break;
-        case 'adicionar_aplicacao':
-          {
-            const store = useCopilotOutlineStore.getState();
-            if (store.pontos.length > 0) {
-              const lastPonto = store.pontos[store.pontos.length - 1];
-              store.addAplicacao(lastPonto.id, selectedText.trim());
-            } else {
-              store.addPonto(selectedText.trim());
-            }
-          }
-          break;
-        case 'adicionar_ilustracao':
-          useCopilotOutlineStore.getState().patchIntroducao(
-            useCopilotOutlineStore.getState().introducao +
-              (useCopilotOutlineStore.getState().introducao ? '\n\n' : '') +
-              '💡 Ilustração: ' + selectedText.trim()
-          );
-          break;
-        case 'adicionar_conclusao':
-          useCopilotOutlineStore.getState().patchConclusao(selectedText.trim());
-          break;
-        case 'copiar':
-          navigator.clipboard.writeText(selectedText);
-          break;
-      }
-      onAction(action, selectedText);
+    if (!selectedText.trim()) return;
+
+    // Ações que abrem o FolderPicker (delegam ao parent)
+    const açõesDeEsboço: SeleçãoAção[] = [
+      'adicionar_esboco', 'adicionar_introducao', 'adicionar_ponto',
+      'adicionar_subponto', 'adicionar_aplicacao', 'adicionar_ilustracao',
+      'adicionar_conclusao', 'adicionar_referencia',
+    ];
+
+    if (açõesDeEsboço.includes(action)) {
+      // Delegar para o parent (ChatContainer → FolderPicker)
+      onAction(action, selectedText.trim());
+      return; // NÃO modifica o store aqui — o FolderPicker faz isso no onConfirm
     }
-    onClose();
+
+    // Ações utilitárias — tratadas inline
+    switch (action) {
+      case 'copiar':
+        navigator.clipboard.writeText(selectedText.trim());
+        break;
+      case 'editar':
+        navigator.clipboard.writeText(selectedText.trim());
+        break;
+      case 'reescrever':
+      case 'expandir':
+      case 'compartilhar':
+      case 'favoritar':
+        // Por enquanto só notificam o parent
+        break;
+    }
+    onAction(action, selectedText.trim());
   };
 
   const groups = {

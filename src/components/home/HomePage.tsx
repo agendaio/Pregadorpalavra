@@ -8,10 +8,12 @@
  */
 
 import { useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { PanelRightOpen } from 'lucide-react';
 import { ChatContainer } from '@/components/copilot/ChatContainer';
 import { CopilotOutlinePanel } from '@/components/copilot/CopilotOutlinePanel';
+import { FolderPicker } from '@/components/copilot/FolderPicker';
+import { autoGenerateSlides } from '@/lib/autoGenerateSlides';
 import { useIsMobile } from '@/lib/responsive';
 import { cn } from '@/lib/utils';
 import { MobileHeader } from '@/components/layout/MobileHeader';
@@ -20,6 +22,8 @@ import { useCopilotOutlineStore } from '@/stores/copilotOutline';
 export function HomePage() {
   const isMobile = useIsMobile();
   const [panelAberta, setPanelAberta] = useState(false);
+  /** FolderPicker "mudar pasta" — disparado pelo CopilotOutlinePanel */
+  const [mudarPastaOpen, setMudarPastaOpen] = useState(false);
   const outline = useCopilotOutlineStore();
   const temEsboço = outline.titulo || outline.tema || outline.pontos.length > 0;
 
@@ -64,7 +68,7 @@ export function HomePage() {
             transition={{ duration: 0.25, ease: 'easeOut' }}
             className="flex-shrink-0 overflow-hidden"
           >
-            <CopilotOutlinePanel />
+            <CopilotOutlinePanel onChangeFolder={() => setMudarPastaOpen(true)} />
           </motion.div>
         )}
 
@@ -81,8 +85,27 @@ export function HomePage() {
         <CopilotOutlinePanel
           asBottomSheet
           onClose={() => setPanelAberta(false)}
+          onChangeFolder={() => setMudarPastaOpen(true)}
         />
       )}
+
+      {/* FolderPicker: "mudar pasta" a partir do painel */}
+      <AnimatePresence>
+        {mudarPastaOpen && (
+          <FolderPicker
+            textoSelecionado={outline.titulo || outline.textoBase || 'Esboço atual'}
+            açãoLabel="Mudar Pasta"
+            açãoIcon="📁"
+            onConfirm={async () => {
+              setMudarPastaOpen(false);
+              try {
+                await autoGenerateSlides(useCopilotOutlineStore.getState());
+              } catch { /* ignore */ }
+            }}
+            onClose={() => setMudarPastaOpen(false)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

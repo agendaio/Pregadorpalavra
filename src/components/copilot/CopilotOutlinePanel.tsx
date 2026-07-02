@@ -27,9 +27,11 @@ interface CopilotOutlinePanelProps {
   asBottomSheet?: boolean;
   /** Callback quando o painel é fechado (bottom sheet) */
   onClose?: () => void;
+  /** Callback para mudar a pasta — abre o FolderPicker */
+  onChangeFolder?: () => void;
 }
 
-export function CopilotOutlinePanel({ asBottomSheet = false, onClose }: CopilotOutlinePanelProps) {
+export function CopilotOutlinePanel({ asBottomSheet = false, onClose, onChangeFolder }: CopilotOutlinePanelProps) {
   const store = useCopilotOutlineStore();
   const navigate = useNavigate();
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -110,6 +112,41 @@ export function CopilotOutlinePanel({ asBottomSheet = false, onClose }: CopilotO
             </span>
           )}
         </div>
+        {/* Info da pasta selecionada */}
+        {store.pastaNome ? (
+          <div className="flex items-center gap-1.5">
+            <div
+              className="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium"
+              style={{
+                backgroundColor: (store.pastaCor ?? '#7c3aed') + '18',
+                color: store.pastaCor ?? '#7c3aed',
+                border: `1px solid ${(store.pastaCor ?? '#7c3aed')}30`,
+              }}
+            >
+              <FolderOpen className="h-3 w-3" />
+              {store.pastaNome}
+            </div>
+            {onChangeFolder && (
+              <button
+                onClick={onChangeFolder}
+                title="Mudar pasta"
+                className="rounded-lg p-1 text-ink-400 transition-colors hover:bg-ink-100 dark:hover:bg-ink-800"
+              >
+                <ChevronUp className="h-3 w-3 rotate-180" />
+              </button>
+            )}
+          </div>
+        ) : (
+          onChangeFolder && (
+            <button
+              onClick={onChangeFolder}
+              className="flex items-center gap-1 rounded-full border border-dashed border-ink-300 px-2.5 py-1 text-[11px] text-ink-400 transition-colors hover:border-violet-300 hover:text-violet-600 dark:border-ink-600 dark:hover:border-violet-600 dark:hover:text-violet-400"
+            >
+              <FolderOpen className="h-3 w-3" />
+              Escolher pasta
+            </button>
+          )
+        )}
         {!asBottomSheet && (
           <>
             <button
