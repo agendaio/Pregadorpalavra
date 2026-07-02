@@ -4,7 +4,7 @@
  */
 
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Mail, Lock, User, ArrowLeft, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { useAuthStore } from '@/stores/authUser';
@@ -14,9 +14,12 @@ type Modo = 'login' | 'signup';
 
 export function AuthPage() {
   const navigate = useNavigate();
+  const [search] = useSearchParams();
   const { login, signup, carregando, erro } = useAuthStore();
 
-  const [modo, setModo] = useState<Modo>('login');
+  // Lê query param: ?signup=true abre direto no cadastro
+  const initialModo: Modo = search.get('signup') === 'true' ? 'signup' : 'login';
+  const [modo, setModo] = useState<Modo>(initialModo);
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
   const [nome, setNome] = useState('');

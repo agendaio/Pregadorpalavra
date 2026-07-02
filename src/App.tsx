@@ -91,6 +91,7 @@ function AnimatedRoutes() {
 
           {/* Página de autenticação (fora do AppShell) */}
           <Route path="/login" element={<AuthPage />} />
+          <Route path="/auth" element={<AuthPage />} />
         </Routes>
       </AnimatePresence>
     </Suspense>

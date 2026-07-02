@@ -166,7 +166,7 @@ export function MorePage() {
 function LoginPromoCard() {
   return (
     <Link
-      to="/login"
+      to="/auth?signup=true"
       className="group relative block overflow-hidden rounded-2xl"
     >
       {/* Gradiente azul → verde */}
