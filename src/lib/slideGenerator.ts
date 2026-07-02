@@ -64,16 +64,19 @@ function classificarCapitulo(titulo: string): SecaoTipo {
 
 /**
  * Gera slides de CONTEÚDO a partir de um capítulo.
- * Retorna um slide de CONTEÚDO com os pontos extraídos.
+ * Retorna null se o capítulo não tiver conteúdo válido.
  */
-function gerarSlideDeCapitulo(capitulo: { titulo: string; blocos: { texto: string }[] }): Slide {
-  const slide = novoSlide('conteudo') as Slide & { content: SlideConteudo };
-  slide.content.titulo = capitulo.titulo;
-
-  // Extrai pontos: blocos que parecem bullet points ou listas
+function gerarSlideDeCapitulo(capitulo: { titulo: string; blocos: { texto: string }[] }): Slide | null {
+  // Extrai pontos: blocos que parecem bullet points ou listas (não subtítulos)
   const pontos = capitulo.blocos
     .map((b) => b.texto)
     .filter((t) => t.trim() && !t.startsWith('▌') && !t.startsWith('  ◦'));
+
+  // Se não tem conteúdo real, não cria slide vazio
+  if (pontos.length === 0) return null;
+
+  const slide = novoSlide('conteudo') as Slide & { content: SlideConteudo };
+  slide.content.titulo = capitulo.titulo;
 
   // Limita a 5 pontos por slide (legibilidade no púlpito)
   const pontosFiltrados = pontos.slice(0, 5);
@@ -93,11 +96,11 @@ function gerarSlideDeCapitulo(capitulo: { titulo: string; blocos: { texto: strin
 
 // ─── Geração de slide de VERSO ──────────────────────────────────────────────
 
-function gerarSlideDeVerso(mensagem: Pick<Mensagem, 'textoBase' | 'livroBiblico' | 'versiculos'>): Slide | null {
+function gerarSlideDeVerso(mensagem: { textoBase?: string; livroBiblico?: string; versiculos?: unknown[] }): Slide | null {
   const referencia = mensagem.textoBase || mensagem.livroBiblico;
   if (!referencia) return null;
 
-  const versiculo = mensagem.versiculos?.[0];
+  const versiculo = mensagem.versiculos?.[0] as { texto?: string; livro?: string; capitulo?: string; versiculos?: string } | undefined;
   if (versiculo?.texto) {
     const slide = novoSlide('verso') as Slide & { content: SlideVerso };
     slide.content.citacao = versiculo.texto;
@@ -110,7 +113,7 @@ function gerarSlideDeVerso(mensagem: Pick<Mensagem, 'textoBase' | 'livroBiblico'
 
 // ─── Geração de slide de CATEGORIAS ─────────────────────────────────────────
 
-function gerarSlideDeCategorias(mensagem: Pick<Mensagem, 'tema' | 'versiculos'>, capitulos: ReturnType<typeof parsearEsboco>): Slide | null {
+function gerarSlideDeCategorias(mensagem: { tema?: string; versiculos?: unknown[] }, capitulos: ReturnType<typeof parsearEsboco>): Slide | null {
   // Agrupa capítulos que parecem categorias (temas diferentes)
   const titulosUnicos = capitulos
     .map((c) => c.titulo)
@@ -131,7 +134,7 @@ function gerarSlideDeCategorias(mensagem: Pick<Mensagem, 'tema' | 'versiculos'>,
 
 // ─── Geração de slide de CHAMADA ────────────────────────────────────────────
 
-function gerarSlideDeChamada(mensagem: Pick<Mensagem, 'objetivo' | 'publico' | 'aplicacoes'>): Slide {
+function gerarSlideDeChamada(mensagem: { objetivo?: string; publico?: string; aplicacoes?: string[] }): Slide {
   const slide = novoSlide('chamada') as Slide & { content: SlideChamada };
   slide.content.titulo = mensagem.objetivo || 'Aplicação';
   slide.content.texto = mensagem.aplicacoes?.[0] || mensagem.publico
@@ -145,7 +148,19 @@ function gerarSlideDeChamada(mensagem: Pick<Mensagem, 'objetivo' | 'publico' | '
 
 export interface GerarSlidesOptions {
   /** Mensagem fonte com esboco, título, texto base, etc. */
-  mensagem: Pick<Mensagem, 'titulo' | 'esboco' | 'textoBase' | 'livroBiblico' | 'versiculos' | 'tema' | 'objetivo' | 'publico' | 'aplicacoes' | 'conclusao' | 'oracao'>;
+  mensagem: {
+    titulo: string;
+    esboco: string;
+    textoBase?: string;
+    livroBiblico?: string;
+    versiculos?: unknown[];
+    tema?: string;
+    objetivo?: string;
+    publico?: string;
+    aplicacoes?: string[];
+    conclusao?: string;
+    oracao?: string;
+  };
   /**
    * Se true, força regeneração (substitui todos os slides).
    * Se false (default), só gera se NÃO existirem slides.
@@ -182,7 +197,8 @@ export function gerarSlides(options: GerarSlidesOptions): { slides: Slide[]; ger
     // Se tiver 2-4 capítulos, cada um vira um slide de conteúdo
     if (capitulosNaoIntro.length <= 4) {
       capitulosNaoIntro.forEach((cap) => {
-        slides.push(gerarSlideDeCapitulo(cap));
+        const slide = gerarSlideDeCapitulo(cap);
+        if (slide) slides.push(slide);
       });
     } else {
       // Se tiver muitos, agrupa em blocos de ~3 por slide
@@ -198,6 +214,9 @@ export function gerarSlides(options: GerarSlidesOptions): { slides: Slide[]; ger
             .slice(0, 3),
         );
 
+        // Se não tem pontos reais, não cria slide vazio
+        if (pontos.length === 0) continue;
+
         slide.content.pontos = pontos.map((texto, idx) => ({
           numero: idx + 1,
           titulo: texto.split('—')[0].trim(),
@@ -212,7 +231,8 @@ export function gerarSlides(options: GerarSlidesOptions): { slides: Slide[]; ger
   // ── 4. APLICAÇÃO (se tiver) ───────────────────────────────────────────
   const aplicacaoCap = chapters.find((c) => RE_APLIC.test(c.titulo));
   if (aplicacaoCap) {
-    slides.push(gerarSlideDeCapitulo(aplicacaoCap));
+    const slide = gerarSlideDeCapitulo(aplicacaoCap);
+    if (slide) slides.push(slide);
   }
 
   // ── 5. CATEGORIAS (se fizer sentido) ───────────────────────────────────
@@ -242,7 +262,15 @@ export function gerarSlides(options: GerarSlidesOptions): { slides: Slide[]; ger
  * Versão simplificada que gera slides mínimos (capa + chamada + oração).
  * Usada quando o esboco está vazio.
  */
-export function gerarSlidesMinimos(mensagem: Pick<Mensagem, 'titulo' | 'textoBase' | 'livroBiblico' | 'objetivo' | 'publico' | 'conclusao' | 'oracao'>): Slide[] {
+export function gerarSlidesMinimos(mensagem: {
+  titulo: string;
+  textoBase?: string;
+  livroBiblico?: string;
+  objetivo?: string;
+  publico?: string;
+  conclusao?: string;
+  oracao?: string;
+}): Slide[] {
   const slides: Slide[] = [];
 
   // Capa

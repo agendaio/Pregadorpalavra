@@ -389,24 +389,28 @@ export function SlideEditor({ slides, onChange, onGerarSlides, podeRegenerar }: 
                   </div>
                   <div className="text-center">
                     <p className="text-[13px] font-medium text-ink-700 dark:text-ink-200">Nenhum slide ainda</p>
-                    <p className="text-[11px] text-ink-400">Gere automaticamente a partir do esboço ou adicione manualmente</p>
+                    <p className="mt-1 text-[11px] text-ink-400">
+                      Escreva o esboço no editor acima usando <strong>títulos (H1)</strong> para separar seções — o gerador vai criar os slides automaticamente.
+                    </p>
                   </div>
-                  {onGerarSlides && (
-                    <button
-                      onClick={onGerarSlides}
-                      className="flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-[13px] font-medium text-white transition hover:bg-indigo-700 active:scale-95"
-                    >
-                      <Sparkles className="h-4 w-4" /> Gerar slides automaticamente
-                    </button>
-                  )}
-                  {!onGerarSlides && (
-                    <button
-                      onClick={() => setShowAddMenu(!showAddMenu)}
-                      className="flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-[13px] font-medium text-white transition hover:bg-indigo-700 active:scale-95"
-                    >
-                      <Plus className="h-4 w-4" /> Adicionar slide
-                    </button>
-                  )}
+                  <div className="mt-1 flex flex-col gap-2">
+                    {onGerarSlides && (
+                      <button
+                        onClick={onGerarSlides}
+                        className="flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-[13px] font-medium text-white transition hover:bg-indigo-700 active:scale-95"
+                      >
+                        <Sparkles className="h-4 w-4" /> Gerar slides automaticamente
+                      </button>
+                    )}
+                    {!onGerarSlides && (
+                      <button
+                        onClick={() => setShowAddMenu(!showAddMenu)}
+                        className="flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-[13px] font-medium text-white transition hover:bg-indigo-700 active:scale-95"
+                      >
+                        <Plus className="h-4 w-4" /> Adicionar slide
+                      </button>
+                    )}
+                  </div>
                 </div>
               ) : (
                 <div className="flex h-[480px]">
