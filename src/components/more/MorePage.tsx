@@ -8,12 +8,8 @@ import {
   Info,
   ChevronRight,
   Github,
-  User,
-  LogOut,
-  LogIn,
 } from 'lucide-react';
 import { useUIStore } from '@/stores/ui';
-import { useAuthStore } from '@/stores/authUser';
 import { MobileHeader } from '@/components/layout/MobileHeader';
 import { cn } from '@/lib/utils';
 import { APP_VERSION } from '@/v.config';
@@ -30,19 +26,8 @@ interface Item {
 export function MorePage() {
   const tema = useUIStore((s) => s.tema);
   const alternarTema = useUIStore((s) => s.alternarTema);
-  const { user, logout } = useAuthStore();
 
   const grupos: { titulo: string; itens: Item[] }[] = [
-    ...(user ? [{
-      titulo: 'Conta',
-      itens: [
-        { icon: User, label: user.nome || user.email || 'Usuário', description: user.email || '' },
-        { icon: LogOut, label: 'Sair da conta', onClick: () => { void logout(); }, variant: 'danger' as const },
-      ],
-    }] : [{
-      titulo: 'Conta',
-      itens: [],
-    }]),
     {
       titulo: 'Acesso rápido',
       itens: [
@@ -146,11 +131,6 @@ export function MorePage() {
             </section>
           ))}
 
-          {/* Card de login — aparece no final quando deslogado */}
-          {!user && (
-            <LoginPromoCard />
-          )}
-
           <div className="pb-4 text-center text-[11px] text-ink-400 dark:text-ink-500">
             Pregador OS · Sistema Operacional para Pregadores
           </div>
@@ -160,55 +140,5 @@ export function MorePage() {
   );
 }
 
+// ─── fim ───────────────────────────────────────────────────────────────────
 
-// ─── Card promocional de login ─────────────────────────────────────────────
-
-function LoginPromoCard() {
-  return (
-    <Link
-      to="/auth?signup=true"
-      className="group relative block overflow-hidden rounded-2xl"
-    >
-      {/* Gradiente azul → verde */}
-      <div className="absolute inset-0 bg-gradient-to-br from-blue-600 via-blue-500 to-emerald-500" />
-      {/* Brilho decorativo */}
-      <div className="absolute inset-0 bg-gradient-to-tr from-white/10 via-white/5 to-transparent" />
-      {/* Borda sutil */}
-      <div className="absolute inset-0 rounded-2xl ring-1 ring-inset ring-white/20" />
-
-      <div className="relative flex items-center gap-4 px-5 py-5">
-        {/* Ícone */}
-        <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-2xl bg-white/20 backdrop-blur-sm shadow-lg">
-          <LogIn className="h-7 w-7 text-white" />
-        </div>
-
-        {/* Texto */}
-        <div className="flex-1 min-w-0">
-          <h3 className="mb-1 text-[17px] font-bold leading-tight text-white">
-            Fazer login / Cadastrar
-          </h3>
-          <p className="text-[13px] leading-relaxed text-white/80">
-            Salve seus esboços na nuvem e acesse de qualquer lugar
-          </p>
-        </div>
-
-        {/* Seta */}
-        <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm transition-transform group-hover:scale-110 group-active:scale-95">
-          <ChevronRight className="h-5 w-5 text-white" />
-        </div>
-      </div>
-
-      {/* Indicadores de benefícios */}
-      <div className="relative flex flex-wrap gap-2 px-5 pb-4">
-        {['☁️ Nuvem', '🔄 Sincronizado', '📱 Multi-dispositivo'].map((badge) => (
-          <span
-            key={badge}
-            className="rounded-full bg-white/15 px-3 py-1 text-[11px] font-medium text-white/90 backdrop-blur-sm"
-          >
-            {badge}
-          </span>
-        ))}
-      </div>
-    </Link>
-  );
-}
