@@ -11,11 +11,17 @@ import {
   PanelRightOpen,
   PanelRightClose,
   MoreVertical,
+  Download,
+  FileText,
+  FileType2,
+  FileCode,
+  Loader2,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { db } from '@/db/schema';
 import { useMensagensStore } from '@/stores/mensagens';
 import { useUIStore } from '@/stores/ui';
+import { exportarMensagem, type FormatoExport } from '@/lib/exporters';
 import { RichEditor } from '@/components/editor/RichEditor';
 import { SlideEditor } from '@/components/slides/SlideEditor';
 import { AIPanel } from '@/components/ai/AIPanel';
@@ -52,6 +58,7 @@ export function EditorPage() {
   const [salvando, setSalvando] = useState(false);
   const [showMeta, setShowMeta] = useState(!isMobile);
   const [showMenu, setShowMenu] = useState(false);
+  const [exportando, setExportando] = useState<FormatoExport | null>(null);
   const ultimoEsbocoRef = useRef('');
 
   useEffect(() => {
@@ -124,6 +131,19 @@ export function EditorPage() {
     await db.removerMensagem(mensagem.id);
     mostrarToast('Mensagem excluída', 'sucesso');
     navigate('/biblioteca');
+  };
+
+  const handleExportar = async (formato: FormatoExport) => {
+    setExportando(formato);
+    setShowMenu(false);
+    try {
+      await exportarMensagem(mensagem, formato);
+      mostrarToast(`Exportado em ${formato.toUpperCase()}`, 'sucesso');
+    } catch (e) {
+      mostrarToast(`Erro ao exportar: ${(e as Error).message}`, 'erro');
+    } finally {
+      setExportando(null);
+    }
   };
 
   const adicionarTag = () => {
@@ -379,6 +399,30 @@ export function EditorPage() {
             >
               <Sparkles className="h-[18px] w-[18px] text-ink-700 dark:text-ink-200" /> {iaAberta ? 'Fechar' : 'Abrir'} Assistente
             </button>
+
+            {/* Exportar — submenu */}
+            <div className="border-t border-ink-100 dark:border-ink-800">
+              <div className="px-4 pt-3 pb-1 text-[10.5px] font-semibold uppercase tracking-wider text-ink-400 dark:text-ink-500">
+                Exportar pregação
+              </div>
+              {([
+                { fmt: 'pdf' as FormatoExport, icon: FileText, label: 'PDF (imprimir)' },
+                { fmt: 'docx' as FormatoExport, icon: FileType2, label: 'Word (.docx)' },
+                { fmt: 'md' as FormatoExport, icon: FileCode, label: 'Markdown' },
+              ]).map(({ fmt, icon: Icon, label }) => (
+                <button
+                  key={fmt}
+                  onClick={() => { void handleExportar(fmt); }}
+                  disabled={exportando !== null}
+                  className="flex w-full items-center gap-3 px-4 py-3 text-[14px] transition-colors active:bg-ink-50 disabled:opacity-50 dark:active:bg-ink-800/40"
+                >
+                  {exportando === fmt
+                    ? <Loader2 className="h-[18px] w-[18px] animate-spin text-ink-700 dark:text-ink-200" />
+                    : <Icon className="h-[18px] w-[18px] text-ink-700 dark:text-ink-200" />}
+                  {label}
+                </button>
+              ))}
+            </div>
             <button
               onClick={() => { handleExcluir(); setShowMenu(false); }}
               className="flex w-full items-center gap-3 border-t border-red-100 px-4 py-3.5 text-[14px] text-red-600 transition-colors active:bg-red-50/50 dark:border-red-500/20 dark:text-red-400 dark:active:bg-red-500/10"
