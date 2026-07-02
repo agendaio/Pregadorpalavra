@@ -17,6 +17,7 @@ import { useCopilotOutlineStore } from '@/stores/copilotOutline';
 import { construirContextoMemoria } from '@/lib/ai/memory';
 import { useUIStore } from '@/stores/ui';
 import { autoGenerateSlides } from '@/lib/autoGenerateSlides';
+import { MarkdownRenderer } from '@/components/copilot/MarkdownRenderer';
 
 // ─── Ícones profissionais por especialista (substitui os emojis) ───────────
 
@@ -778,13 +779,13 @@ export function AssistantPage() {
               </div>
             )}
 
-            {/* Caixa de input */}
+            {/* Caixa de input — mesmo padrão visual do chat de Início */}
             <div
               className={cn(
-                'flex items-center gap-2 rounded-3xl border bg-white px-3.5 py-2.5 shadow-sm transition-all dark:bg-ink-900/40',
+                'flex items-center gap-2 rounded-3xl border bg-white px-3.5 py-2.5 shadow-lg shadow-ink-900/10 transition-all dark:bg-ink-900/40 dark:shadow-black/20',
                 speech.isListening
-                  ? 'border-red-300 dark:border-red-800/60'
-                  : 'border-ink-300 focus-within:border-ink-500 focus-within:shadow-md dark:border-ink-700 dark:focus-within:border-ink-600',
+                  ? 'border-red-300 ring-2 ring-red-200 dark:border-red-800/60'
+                  : 'border-ink-200 focus-within:border-ink-400 focus-within:shadow-xl focus-within:shadow-ink-900/15 dark:border-ink-700 dark:focus-within:border-ink-600',
               )}
             >
               <textarea
@@ -798,19 +799,21 @@ export function AssistantPage() {
                   }
                 }}
                 placeholder={
-                  especialistaAtivo
-                    ? `Pergunte algo ao especialista ${especialistaAtivo.nome}…`
-                    : 'Pergunte sobre a Bíblia, sermões, personagens…'
+                  speech.isListening
+                    ? 'Fale algo…'
+                    : especialistaAtivo
+                      ? `Pergunte ao especialista em ${especialistaAtivo.nome}…`
+                      : 'Pergunte qualquer coisa…'
                 }
                 rows={1}
                 disabled={speech.isListening}
                 className={cn(
-                  'flex-1 resize-none bg-transparent px-1 text-[14.5px] leading-snug outline-none',
+                  'flex-1 resize-none bg-transparent px-1 text-[14px] leading-relaxed outline-none',
                   speech.isListening
-                    ? 'cursor-default text-red-900 placeholder:text-red-400/70 dark:text-red-100'
-                    : 'text-ink-900 placeholder:text-ink-400 dark:text-white dark:placeholder:text-ink-500',
+                    ? 'cursor-default text-red-900 placeholder:text-[12.5px] placeholder:text-red-400/70 dark:text-red-100'
+                    : 'text-ink-900 placeholder:text-[12.5px] placeholder:text-ink-400 dark:text-white dark:placeholder:text-ink-500',
                 )}
-                style={{ maxHeight: '180px' }}
+                style={{ maxHeight: '160px' }}
               />
 
               {/* Mic button (esquerda do send, estilo ChatGPT) */}
@@ -820,15 +823,15 @@ export function AssistantPage() {
                   disabled={loading}
                   aria-label="Gravar áudio"
                   className={cn(
-                    'flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full transition-all',
-                    'text-ink-500 hover:bg-ink-100 hover:text-ink-900 dark:text-ink-400 dark:hover:bg-ink-800 dark:hover:text-white',
+                    'flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full transition-all',
+                    'text-ink-600 hover:bg-ink-100 hover:text-ink-900 dark:text-ink-400 dark:hover:bg-ink-800 dark:hover:text-white',
                     loading && 'opacity-50',
                   )}
                 >
                   {speech.isSupported ? (
-                    <Mic className="h-4 w-4" />
+                    <Mic className="h-[22px] w-[22px]" />
                   ) : (
-                    <MicOff className="h-4 w-4 opacity-50" />
+                    <MicOff className="h-[22px] w-[22px] opacity-50" />
                   )}
                 </button>
               )}
@@ -839,16 +842,16 @@ export function AssistantPage() {
                 disabled={!input.trim() || loading || speech.isListening}
                 aria-label="Enviar"
                 className={cn(
-                  'flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full transition-all',
+                  'flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full transition-all',
                   input.trim() && !loading && !speech.isListening
-                    ? 'bg-ink-900 text-white hover:bg-ink-800 dark:bg-white dark:text-ink-900 dark:hover:bg-ink-200'
+                    ? 'bg-ink-900 text-white shadow-md hover:bg-ink-800 active:scale-95 dark:bg-white dark:text-ink-900 dark:hover:bg-ink-200'
                     : 'bg-ink-100 text-ink-300 dark:bg-ink-800 dark:text-ink-600',
                 )}
               >
                 {loading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <Loader2 className="h-5 w-5 animate-spin" />
                 ) : (
-                  <Send className="h-4 w-4" />
+                  <Send className="h-[22px] w-[22px]" />
                 )}
               </button>
             </div>
@@ -901,7 +904,25 @@ function MessageBubble({
               : 'bg-ink-100 text-ink-900 dark:bg-ink-800/60 dark:text-ink-100',
           )}
         >
-          <div className="whitespace-pre-wrap break-words">{msg.content}</div>
+          {isUser ? (
+            <div className="whitespace-pre-wrap break-words">{msg.content}</div>
+          ) : (
+            <MarkdownRenderer
+              content={msg.content}
+              onCopySection={(text) => { navigator.clipboard.writeText(text).catch(() => {}); }}
+              onShareSection={(text) => {
+                if (navigator.share) navigator.share({ text }).catch(() => {});
+                else navigator.clipboard.writeText(text).catch(() => {});
+              }}
+              onAddSectionToOutline={(text, title) => {
+                const store = useCopilotOutlineStore.getState();
+                const novoPonto = { id: crypto.randomUUID(), texto: `${title}\n\n${text}`.trim(), subpontos: [], aplicacoes: [] };
+                store.importar({ pontos: [...store.pontos, novoPonto] });
+                useUIStore.getState().mostrarToast('Adicionado ao esboço', 'sucesso');
+                void autoGenerateSlides(store).catch(() => {});
+              }}
+            />
+          )}
         </div>
 
         {isUser ? (

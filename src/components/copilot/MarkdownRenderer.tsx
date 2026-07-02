@@ -173,8 +173,19 @@ function SectionBlock({
         ? 'text-[14px] font-semibold'
         : 'text-[15.5px] font-semibold';
 
+  // "Leituras Complementares" ganha destaque próprio — cor diferente das
+  // demais seções, pra ficar visualmente isolada e fácil de achar.
+  const isLeituras = /leituras?\s+complementares?/i.test(section.title);
+
   return (
-    <section className="group/section rounded-xl border border-ink-200/80 bg-white/40 transition-colors hover:border-ink-300 hover:bg-white/70 dark:border-ink-700 dark:bg-ink-900/30 dark:hover:border-ink-600 dark:hover:bg-ink-900/50">
+    <section
+      className={cn(
+        'group/section rounded-xl border transition-colors',
+        isLeituras
+          ? 'border-amber-200 bg-amber-50/50 hover:border-amber-300 hover:bg-amber-50/80 dark:border-amber-800/50 dark:bg-amber-900/10 dark:hover:border-amber-700'
+          : 'border-ink-200/80 bg-white/40 hover:border-ink-300 hover:bg-white/70 dark:border-ink-700 dark:bg-ink-900/30 dark:hover:border-ink-600 dark:hover:bg-ink-900/50',
+      )}
+    >
       {/* Header da seção com ações inline */}
       <header className="flex items-start justify-between gap-2 px-3.5 pt-3 pb-1.5">
         <button
@@ -184,14 +195,17 @@ function SectionBlock({
         >
           <ChevronDown
             className={cn(
-              'h-4 w-4 flex-shrink-0 text-ink-400 transition-transform',
+              'h-4 w-4 flex-shrink-0 transition-transform',
+              isLeituras ? 'text-amber-500' : 'text-ink-400',
               !open && '-rotate-90',
             )}
           />
+          {isLeituras && <BookOpen className="h-4 w-4 flex-shrink-0 text-amber-600 dark:text-amber-400" />}
           <HeaderTag
             className={cn(
-              'm-0 flex-1 tracking-tight text-ink-900 dark:text-white',
-              section.type === 'h2' && 'border-b border-ink-200/60 pb-1.5 dark:border-ink-700',
+              'm-0 flex-1 tracking-tight',
+              isLeituras ? 'text-amber-800 dark:text-amber-300' : 'text-ink-900 dark:text-white',
+              section.type === 'h2' && cn('border-b pb-1.5', isLeituras ? 'border-amber-200/60 dark:border-amber-800/40' : 'border-ink-200/60 dark:border-ink-700'),
               titleSize,
             )}
           >
@@ -317,11 +331,31 @@ function MarkdownBody({ content }: { content: string }) {
             {children}
           </li>
         ),
-        strong: ({ children, ...props }) => (
-          <strong className="font-semibold text-ink-900 dark:text-white" {...props}>
-            {children}
-          </strong>
-        ),
+        strong: ({ children, ...props }) => {
+          // Marcadores [FATO] / [INTERPRETAÇÃO] / [APLICAÇÃO] viram badges
+          // coloridos em vez de negrito simples — fica fácil diferenciar
+          // fato de interpretação de aplicação prática num relance.
+          const texto = Array.isArray(children) ? children.join('') : String(children ?? '');
+          const marcador = texto.trim().match(/^\[(FATO|INTERPRETAÇÃO|APLICAÇÃO)\]$/i);
+          if (marcador) {
+            const tipo = marcador[1].toUpperCase();
+            const estilos: Record<string, string> = {
+              FATO: 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
+              'INTERPRETAÇÃO': 'bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300',
+              'APLICAÇÃO': 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
+            };
+            return (
+              <span className={cn('mr-1 inline-block rounded-md px-1.5 py-0.5 text-[10.5px] font-bold uppercase tracking-wide', estilos[tipo])}>
+                {tipo}
+              </span>
+            );
+          }
+          return (
+            <strong className="font-semibold text-ink-900 dark:text-white" {...props}>
+              {children}
+            </strong>
+          );
+        },
         em: ({ children, ...props }) => (
           <em className="italic text-ink-600 dark:text-ink-300" {...props}>
             {children}

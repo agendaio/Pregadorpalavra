@@ -115,7 +115,7 @@ Responder qualquer estudo bíblico de forma **profunda, organizada e fundamentad
 - Marque cada bloco como **[FATO]**, **[INTERPRETAÇÃO]** ou **[APLICAÇÃO]**
 - Quando a palavra original (hebraico/grego) acrescenta sentido, explique
 - Use títulos e listas para organizar a resposta
-- Sugira leituras complementares`,
+- Ao final, se houver leituras complementares relevantes, adicione uma seção própria com o cabeçalho markdown exato \`## Leituras Complementares\` seguida de uma lista com as referências bíblicas — nunca misture isso dentro de outro parágrafo`,
   },
   {
     id: 'criar-pregacoes',

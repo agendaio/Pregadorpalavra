@@ -811,7 +811,7 @@ export function ChatContainer({ onTogglePanel, onEsboçoPending }: ChatContainer
 
         <div
           className={cn(
-            'flex items-end gap-1.5 rounded-3xl border bg-white px-3 py-3 shadow-lg shadow-ink-900/10 transition-all dark:shadow-black/20',
+            'flex items-center gap-2 rounded-3xl border bg-white px-3.5 py-2.5 shadow-lg shadow-ink-900/10 transition-all dark:shadow-black/20',
             speech.isListening
               ? 'border-red-300 ring-2 ring-red-200 dark:border-red-700/60 dark:bg-sky-100/90 dark:ring-red-900/30'
               : 'border-ink-200 focus-within:border-ink-400 focus-within:shadow-xl focus-within:shadow-ink-900/15 dark:border-ink-700 dark:bg-sky-100/80 dark:focus-within:border-sky-400',

@@ -470,8 +470,8 @@ export function EditorPage() {
 
       {/* Bottom sheet IA em mobile */}
       {isMobile && (
-        <BottomSheet open={iaAberta} onClose={() => setIA(false)} title="Assistente Ministerial" height="lg">
-          <AIPanel />
+        <BottomSheet open={iaAberta} onClose={() => setIA(false)} title="Assistente Ministerial" subtitle="Contexto carregado" height="full">
+          <AIPanel showHeader={false} />
         </BottomSheet>
       )}
 

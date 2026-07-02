@@ -27,17 +27,27 @@ export function HomePage() {
   const [esboçoPendente, setEsboçoPendente] = useState(false);
   /** true quando o usuário clicou no X pra fechar o painel — some até a próxima intenção sermon ou clique manual */
   const [painelFechadoPeloUsuario, setPainelFechadoPeloUsuario] = useState(false);
+  /**
+   * true só depois de uma ação explícita NESTA sessão (pedir um sermão ou
+   * clicar no botão/menu de esboço). NUNCA deriva de "tem conteúdo salvo" —
+   * senão o painel reabre sozinho toda vez que a página carrega, só porque
+   * sobrou esboço de uma conversa antiga no localStorage.
+   */
+  const [painelRevelado, setPainelRevelado] = useState(false);
   const outline = useCopilotOutlineStore();
-  const temEsboço = outline.titulo || outline.tema || outline.pontos.length > 0;
-  const mostrarPainel = (temEsboço || esboçoPendente) && !painelFechadoPeloUsuario;
+  const mostrarPainel = painelRevelado && !painelFechadoPeloUsuario;
 
   /** Nova intenção sermon sempre reabre o painel, mesmo que o usuário tenha fechado antes */
   const handleEsboçoPending = (pending: boolean) => {
     setEsboçoPendente(pending);
-    if (pending) setPainelFechadoPeloUsuario(false);
+    if (pending) {
+      setPainelRevelado(true);
+      setPainelFechadoPeloUsuario(false);
+    }
   };
 
   const abrirPainelManualmente = () => {
+    setPainelRevelado(true);
     setPainelFechadoPeloUsuario(false);
   };
 
@@ -50,14 +60,16 @@ export function HomePage() {
         right={
           <button
             onClick={() => (mostrarPainel ? setPainelFechadoPeloUsuario(true) : abrirPainelManualmente())}
+            title="Esboço"
             className={cn(
-              'flex h-11 w-11 items-center justify-center rounded-full transition-colors',
+              'flex h-10 items-center gap-1.5 rounded-full px-3.5 text-[12.5px] font-medium transition-colors',
               mostrarPainel
                 ? 'bg-ink-900 text-white dark:bg-white dark:text-ink-900'
                 : 'text-ink-700 hover:bg-ink-100 dark:text-ink-200 dark:hover:bg-ink-800',
             )}
           >
-            <PanelRightOpen className="h-5 w-5" />
+            <PanelRightOpen className="h-[18px] w-[18px]" />
+            <span className="hidden sm:inline">Esboço</span>
           </button>
         }
       />

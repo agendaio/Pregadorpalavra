@@ -22,6 +22,7 @@ import { ACOES_IA, type AcaoIA, enviarComFallback, type ChatMessage } from '@/li
 import { SYSTEM_APPENDS, construirMensagens } from '@/lib/ai/agent';
 import { cn } from '@/lib/utils';
 import { EASE_OUT } from '@/lib/motion';
+import { MarkdownRenderer } from '@/components/copilot/MarkdownRenderer';
 
 const ICONES: Record<AcaoIA, React.ComponentType<{ className?: string }>> = {
   esboco: ScrollText,
@@ -44,7 +45,12 @@ interface RespostaIA {
   fallback: boolean;
 }
 
-export function AIPanel() {
+interface AIPanelProps {
+  /** false quando já existe um cabeçalho por fora (ex: BottomSheet) — evita duplicar título */
+  showHeader?: boolean;
+}
+
+export function AIPanel({ showHeader = true }: AIPanelProps) {
   const mensagem = useMensagensStore((s) => s.atual);
   const patch = useMensagensStore((s) => s.patch);
 
@@ -114,17 +120,19 @@ export function AIPanel() {
 
   return (
     <div className="flex h-full flex-col bg-paper dark:bg-paper-dark">
-      <div className="flex flex-shrink-0 items-center gap-2 border-b border-ink-200/70 px-4 py-3 dark:border-ink-800">
-        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-ink-900 to-ink-700 text-white shadow-sm dark:from-white dark:to-ink-100 dark:text-ink-950">
-          <Sparkles className="h-3.5 w-3.5" />
+      {showHeader && (
+        <div className="flex flex-shrink-0 items-center gap-2 border-b border-ink-200/70 px-4 py-3 dark:border-ink-800">
+          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-ink-900 to-ink-700 text-white shadow-sm dark:from-white dark:to-ink-100 dark:text-ink-950">
+            <Sparkles className="h-3.5 w-3.5" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h2 className="truncate text-[13.5px] font-semibold tracking-tight text-ink-900 dark:text-white">
+              Assistente Ministerial
+            </h2>
+            <p className="text-[11px] text-ink-500 dark:text-ink-400">Contexto carregado</p>
+          </div>
         </div>
-        <div className="flex-1 min-w-0">
-          <h2 className="truncate text-[13.5px] font-semibold tracking-tight text-ink-900 dark:text-white">
-            Assistente Ministerial
-          </h2>
-          <p className="text-[11px] text-ink-500 dark:text-ink-400">Contexto carregado</p>
-        </div>
-      </div>
+      )}
 
       <div className="flex-shrink-0 border-b border-ink-200/70 p-3 dark:border-ink-800">
         <div className="grid grid-cols-2 gap-1.5">
@@ -229,9 +237,17 @@ export function AIPanel() {
                       transition={{ duration: 0.18, ease: EASE_OUT }}
                       className="border-t border-ink-200/80 px-3 py-2.5 text-[12.5px] leading-relaxed text-ink-700 dark:border-ink-800 dark:text-ink-200"
                     >
-                      <pre className="whitespace-pre-wrap break-words font-sans">
-                        {h.conteudo}
-                      </pre>
+                      <div className="prose-chat">
+                        <MarkdownRenderer
+                          content={h.conteudo}
+                          onCopySection={(texto) => navigator.clipboard.writeText(texto).catch(() => {})}
+                          onShareSection={(texto) => {
+                            if (navigator.share) navigator.share({ text: texto }).catch(() => {});
+                            else navigator.clipboard.writeText(texto).catch(() => {});
+                          }}
+                          onAddSectionToOutline={(texto) => inserirNoEsboco(texto)}
+                        />
+                      </div>
 
                       <div className="mt-2.5 flex items-center gap-2 border-t border-ink-100 pt-2 text-[10.5px] text-ink-500 tabular-nums dark:border-ink-800 dark:text-ink-400">
                         <span className="inline-flex items-center gap-1">

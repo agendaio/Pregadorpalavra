@@ -59,7 +59,7 @@ export function BottomSheet({ open, onClose, title, subtitle, children, height =
             }}
             onClick={(e) => e.stopPropagation()}
             className={cn(
-              'relative w-full overflow-hidden rounded-t-3xl bg-paper shadow-ring',
+              'relative flex w-full flex-col overflow-hidden rounded-t-3xl bg-paper shadow-ring',
               'dark:bg-paper-dark',
               maxHeightClass,
             )}
@@ -69,28 +69,26 @@ export function BottomSheet({ open, onClose, title, subtitle, children, height =
               <div className="h-[5px] w-9 rounded-full bg-ink-300/80 dark:bg-ink-600" />
             </div>
 
-            {/* Header */}
-            {(title || subtitle) && (
-              <div className="flex flex-shrink-0 items-start justify-between px-5 pb-3 pt-1">
-                <div>
-                  {title && (
-                    <h2 className="text-[17px] font-semibold tracking-tight text-ink-900 dark:text-white">
-                      {title}
-                    </h2>
-                  )}
-                  {subtitle && (
-                    <p className="mt-0.5 text-[13px] text-ink-500 dark:text-ink-400">{subtitle}</p>
-                  )}
-                </div>
-                <button
-                  onClick={onClose}
-                  className="flex h-9 w-9 items-center justify-center rounded-full bg-ink-100 text-ink-700 transition-colors hover:bg-ink-200 dark:bg-ink-800 dark:text-ink-200 dark:hover:bg-ink-700"
-                  aria-label="Fechar"
-                >
-                  <X className="h-4 w-4" />
-                </button>
+            {/* Header — X sempre visível, mesmo sem título */}
+            <div className="flex flex-shrink-0 items-start justify-between px-5 pb-3 pt-1">
+              <div className="min-w-0 flex-1">
+                {title && (
+                  <h2 className="text-[17px] font-semibold tracking-tight text-ink-900 dark:text-white">
+                    {title}
+                  </h2>
+                )}
+                {subtitle && (
+                  <p className="mt-0.5 text-[13px] text-ink-500 dark:text-ink-400">{subtitle}</p>
+                )}
               </div>
-            )}
+              <button
+                onClick={onClose}
+                className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-ink-100 text-ink-700 transition-colors hover:bg-ink-200 dark:bg-ink-800 dark:text-ink-200 dark:hover:bg-ink-700"
+                aria-label="Fechar"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
 
             {/* Body */}
             <div className="flex-1 overflow-y-auto pb-[calc(env(safe-area-inset-bottom)+24px)]">
