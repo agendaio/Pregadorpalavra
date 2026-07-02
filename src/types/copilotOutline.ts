@@ -12,6 +12,7 @@ export interface PontoEsboço {
 
 export interface SessionContext {
   titulo: string;
+  subtitulo: string;
   tema: string;
   objetivo: string;
   textoBase: string;
@@ -23,6 +24,10 @@ export interface SessionContext {
   resumo: string;
   tempoEstimado: number;
   conversaId: string;
+  /** Pasta de esboço selecionada */
+  pastaId: string | null;
+  pastaNome: string | null;
+  pastaCor: string | null;
 }
 
 /** Tipos de ação disponíveis no menu de seleção de texto */
@@ -69,6 +74,7 @@ export const SELEÇÃO_AÇÕES: SeleçãoAçãoMeta[] = [
 /** Contexto vazio para reset */
 export const SESSÃO_VAZIA: SessionContext = {
   titulo: '',
+  subtitulo: '',
   tema: '',
   objetivo: '',
   textoBase: '',
@@ -80,4 +86,7 @@ export const SESSÃO_VAZIA: SessionContext = {
   resumo: '',
   tempoEstimado: 30,
   conversaId: '',
+  pastaId: null,
+  pastaNome: null,
+  pastaCor: null,
 };

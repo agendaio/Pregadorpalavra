@@ -27,7 +27,13 @@ function saveToStorage(state: SessionContext) {
 }
 
 interface CopilotOutlineState extends SessionContext {
+  pastaId: string | null;
+  pastaNome: string | null;
+  pastaCor: string | null;
+  setPasta: (id: string, nome: string, cor: string) => void;
+  clearPasta: () => void;
   patchTitulo: (v: string) => void;
+  patchSubtitulo: (v: string) => void;
   patchTema: (v: string) => void;
   patchObjetivo: (v: string) => void;
   patchTextoBase: (v: string) => void;
@@ -51,7 +57,7 @@ interface CopilotOutlineState extends SessionContext {
   importar: (ctx: Partial<SessionContext>) => void;
 }
 
-export const useCopilotOutlineStore = create<CopilotOutlineState>((set, get) => {
+export const useCopilotOutlineStore = create<CopilotOutlineState>()((set, get) => {
   const stored = loadFromStorage();
   const initial: SessionContext = {
     ...SESSÃO_VAZIA,
@@ -65,6 +71,7 @@ export const useCopilotOutlineStore = create<CopilotOutlineState>((set, get) => 
   return {
     // ── Estado inicial ──────────────────────────────────────────────
     titulo: initial.titulo,
+    subtitulo: initial.subtitulo,
     tema: initial.tema,
     objetivo: initial.objetivo,
     textoBase: initial.textoBase,
@@ -76,11 +83,34 @@ export const useCopilotOutlineStore = create<CopilotOutlineState>((set, get) => 
     resumo: initial.resumo,
     tempoEstimado: initial.tempoEstimado,
     conversaId: initial.conversaId,
+    // Pasta de esboço
+    pastaId: null,
+    pastaNome: null,
+    pastaCor: null,
+
+    // ── Pasta ─────────────────────────────────────────────────────
+    setPasta: (id, nome, cor) => {
+      set({ pastaId: id, pastaNome: nome, pastaCor: cor });
+      // pastaId/pastaNome/pastaCor são campos extras (não em SessionContext)
+      localStorage.setItem('pregador.pastaId', id ?? '');
+      localStorage.setItem('pregador.pastaNome', nome ?? '');
+      localStorage.setItem('pregador.pastaCor', cor ?? '');
+    },
+    clearPasta: () => {
+      set({ pastaId: null, pastaNome: null, pastaCor: null });
+      localStorage.removeItem('pregador.pastaId');
+      localStorage.removeItem('pregador.pastaNome');
+      localStorage.removeItem('pregador.pastaCor');
+    },
 
     // ── Patches simples ────────────────────────────────────────────
     patchTitulo: (v) => {
       set({ titulo: v });
       persist({ titulo: v });
+    },
+    patchSubtitulo: (v) => {
+      set({ subtitulo: v });
+      persist({ subtitulo: v });
     },
     patchTema: (v) => {
       set({ tema: v });

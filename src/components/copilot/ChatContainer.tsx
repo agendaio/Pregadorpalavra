@@ -29,6 +29,8 @@ import {
 import type { Sessao } from '@/lib/ai';
 import { cn, formatarRelativo } from '@/lib/utils';
 import { SelectionMenu } from './SelectionMenu';
+import { FolderPicker } from './FolderPicker';
+import { autoGenerateSlides } from '@/lib/autoGenerateSlides';
 import type { SeleçãoAção } from '@/types/copilotOutline';
 
 interface ChatMessage {
@@ -146,6 +148,12 @@ export function ChatContainer({ onTogglePanel }: { onTogglePanel?: () => void })
       store.patchTitulo(tituloMatch[1].trim());
     }
 
+    // Subtítulo
+    const subtituloMatch = content.match(/Subtítulo|Subtítulo|Subtitulo[:\s]+(.+)/im);
+    if (subtituloMatch && !store.subtitulo) {
+      store.patchSubtitulo(subtituloMatch[1].trim());
+    }
+
     // Tema
     const temaMatch = content.match(/^[*_]?Tema[*_]?[:\s]+(.+)/im);
     if (temaMatch && !store.tema) {
@@ -222,49 +230,57 @@ export function ChatContainer({ onTogglePanel }: { onTogglePanel?: () => void })
     // Build messages array
     const todasMensagens = [...mensagens, userMsg];
 
-    abortRef.current = new AbortController();
+      // Timeout 60s — streaming pode demorar na primeira chamada
+      const controller = new AbortController();
+      const timeoutId = window.setTimeout(() => controller.abort(), 60_000);
+      abortRef.current = controller;
 
-    try {
-      const supabaseLib = await import('@/lib/supabase');
-      const sb = supabaseLib.supabase();
-      const { data: sessData } = await sb?.auth.getSession() ?? {};
-      const userToken = (sessData?.session as { access_token?: string } | null | undefined)?.access_token;
-      // Usa token do usuário logado; se não estiver logado, usa ANON_KEY (funciona com RLS configurado)
-      const token = userToken ?? supabaseLib.SUPABASE_ANON_KEY;
-      if (!token) throw new Error('Não autenticado');
+      try {
+        const supabaseLib = await import('@/lib/supabase');
+        const sb = supabaseLib.supabase();
+        const { data: sessData } = await sb?.auth.getSession() ?? {};
+        const userToken = (sessData?.session as { access_token?: string } | null | undefined)?.access_token;
+        // Usa token do usuário logado; se não estiver logado, usa ANON_KEY (funciona com RLS configurado)
+        const token = userToken ?? supabaseLib.SUPABASE_ANON_KEY;
+        if (!token) throw new Error('Não autenticado');
 
-      const contextoMemoria = construirContextoMemoria(useCopilotOutlineStore.getState());
-      const supabaseUrl = supabaseLib.SUPABASE_URL;
+        const contextoMemoria = construirContextoMemoria(useCopilotOutlineStore.getState());
+        const supabaseUrl = supabaseLib.SUPABASE_URL;
 
-      const messagesForApi: Array<{ role: 'user' | 'assistant' | 'system'; content: string }> = [
-        ...(contextoMemoria ? [{ role: 'system' as const, content: contextoMemoria }] : []),
-        { role: 'system' as const, content: SYSTEM_PROMPT },
-        ...todasMensagens.map(m => ({ role: m.role as 'user' | 'assistant', content: m.content })),
-      ];
+        const messagesForApi: Array<{ role: 'user' | 'assistant' | 'system'; content: string }> = [
+          ...(contextoMemoria ? [{ role: 'system' as const, content: contextoMemoria }] : []),
+          { role: 'system' as const, content: SYSTEM_PROMPT },
+          ...todasMensagens.map(m => ({ role: m.role as 'user' | 'assistant', content: m.content })),
+        ];
 
-      const res = await fetch(`${supabaseUrl}/functions/v1/ai-chat`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-          'apikey': supabaseLib.SUPABASE_ANON_KEY,
-        },
-        body: JSON.stringify({
-          messages: messagesForApi.map(m => ({ role: m.role, content: m.content })),
-          stream: true,
-          temperature: 0.7,
-          maxTokens: 2500,
-          session_context: useCopilotOutlineStore.getState(),
-        }),
-        signal: abortRef.current.signal,
-      });
+        const res = await fetch(`${supabaseUrl}/functions/v1/ai-chat`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+            'apikey': supabaseLib.SUPABASE_ANON_KEY,
+          },
+          body: JSON.stringify({
+            messages: messagesForApi.map(m => ({ role: m.role, content: m.content })),
+            stream: true,
+            temperature: 0.7,
+            maxTokens: 2500,
+            session_context: useCopilotOutlineStore.getState(),
+          }),
+          signal: controller.signal,
+        });
+        window.clearTimeout(timeoutId);
 
       if (!res.ok) {
         const errData = await res.json().catch(() => ({})) as { message?: string };
         throw new Error(errData.message ?? `Erro HTTP ${res.status}`);
       }
 
-      const reader = res.body!.getReader();
+      if (!res.body) {
+        throw new Error('Resposta vazia do servidor. Tente novamente.');
+      }
+
+      const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let buffer = '';
       let acc = '';

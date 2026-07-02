@@ -121,9 +121,21 @@ export function AssistantPage() {
     const texto = input.trim();
     if (!texto || loading) return;
 
-    if (!sessionId) {
+    let currentSessionId = sessionId;
+
+    // Criar sessão se não existir — aguarda criação antes de prosseguir
+    if (!currentSessionId) {
       const agente = agentes.find((a) => a.id === agenteSelecionado);
       await criarSessao(agente);
+      // Busca a sessão recém-criada pelo updatedAt mais recente
+      currentSessionId = (await aiDB.sessoes.orderBy('updatedAt').reverse().first())?.id ?? null;
+      if (currentSessionId) setSessionId(currentSessionId);
+    }
+
+    if (!currentSessionId) {
+      setError('Não foi possível criar sessão. Tente novamente.');
+      setLoading(false);
+      return;
     }
 
     const userMsg: ChatMessage = {
@@ -141,16 +153,17 @@ export function AssistantPage() {
     let streamContent = '';
 
     try {
-      // Obter sessão atual
-      const currentSessionId = sessionId ?? (await aiDB.sessoes.orderBy('updatedAt').reverse().first())?.id;
-      if (!currentSessionId) throw new Error('Sessão não encontrada');
+      // Persistir mensagem do usuário imediatamente
+      await aiDB.mensagens.put({ sessaoId: currentSessionId, ...userMsg });
+      await aiDB.sessoes.update(currentSessionId, { updatedAt: Date.now() });
+
+      // Montar histórico com a nova mensagem do usuário
+      const todasMensagens = [...messages, userMsg];
 
       // Persistir mensagem do usuário
       await aiDB.mensagens.put({ sessaoId: currentSessionId, ...userMsg });
       await aiDB.sessoes.update(currentSessionId, { updatedAt: Date.now() });
 
-      // Montar histórico
-      const todasMensagens = [...messages, userMsg];
       const chatHistory = todasMensagens.map((m) => ({
         role: m.role,
         content: m.content,

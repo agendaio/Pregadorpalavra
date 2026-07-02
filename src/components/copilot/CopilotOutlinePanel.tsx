@@ -13,6 +13,7 @@ import {
   Play, ChevronUp, ChevronDown, Trash2, Plus, Clock,
   BookOpen, Target, MessageSquare, Users, FolderOpen,
   X, GripVertical, CheckCircle2, Sparkles, Layout,
+  Maximize2, Minimize2, AlignLeft,
 } from 'lucide-react';
 import { useCopilotOutlineStore } from '@/stores/copilotOutline';
 import { cn } from '@/lib/utils';
@@ -34,6 +35,7 @@ export function CopilotOutlinePanel({ asBottomSheet = false, onClose }: CopilotO
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
   const [showPanel, setShowPanel] = useState(true);
+  const [fullscreen, setFullscreen] = useState(false);
 
   const hasContent = store.titulo || store.tema || store.pontos.length > 0;
 
@@ -72,6 +74,7 @@ export function CopilotOutlinePanel({ asBottomSheet = false, onClose }: CopilotO
     if (!editingId) return;
     switch (editingId) {
       case 'titulo': store.patchTitulo(editValue); break;
+      case 'subtitulo': store.patchSubtitulo(editValue); break;
       case 'tema': store.patchTema(editValue); break;
       case 'objetivo': store.patchObjetivo(editValue); break;
       case 'textoBase': store.patchTextoBase(editValue); break;
@@ -80,6 +83,14 @@ export function CopilotOutlinePanel({ asBottomSheet = false, onClose }: CopilotO
       case 'introducao': store.patchIntroducao(editValue); break;
       case 'conclusao': store.patchConclusao(editValue); break;
       case 'resumo': store.patchResumo(editValue); break;
+      default: {
+        // Formato "ponto_<uuid>" para edição de ponto
+        if (editingId?.startsWith('ponto_')) {
+          const pontoId = editingId.replace('ponto_', '');
+          store.patchPonto(pontoId, editValue);
+        }
+        break;
+      }
     }
     setEditingId(null);
   };
@@ -100,12 +111,21 @@ export function CopilotOutlinePanel({ asBottomSheet = false, onClose }: CopilotO
           )}
         </div>
         {!asBottomSheet && (
-          <button
-            onClick={() => setShowPanel(p => !p)}
-            className="rounded-lg p-1 text-ink-400 hover:bg-ink-100 dark:hover:bg-ink-800"
-          >
-            <X className="h-4 w-4" />
-          </button>
+          <>
+            <button
+              onClick={() => setFullscreen(f => !f)}
+              className="rounded-lg p-1 text-ink-400 hover:bg-ink-100 dark:hover:bg-ink-800"
+              title={fullscreen ? 'Modo normal' : 'Tela cheia'}
+            >
+              {fullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+            </button>
+            <button
+              onClick={() => setShowPanel(p => !p)}
+              className="rounded-lg p-1 text-ink-400 hover:bg-ink-100 dark:hover:bg-ink-800"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </>
         )}
       </div>
 
@@ -118,6 +138,8 @@ export function CopilotOutlinePanel({ asBottomSheet = false, onClose }: CopilotO
             {/* Campos principais */}
             <Section title="Título" icon={<BookOpen className="h-3.5 w-3.5" />} value={store.titulo} editingId={editingId} editValue={editValue} editingField="titulo"
               onEdit={startEditing} onChange={setEditValue} onSave={saveEdit} onCancel={() => setEditingId(null)} placeholder="Título da pregação" />
+            <Section title="Subtítulo" icon={<AlignLeft className="h-3.5 w-3.5" />} value={store.subtitulo} editingId={editingId} editValue={editValue} editingField="subtitulo"
+              onEdit={startEditing} onChange={setEditValue} onSave={saveEdit} onCancel={() => setEditingId(null)} placeholder="Subtítulo (opcional)" />
             <Section title="Texto Base" icon={<BookOpen className="h-3.5 w-3.5" />} value={store.textoBase} editingId={editingId} editValue={editValue} editingField="textoBase"
               onEdit={startEditing} onChange={setEditValue} onSave={saveEdit} onCancel={() => setEditingId(null)} placeholder="João 3:16" />
             <Section title="Tema" icon={<Target className="h-3.5 w-3.5" />} value={store.tema} editingId={editingId} editValue={editValue} editingField="tema"
@@ -257,6 +279,241 @@ export function CopilotOutlinePanel({ asBottomSheet = false, onClose }: CopilotO
     </div>
   );
 
+  {/* ─── MODO TELA CHEIA ─────────────────────────────────────────── */}
+  <AnimatePresence>
+    {fullscreen && (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 z-[100] flex flex-col"
+        style={{ background: 'linear-gradient(180deg, #f8f7f4 0%, #f4f3f0 100%)' }}
+      >
+        {/* Header da tela cheia */}
+        <div className="flex items-center justify-between border-b border-ink-200/60 bg-white/80 px-6 py-3 backdrop-blur-md dark:border-ink-800 dark:bg-ink-900/80">
+          <div className="flex items-center gap-3">
+            <Sparkles className="h-5 w-5 text-amber-500" />
+            <span className="font-semibold text-ink-800 dark:text-white">Editor de Pregação</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setFullscreen(false)}
+              className="flex items-center gap-1.5 rounded-full bg-ink-900 px-4 py-2 text-[12px] font-medium text-white transition-colors hover:bg-ink-800 dark:bg-white dark:text-ink-900 dark:hover:bg-ink-100"
+            >
+              <Minimize2 className="h-4 w-4" />
+              Minimizar
+            </button>
+          </div>
+        </div>
+
+        {/* Corpo da tela cheia */}
+        <div className="flex flex-1 flex-col overflow-hidden">
+          {/* Área do título grande */}
+          <div className="flex-shrink-0 border-b border-ink-200/50 bg-white px-6 py-6 dark:border-ink-800 dark:bg-ink-900/50">
+            {/* Título grande */}
+            <div className="mb-3">
+              <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-ink-400">
+                Título
+              </label>
+              {editingId === 'titulo' ? (
+                <input
+                  autoFocus
+                  type="text"
+                  value={editValue}
+                  onChange={e => setEditValue(e.target.value)}
+                  onBlur={saveEdit}
+                  onKeyDown={e => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') setEditingId(null); }}
+                  placeholder="Título da pregação..."
+                  className="w-full bg-transparent text-[28px] font-bold leading-tight text-ink-900 placeholder:text-ink-300 outline-none dark:text-white"
+                />
+              ) : (
+                <button
+                  onClick={() => startEditing('titulo', store.titulo)}
+                  className="w-full text-left text-[28px] font-bold leading-tight text-ink-900 placeholder:text-ink-300 hover:text-ink-600 dark:text-white dark:hover:text-ink-300"
+                >
+                  {store.titulo || <span className="text-ink-300">Título da pregação...</span>}
+                </button>
+              )}
+            </div>
+
+            {/* Subtítulo */}
+            <div>
+              <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-ink-400">
+                Subtítulo
+              </label>
+              {editingId === 'subtitulo' ? (
+                <input
+                  autoFocus
+                  type="text"
+                  value={editValue}
+                  onChange={e => setEditValue(e.target.value)}
+                  onBlur={saveEdit}
+                  onKeyDown={e => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') setEditingId(null); }}
+                  placeholder="Subtítulo (opcional)"
+                  className="w-full bg-transparent text-[18px] leading-relaxed text-ink-600 placeholder:text-ink-300 outline-none dark:text-ink-400"
+                />
+              ) : (
+                <button
+                  onClick={() => startEditing('subtitulo', store.subtitulo)}
+                  className="w-full text-left text-[18px] leading-relaxed text-ink-600 placeholder:text-ink-300 hover:text-ink-400 dark:text-ink-400 dark:hover:text-ink-300"
+                >
+                  {store.subtitulo || <span className="text-ink-300">Subtítulo (opcional)...</span>}
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Conteúdo scrollável */}
+          <div className="flex-1 overflow-y-auto px-6 py-6">
+            <div className="mx-auto max-w-3xl space-y-6">
+              {/* Texto Base */}
+              <FullscreenField
+                label="Texto Base" icon={<BookOpen className="h-4 w-4" />}
+                value={store.textoBase}
+                editingId={editingId} editValue={editValue} editingField="textoBase"
+                startEdit={startEditing} setEditValue={setEditValue} saveEdit={saveEdit} cancelEdit={() => setEditingId(null)}
+                placeholder="João 3:16 — Porque Deus amou o mundo..."
+              />
+              {/* Tema */}
+              <FullscreenField
+                label="Tema Central" icon={<Target className="h-4 w-4" />}
+                value={store.tema}
+                editingId={editingId} editValue={editValue} editingField="tema"
+                startEdit={startEditing} setEditValue={setEditValue} saveEdit={saveEdit} cancelEdit={() => setEditingId(null)}
+                placeholder="Qual o tema central da mensagem?"
+              />
+              {/* Objetivo */}
+              <FullscreenField
+                label="Objetivo" icon={<Target className="h-4 w-4" />}
+                value={store.objetivo}
+                editingId={editingId} editValue={editValue} editingField="objetivo"
+                startEdit={startEditing} setEditValue={setEditValue} saveEdit={saveEdit} cancelEdit={() => setEditingId(null)}
+                placeholder="O que o pregador quer que o povo leve?"
+              />
+              {/* Introdução */}
+              <FullscreenField
+                label="Introdução" icon={<MessageSquare className="h-4 w-4" />}
+                value={store.introducao}
+                editingId={editingId} editValue={editValue} editingField="introducao"
+                startEdit={startEditing} setEditValue={setEditValue} saveEdit={saveEdit} cancelEdit={() => setEditingId(null)}
+                multiline placeholder="Contextualize o tema para a congregação..."
+              />
+              {/* Pontos */}
+              {store.pontos.length > 0 && (
+                <div>
+                  <div className="mb-3 flex items-center gap-2">
+                    <span className="text-[11px] font-semibold uppercase tracking-wider text-ink-400">
+                      Pontos ({store.pontos.length})
+                    </span>
+                  </div>
+                  <div className="space-y-3">
+                    {store.pontos.map((ponto, i) => (
+                      <FullscreenPontoCard
+                        key={ponto.id}
+                        ponto={ponto}
+                        index={i}
+                        editingId={editingId}
+                        editValue={editValue}
+                        startEdit={startEditing}
+                        setEditValue={setEditValue}
+                        saveEdit={saveEdit}
+                        cancelEdit={() => setEditingId(null)}
+                        onReorderUp={() => i > 0 && store.reorderPontos(i, i - 1)}
+                        onReorderDown={() => i < store.pontos.length - 1 && store.reorderPontos(i, i + 1)}
+                        onRemove={() => store.removePonto(ponto.id)}
+                        canReorderUp={i > 0}
+                        canReorderDown={i < store.pontos.length - 1}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+              {/* Conclusão */}
+              <FullscreenField
+                label="Conclusão" icon={<CheckCircle2 className="h-4 w-4" />}
+                value={store.conclusao}
+                editingId={editingId} editValue={editValue} editingField="conclusao"
+                startEdit={startEditing} setEditValue={setEditValue} saveEdit={saveEdit} cancelEdit={() => setEditingId(null)}
+                multiline placeholder="Resumo e chamado para ação..."
+              />
+              {/* Resumo */}
+              <FullscreenField
+                label="Resumo" icon={<MessageSquare className="h-4 w-4" />}
+                value={store.resumo}
+                editingId={editingId} editValue={editValue} editingField="resumo"
+                startEdit={startEditing} setEditValue={setEditValue} saveEdit={saveEdit} cancelEdit={() => setEditingId(null)}
+                multiline placeholder="Resumo executivo da pregação..."
+              />
+            </div>
+          </div>
+
+          {/* Footer da tela cheia */}
+          <div className="flex-shrink-0 border-t border-ink-200/60 bg-white/80 px-6 py-4 backdrop-blur-md dark:border-ink-800 dark:bg-ink-900/80">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4 text-[12px] text-ink-400">
+                <span className="flex items-center gap-1">
+                  <Clock className="h-3.5 w-3.5" />
+                  {store.tempoEstimado > 0 ? `${store.tempoEstimado} min` : '—'}
+                </span>
+                {store.pontos.length > 0 && (
+                  <span>{store.pontos.length} ponto{store.pontos.length !== 1 ? 's' : ''}</span>
+                )}
+                {store.textoBase && (
+                  <span className="rounded-full bg-ink-100 px-2 py-0.5 dark:bg-ink-800">{store.textoBase}</span>
+                )}
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    const mensagem = novaMensagem({
+                      titulo: store.titulo || 'Pregação',
+                      tema: store.tema,
+                      textoBase: store.textoBase,
+                      objetivo: store.objetivo,
+                      esboco: formatarEsbocoTexto(store),
+                      categoria: 'pregacao',
+                      status: 'rascunho',
+                    });
+                    const { slides } = gerarSlides({ mensagem });
+                    mensagem.slides = slides;
+                    db.salvarMensagem(mensagem);
+                    navigate(`/editar/${mensagem.id}`);
+                  }}
+                  className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 px-5 py-2.5 text-[13px] font-semibold text-white shadow-sm transition-all hover:from-amber-600 hover:to-orange-600 active:scale-[0.98]"
+                >
+                  <Layout className="h-4 w-4" />
+                  Editar Slides
+                </button>
+                <button
+                  onClick={() => {
+                    const mensagem = novaMensagem({
+                      titulo: store.titulo || 'Pregação',
+                      tema: store.tema,
+                      textoBase: store.textoBase,
+                      objetivo: store.objetivo,
+                      esboco: formatarEsbocoTexto(store),
+                      categoria: 'pregacao',
+                      status: 'rascunho',
+                    });
+                    const { slides } = gerarSlides({ mensagem });
+                    mensagem.slides = slides;
+                    db.salvarMensagem(mensagem);
+                    navigate(`/pulpit/${mensagem.id}`);
+                  }}
+                  className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-600 px-5 py-2.5 text-[13px] font-semibold text-white shadow-sm transition-all hover:from-emerald-600 hover:to-cyan-700 active:scale-[0.98]"
+                >
+                  <Play className="h-4 w-4" fill="currentColor" />
+                  Apresentar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </motion.div>
+    )}
+  </AnimatePresence>
+
+  {/* ─── MODO NORMAL / BOTTOM SHEET ───────────────────────────────── */}
   if (asBottomSheet) {
     return (
       <>
@@ -297,6 +554,162 @@ export function CopilotOutlinePanel({ asBottomSheet = false, onClose }: CopilotO
   return (
     <div className="flex h-full w-full flex-col border-l border-ink-200/70 bg-paper dark:border-ink-800 dark:bg-sky-50/80">
       {content}
+    </div>
+  );
+}
+
+// ─── Subcomponentes de tela cheia ─────────────────────────────────────────
+
+interface FullscreenFieldProps {
+  label: string;
+  icon: React.ReactNode;
+  value: string;
+  editingId: string | null;
+  editValue: string;
+  editingField: string;
+  startEdit: (field: string, value: string) => void;
+  setEditValue: (v: string) => void;
+  saveEdit: () => void;
+  cancelEdit: () => void;
+  multiline?: boolean;
+  placeholder?: string;
+}
+
+function FullscreenField({
+  label, icon, value, editingId, editValue, editingField,
+  startEdit, setEditValue, saveEdit, cancelEdit, multiline, placeholder,
+}: FullscreenFieldProps) {
+  const isEditing = editingId === editingField;
+  return (
+    <div>
+      <div className="mb-2 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-ink-400">
+        {icon}
+        {label}
+      </div>
+      {isEditing ? (
+        multiline ? (
+          <textarea
+            autoFocus
+            value={editValue}
+            onChange={e => setEditValue(e.target.value)}
+            onBlur={saveEdit}
+            onKeyDown={e => {
+              if (e.key === 'Escape') cancelEdit();
+              if (e.key === 'Enter' && e.ctrlKey) saveEdit();
+            }}
+            rows={4}
+            placeholder={placeholder}
+            className="w-full rounded-xl border border-ink-300 bg-white px-4 py-3 text-[15px] leading-relaxed text-ink-900 placeholder:text-ink-300 outline-none focus:border-amber-400 dark:border-ink-600 dark:bg-ink-800 dark:text-white"
+          />
+        ) : (
+          <input
+            autoFocus
+            type="text"
+            value={editValue}
+            onChange={e => setEditValue(e.target.value)}
+            onBlur={saveEdit}
+            onKeyDown={e => {
+              if (e.key === 'Enter') saveEdit();
+              if (e.key === 'Escape') cancelEdit();
+            }}
+            placeholder={placeholder}
+            className="w-full rounded-xl border border-ink-300 bg-white px-4 py-3 text-[16px] text-ink-900 placeholder:text-ink-300 outline-none focus:border-amber-400 dark:border-ink-600 dark:bg-ink-800 dark:text-white"
+          />
+        )
+      ) : (
+        <button
+          onClick={() => startEdit(editingField, value)}
+          className="w-full rounded-xl border border-transparent px-4 py-3 text-left text-[15px] text-ink-700 transition-colors hover:border-ink-200 hover:bg-ink-50 dark:text-ink-300 dark:hover:border-ink-700 dark:hover:bg-ink-800"
+        >
+          {value || <span className="text-ink-300">{placeholder}</span>}
+        </button>
+      )}
+    </div>
+  );
+}
+
+interface FullscreenPontoCardProps {
+  ponto: { id: string; texto: string; subpontos: string[]; aplicacoes: string[] };
+  index: number;
+  editingId: string | null;
+  editValue: string;
+  startEdit: (field: string, value: string) => void;
+  setEditValue: (v: string) => void;
+  saveEdit: () => void;
+  cancelEdit: () => void;
+  onReorderUp: () => void;
+  onReorderDown: () => void;
+  onRemove: () => void;
+  canReorderUp: boolean;
+  canReorderDown: boolean;
+}
+
+function FullscreenPontoCard({
+  ponto, index, editingId, editValue,
+  startEdit, setEditValue, saveEdit, cancelEdit,
+  onReorderUp, onReorderDown, onRemove,
+  canReorderUp, canReorderDown,
+}: FullscreenPontoCardProps) {
+  const isEditingPonto = editingId === `ponto_${ponto.id}`;
+  return (
+    <div className="rounded-2xl border border-ink-200 bg-white shadow-sm dark:border-ink-700 dark:bg-ink-900/50">
+      <div className="flex items-start gap-3 p-4">
+        <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-amber-100 text-[14px] font-bold text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
+          {index + 1}
+        </div>
+        <div className="min-w-0 flex-1">
+          {isEditingPonto ? (
+            <textarea
+              autoFocus
+              value={editValue}
+              onChange={e => setEditValue(e.target.value)}
+              onBlur={saveEdit}
+              onKeyDown={e => {
+                if (e.key === 'Escape') cancelEdit();
+                if (e.key === 'Enter' && e.ctrlKey) saveEdit();
+              }}
+              rows={3}
+              className="w-full rounded-xl border border-ink-300 bg-white px-3 py-2 text-[15px] leading-relaxed text-ink-900 outline-none focus:border-amber-400 dark:border-ink-600 dark:bg-ink-800 dark:text-white"
+            />
+          ) : (
+            <button
+              onClick={() => startEdit(`ponto_${ponto.id}`, ponto.texto)}
+              className="w-full text-left text-[15px] font-semibold text-ink-800 hover:text-ink-600 dark:text-ink-100 dark:hover:text-ink-300"
+            >
+              {ponto.texto}
+            </button>
+          )}
+          {ponto.subpontos.length > 0 && (
+            <ul className="mt-2 space-y-1 pl-2">
+              {ponto.subpontos.map((sp, j) => (
+                <li key={j} className="flex items-start gap-2 text-[13px] text-ink-500 dark:text-ink-400">
+                  <span className="mt-0.5 text-[10px] text-ink-400">{String.fromCharCode(97 + j)})</span>
+                  <span>{sp}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+          {ponto.aplicacoes.length > 0 && (
+            <div className="mt-2 space-y-1">
+              <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">Aplicações:</span>
+              {ponto.aplicacoes.map((app, j) => (
+                <p key={j} className="text-[12.5px] text-emerald-700 dark:text-emerald-300">→ {app}</p>
+              ))}
+            </div>
+          )}
+        </div>
+        <div className="flex flex-shrink-0 flex-col gap-1">
+          <button onClick={onReorderUp} disabled={!canReorderUp} className="rounded p-1 text-ink-400 hover:bg-ink-100 disabled:opacity-20 dark:hover:bg-ink-800">
+            <ChevronUp className="h-4 w-4" />
+          </button>
+          <button onClick={onReorderDown} disabled={!canReorderDown} className="rounded p-1 text-ink-400 hover:bg-ink-100 disabled:opacity-20 dark:hover:bg-ink-800">
+            <ChevronDown className="h-4 w-4" />
+          </button>
+          <button onClick={onRemove} className="rounded p-1 text-ink-400 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/20">
+            <Trash2 className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -400,16 +813,17 @@ function Section({ title, icon, value, editingId, editValue, editingField, onEdi
 
 function formatarEsbocoTexto(store: ReturnType<typeof useCopilotOutlineStore.getState>): string {
   const linhas: string[] = [];
-  if (store.titulo) linhas.push(`# ${store.titulo}`);
-  if (store.textoBase) linhas.push(`Texto Base: ${store.textoBase}`);
-  if (store.tema) linhas.push(`Tema: ${store.tema}`);
-  if (store.objetivo) linhas.push(`Objetivo: ${store.objetivo}`);
-  if (store.introducao) linhas.push(`\n## Introdução\n${store.introducao}`);
+  if (store.titulo) linhas.push(`<h1>${store.titulo}</h1>`);
+  if (store.subtitulo) linhas.push(`<h2>${store.subtitulo}</h2>`);
+  if (store.textoBase) linhas.push(`<p><strong>Texto Base:</strong> ${store.textoBase}</p>`);
+  if (store.tema) linhas.push(`<p><strong>Tema:</strong> ${store.tema}</p>`);
+  if (store.objetivo) linhas.push(`<p><strong>Objetivo:</strong> ${store.objetivo}</p>`);
+  if (store.introducao) linhas.push(`<h2>Introdução</h2><p>${store.introducao}</p>`);
   store.pontos.forEach((p, i) => {
-    linhas.push(`\n## ${i + 1}. ${p.texto}`);
-    p.subpontos.forEach((sp, j) => linhas.push(`   ${String.fromCharCode(97 + j)}) ${sp}`));
-    p.aplicacoes.forEach(app => linhas.push(`   → ${app}`));
+    linhas.push(`<h2>${i + 1}. ${p.texto}</h2>`);
+    p.subpontos.forEach((sp, j) => linhas.push(`<h3>${String.fromCharCode(97 + j)}) ${sp}</h3>`));
+    p.aplicacoes.forEach(app => linhas.push(`<p>→ ${app}</p>`));
   });
-  if (store.conclusao) linhas.push(`\n## Conclusão\n${store.conclusao}`);
-  return linhas.join('\n');
+  if (store.conclusao) linhas.push(`<h2>Conclusão</h2><p>${store.conclusao}</p>`);
+  return linhas.join('');
 }
