@@ -114,6 +114,24 @@ export function App() {
     semearExemplos();
     void syncInit(); // inicializa sync offline-first com Supabase
     void inicializarAuth(); // inicializa auth do usuário
+
+    // Warmup invisível da Edge Function (faz cold-start antes do usuário precisar)
+    const warmup = async () => {
+      try {
+        const mod = await import('@/lib/supabase');
+        const url = mod.SUPABASE_URL;
+        const token = mod.SUPABASE_ANON_KEY;
+        if (!url || !token) return;
+        // POST mínimo, sem stream — acorda o container Deno
+        void fetch(`${url}/functions/v1/ai-chat`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, apikey: token },
+          body: JSON.stringify({ messages: [{ role: 'user', content: 'ok' }], modo: 'chat', maxTokens: 1, stream: false }),
+        }).catch(() => {});
+      } catch { /* ignore */ }
+    };
+    if ('requestIdleCallback' in window) (window as Window & { requestIdleCallback?: (cb: () => void) => void }).requestIdleCallback?.(warmup);
+    else setTimeout(warmup, 1500);
   }, [inicializarAuth]);
 
   return (
