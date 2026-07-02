@@ -157,8 +157,9 @@ export function CopilotOutlinePanel({ asBottomSheet = false, onClose, onChangeFo
               {fullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
             </button>
             <button
-              onClick={() => setShowPanel(p => !p)}
+              onClick={() => onClose?.()}
               className="rounded-lg p-1 text-ink-400 hover:bg-ink-100 dark:hover:bg-ink-800"
+              title="Fechar painel"
             >
               <X className="h-4 w-4" />
             </button>

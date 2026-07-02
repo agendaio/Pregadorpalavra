@@ -21,14 +21,25 @@ import { useCopilotOutlineStore } from '@/stores/copilotOutline';
 
 export function HomePage() {
   const isMobile = useIsMobile();
-  const [panelAberta, setPanelAberta] = useState(false);
   /** FolderPicker "mudar pasta" — disparado pelo CopilotOutlinePanel */
   const [mudarPastaOpen, setMudarPastaOpen] = useState(false);
   /** true assim que a intenção "criar esboço/sermão" é detectada — abre o painel antes mesmo da resposta terminar */
   const [esboçoPendente, setEsboçoPendente] = useState(false);
+  /** true quando o usuário clicou no X pra fechar o painel — some até a próxima intenção sermon ou clique manual */
+  const [painelFechadoPeloUsuario, setPainelFechadoPeloUsuario] = useState(false);
   const outline = useCopilotOutlineStore();
   const temEsboço = outline.titulo || outline.tema || outline.pontos.length > 0;
-  const mostrarPainel = temEsboço || esboçoPendente;
+  const mostrarPainel = (temEsboço || esboçoPendente) && !painelFechadoPeloUsuario;
+
+  /** Nova intenção sermon sempre reabre o painel, mesmo que o usuário tenha fechado antes */
+  const handleEsboçoPending = (pending: boolean) => {
+    setEsboçoPendente(pending);
+    if (pending) setPainelFechadoPeloUsuario(false);
+  };
+
+  const abrirPainelManualmente = () => {
+    setPainelFechadoPeloUsuario(false);
+  };
 
   return (
     <div className="flex h-full flex-col overflow-hidden bg-paper dark:bg-paper-dark">
@@ -38,10 +49,10 @@ export function HomePage() {
         back={false}
         right={
           <button
-            onClick={() => setPanelAberta(p => !p)}
+            onClick={() => (mostrarPainel ? setPainelFechadoPeloUsuario(true) : abrirPainelManualmente())}
             className={cn(
               'flex h-11 w-11 items-center justify-center rounded-full transition-colors',
-              panelAberta || temEsboço
+              mostrarPainel
                 ? 'bg-ink-900 text-white dark:bg-white dark:text-ink-900'
                 : 'text-ink-700 hover:bg-ink-100 dark:text-ink-200 dark:hover:bg-ink-800',
             )}
@@ -55,13 +66,13 @@ export function HomePage() {
       <div className="flex flex-1 overflow-hidden">
         {/* Chat — preenche toda a largura quando painel fechado (mobile) ou em desktop quando painel fechado */}
         <motion.div
-          animate={{ width: isMobile ? '100%' : temEsboço && !panelAberta ? '100%' : '100%' }}
+          animate={{ width: '100%' }}
           className="flex flex-1 flex-col overflow-hidden"
           transition={{ duration: 0.2 }}
         >
           <ChatContainer
-            onTogglePanel={() => setPanelAberta(p => !p)}
-            onEsboçoPending={setEsboçoPendente}
+            onTogglePanel={() => (mostrarPainel ? setPainelFechadoPeloUsuario(true) : abrirPainelManualmente())}
+            onEsboçoPending={handleEsboçoPending}
           />
         </motion.div>
 
@@ -74,14 +85,17 @@ export function HomePage() {
             transition={{ duration: 0.25, ease: 'easeOut' }}
             className="flex-shrink-0 overflow-hidden"
           >
-            <CopilotOutlinePanel onChangeFolder={() => setMudarPastaOpen(true)} />
+            <CopilotOutlinePanel
+              onClose={() => setPainelFechadoPeloUsuario(true)}
+              onChangeFolder={() => setMudarPastaOpen(true)}
+            />
           </motion.div>
         )}
 
         {/* Panel lateral — desktop, quando não tem esboço (botão toggle) */}
         {!isMobile && !mostrarPainel && (
           <div className="flex-shrink-0 overflow-hidden">
-            <EmptyOutlineHint onOpen={() => setPanelAberta(true)} />
+            <EmptyOutlineHint onOpen={abrirPainelManualmente} />
           </div>
         )}
       </div>
@@ -90,7 +104,7 @@ export function HomePage() {
       {isMobile && mostrarPainel && (
         <CopilotOutlinePanel
           asBottomSheet
-          onClose={() => setPanelAberta(false)}
+          onClose={() => setPainelFechadoPeloUsuario(true)}
           onChangeFolder={() => setMudarPastaOpen(true)}
         />
       )}
