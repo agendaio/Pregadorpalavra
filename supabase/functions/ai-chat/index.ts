@@ -42,6 +42,40 @@ function jsonError(status: number, code: string, message: string) {
   return json({ error: code, message }, status);
 }
 
+// ─── CACHE INTELIGENTE ──────────────────────────────────────────────────────
+// In-memory, janela curta (5 min), TTL limpo por entrada.
+// Usa globalThis pra sobreviver a cold starts dentro do mesmo container
+// (Supabase Edge mantém warm pool; containers persistem minutos).
+// Reduz latência percebida pra perguntas recorrentes — mesmo efeito visual
+// do "cache" do ChatGPT.
+
+const CACHE_TTL_MS = 5 * 60 * 1000;
+const CACHE_MAX = 200;
+
+interface CacheEntry { value: string; expires: number }
+const _global = globalThis as unknown as { __ai_chat_cache?: Map<string, CacheEntry> };
+const cache: Map<string, CacheEntry> = _global.__ai_chat_cache ?? new Map();
+_global.__ai_chat_cache = cache;
+
+function cacheGet(key: string): string | null {
+  const entry = cache.get(key);
+  if (!entry) return null;
+  if (Date.now() > entry.expires) {
+    cache.delete(key);
+    return null;
+  }
+  return entry.value;
+}
+
+function cacheSet(key: string, value: string): void {
+  if (cache.size >= CACHE_MAX) {
+    // FIFO: apaga a entrada mais antiga
+    const firstKey = cache.keys().next().value;
+    if (firstKey !== undefined) cache.delete(firstKey);
+  }
+  cache.set(key, { value, expires: Date.now() + CACHE_TTL_MS });
+}
+
 // ─── Provedores ─────────────────────────────────────────────────────────────
 
 interface ChatOptions {
@@ -628,6 +662,44 @@ serve(async (req) => {
       }
     }
 
+    // ── CACHE INTELIGENTE (chat mode apenas) ────────────────────────────────
+    // Hash simples da última pergunta do usuário + systemContent (normalizado).
+    // Janela: 5 minutos. Tamanho máximo: 200 entradas.
+    if (modo === 'chat' && Array.isArray(messages) && messages.length > 0) {
+      const ultimaPergunta = (messages as Array<{ role: string; content: string }>)
+        .filter((m) => m.role === 'user')
+        .slice(-1)[0]?.content ?? '';
+      // Normaliza a chave do cache: lowercase, trim, colapsa espaços
+      const norm = (s: string) => s.toLowerCase().trim().replace(/\s+/g, ' ');
+      const sysBase = systemPrompt || systemAppend || SYSTEM_BASE_LIGHT;
+      const cacheKey = `${model}|${norm(sysBase).slice(0, 120)}|${norm(ultimaPergunta)}`;
+      const cached = cacheGet(cacheKey);
+      if (cached) {
+        // Cache hit — devolve na mesma velocidade do ChatGPT
+        if (stream) {
+          // SSE cached: primeiro event imediato com a resposta inteira
+          const encoder = new TextEncoder();
+          const stream = new ReadableStream({
+            start(controller) {
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ content: cached, cached: true })}\n\n`));
+              controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+              controller.close();
+            },
+          });
+          return new Response(stream, {
+            status: 200,
+            headers: {
+              'Content-Type': 'text/event-stream',
+              'Cache-Control': 'no-cache, no-transform',
+              'Access-Control-Allow-Origin': '*',
+              'Access-Control-Allow-Headers': 'authorization, content-type, apikey, x-client-info',
+            },
+          });
+        }
+        return json({ content: cached, cached: true, provider, model });
+      }
+    }
+
     // Obter API key ativa do banco
     const { data: keyData } = await sbAdmin
       .from('api_keys')
@@ -686,6 +758,17 @@ serve(async (req) => {
       const content = result.choices?.[0]?.message?.content ?? '';
       const usage = result.usage ?? {};
       const duracaoMs = Date.now() - start;
+
+      // ── Salvar no cache para perguntas idênticas (chave normalizada) ──
+      if (content && Array.isArray(messages) && messages.length > 0) {
+        const ultimaPergunta = (messages as Array<{ role: string; content: string }>)
+          .filter((m) => m.role === 'user')
+          .slice(-1)[0]?.content ?? '';
+        const norm = (s: string) => s.toLowerCase().trim().replace(/\s+/g, ' ');
+        const sysBase = systemPrompt || systemAppend || SYSTEM_BASE_LIGHT;
+        const cacheKey = `${model}|${norm(sysBase).slice(0, 120)}|${norm(ultimaPergunta)}`;
+        cacheSet(cacheKey, content);
+      }
 
       // Log assíncrono
       sbAdmin.from('usage_log').insert({
