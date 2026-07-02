@@ -297,10 +297,13 @@ export function ChatContainer({ onTogglePanel, onEsboçoPending }: ChatContainer
         systemAppend = '';
       }
 
-      const messagesForApi: Array<{ role: 'user' | 'assistant' | 'system'; content: string }> = [
-        { role: 'system' as const, content: systemPrompt },
-        ...todasMensagens.map(m => ({ role: m.role as 'user' | 'assistant', content: m.content })),
-      ];
+      // O system prompt vai no campo `systemPrompt` do body — o backend monta
+      // o system message. Não embutir em messages[], senão a chamada sai com
+      // dois prompts de sistema (tokens duplicados, latência maior).
+      const messagesForApi = todasMensagens.map(m => ({
+        role: m.role as 'user' | 'assistant',
+        content: m.content,
+      }));
 
       // ── 4. Enviar para a Edge Function ────────────────────────────
       const res = await fetch(`${supabaseUrl}/functions/v1/ai-chat`, {
@@ -311,11 +314,12 @@ export function ChatContainer({ onTogglePanel, onEsboçoPending }: ChatContainer
           'apikey': supabaseLib.SUPABASE_ANON_KEY,
         },
         body: JSON.stringify({
-          messages: messagesForApi.map(m => ({ role: m.role, content: m.content })),
+          messages: messagesForApi,
           stream: true,
           temperature: 0.7,
-          maxTokens: 2500,
+          maxTokens: isSermonMode ? 2500 : 800,
           modo: isSermonMode ? 'sermon' : 'chat',
+          systemPrompt,
           // Só manda contexto se for sermon mode
           ...(isSermonMode ? { session_context: useCopilotOutlineStore.getState(), systemAppend } : { systemAppend }),
         }),

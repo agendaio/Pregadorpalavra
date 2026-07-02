@@ -45,11 +45,16 @@ import {
   Minimize2,
   AlignJustify,
   PanelTopOpen,
+  Download,
+  FileText,
+  FileType2,
+  FileCode,
 } from 'lucide-react';
 import { db } from '@/db/schema';
 import { usePulpitStore } from '@/stores/pulpit';
 import { useProgressoStore, type Capitulo } from '@/stores/progressoPulpit';
 import { useUIStore } from '@/stores/ui';
+import { exportarMensagem, type FormatoExport } from '@/lib/exporters';
 import { parsearEsboco } from '@/lib/esbocoParser';
 import { cn, formatarRelogio, formatarDuracao } from '@/lib/utils';
 import { SlideRenderer } from './SlideRenderer';
@@ -519,6 +524,7 @@ export function PulpitPage() {
   const [termoBusca, setTermoBusca] = useState('');
   const [temaEscuro, setTemaEscuro] = useState(true); // /pulpit é sempre dark por design
   const [settingsAberta, setSettingsAberta] = useState(false);
+  const [exportMenuAberta, setExportMenuAberta] = useState(false);
   const [modoApresentacao, setModoApresentacao] = useState(false);
   const [slideIndex, setSlideIndex] = useState(0);
   const [espacamentoLinhas, setEspacamentoLinhas] = useState(1.55);
@@ -676,6 +682,17 @@ export function PulpitPage() {
     resetarProgresso();
     setTermoBusca('');
   }, [resetar, resetarProgresso]);
+
+  const handleExportar = useCallback(async (formato: FormatoExport) => {
+    if (!mensagem) return;
+    setExportMenuAberta(false);
+    try {
+      await exportarMensagem(mensagem, formato);
+      mostrarToast(`Exportado em ${formato.toUpperCase()}`, 'sucesso');
+    } catch (e) {
+      mostrarToast(`Erro ao exportar: ${(e as Error).message}`, 'erro');
+    }
+  }, [mensagem, mostrarToast]);
 
   // â”€â”€â”€ Busca: Cmd/Ctrl+K ou botão â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   useEffect(() => {
@@ -1062,6 +1079,14 @@ return (
             />
             <BarraSeparador />
             <BarraBotao
+              icon={<Download className="h-4 w-4" />}
+              label="Exportar"
+              onClick={() => setExportMenuAberta((v) => !v)}
+              ariaLabel="Exportar pregação"
+              destaque={exportMenuAberta}
+            />
+            <BarraSeparador />
+            <BarraBotao
               icon={<Settings2 className="h-4 w-4" />}
               label="Ajustes"
               onClick={() => setSettingsAberta((v) => !v)}
@@ -1275,6 +1300,49 @@ return (
               </div>
             )}
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• EXPORT MENU (popover) â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
+      <AnimatePresence>
+        {exportMenuAberta && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[54] bg-black/40 backdrop-blur-sm"
+              onClick={() => setExportMenuAberta(false)}
+            />
+            <motion.div
+              initial={{ opacity: 0, y: 20, scale: 0.96 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 20, scale: 0.96 }}
+              transition={{ duration: 0.18 }}
+              className="fixed inset-x-4 bottom-24 z-[55] mx-auto max-w-sm rounded-2xl border border-amber-300/20 bg-[#0e0e1c] p-3 shadow-2xl sm:left-1/2 sm:right-auto sm:bottom-32 sm:-translate-x-1/2"
+            >
+              <div className="px-3 pb-2 pt-1 text-[10.5px] font-semibold uppercase tracking-wider text-amber-300/70">
+                Exportar pregação
+              </div>
+              {([
+                { fmt: 'pdf' as FormatoExport, icon: FileText, label: 'PDF', desc: 'Ideal para imprimir' },
+                { fmt: 'docx' as FormatoExport, icon: FileType2, label: 'Word (.docx)', desc: 'Editável no Microsoft Word' },
+                { fmt: 'md' as FormatoExport, icon: FileCode, label: 'Markdown', desc: 'Texto puro para anotações' },
+              ]).map(({ fmt, icon: Icon, label, desc }) => (
+                <button
+                  key={fmt}
+                  onClick={() => { void handleExportar(fmt); }}
+                  className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-white/[0.06]"
+                >
+                  <Icon className="h-5 w-5 flex-shrink-0 text-amber-300" />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[13.5px] font-medium text-white">{label}</div>
+                    <div className="text-[11px] text-white/50">{desc}</div>
+                  </div>
+                </button>
+              ))}
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
 
