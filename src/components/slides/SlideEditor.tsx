@@ -13,7 +13,7 @@ import { useState, useCallback, useRef } from 'react';
 import {
   Plus, Trash2, Copy, ChevronUp, ChevronDown,
   Layers, Sparkles, X, Check,
-  GripVertical, Eye,
+  GripVertical, Eye, Share2, Play, Download, ExternalLink,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
@@ -118,10 +118,9 @@ function SlideThumbnail({
           </span>
         </div>
 
-        {/* Ações — aparecem no hover/tap */}
+        {/* Ações — aparecem NO HOVER/TAP, abaixo do card */}
         <div className={cn(
-          'absolute -top-1 left-1/2 flex -translate-x-1/2 gap-0.5 rounded-xl bg-white/95 dark:bg-ink-900/95 px-1.5 py-1 shadow-lg border border-ink-200/50 dark:border-ink-700',
-          ativo ? 'opacity-100' : 'opacity-0 group-hover:opacity-100',
+          'absolute -bottom-10 left-1/2 z-10 flex -translate-x-1/2 gap-0.5 rounded-xl bg-white/95 dark:bg-ink-900/95 px-1.5 py-1 shadow-lg border border-ink-200/50 dark:border-ink-700 opacity-0 group-hover:opacity-100 group-active:opacity-100 transition-opacity',
         )}>
           <ActionBtn icon={<ChevronUp className="h-3 w-3" />} onClick={(e) => { e.stopPropagation(); onMoveUp(); }} disabled={isFirst} title="Mover acima" />
           <ActionBtn icon={<ChevronDown className="h-3 w-3" />} onClick={(e) => { e.stopPropagation(); onMoveDown(); }} disabled={isLast} title="Mover abaixo" />
@@ -263,7 +262,48 @@ interface SlideEditorProps {
 export function SlideEditor({ slides, onChange, onGerarSlides, podeRegenerar }: SlideEditorProps) {
   const [selectedId, setSelectedId] = useState<string | null>(slides[0]?.id ?? null);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showShareMenu, setShowShareMenu] = useState(false);
   const thumbnailRef = useRef<HTMLDivElement>(null);
+
+  // Função para exportar slides
+  const handleExport = async (formato: 'copy' | 'json' | 'print') => {
+    setShowShareMenu(false);
+    if (formato === 'copy') {
+      const texto = slides.map((s, i) => {
+        const meta = TIPO_META[s.content.tipo];
+        const content = s.content;
+        let texto = '';
+        if (content.tipo === 'capa') texto = content.titulo || '';
+        else if (content.tipo === 'verso') texto = content.citacao || '';
+        else if (content.tipo === 'conteudo') texto = content.titulo || '';
+        else if (content.tipo === 'chamada') texto = content.titulo || '';
+        else if (content.tipo === 'oracao') texto = content.titulo || '';
+        return `Slide ${i + 1} - ${meta.label}: ${texto}`;
+      }).join('\n');
+      await navigator.clipboard.writeText(texto);
+    } else if (formato === 'json') {
+      const json = JSON.stringify(slides, null, 2);
+      await navigator.clipboard.writeText(json);
+    } else if (formato === 'print') {
+      const printWindow = window.open('', '_blank');
+      if (printWindow) {
+        printWindow.document.write(`<html><head><title>Slides</title><style>body{font-family:sans-serif;padding:20px;} .slide{margin-bottom:30px;border:1px solid #ccc;padding:20px;}</style></head><body>`);
+        slides.forEach((s, i) => {
+          const meta = TIPO_META[s.content.tipo];
+          printWindow.document.write(`<div class="slide"><h3>Slide ${i + 1} - ${meta.label}</h3>`);
+          const content = s.content as any;
+          if (content.titulo) printWindow.document.write(`<p><strong>Título:</strong> ${content.titulo}</p>`);
+          if (content.citacao) printWindow.document.write(`<p><strong>Citação:</strong> ${content.citacao}</p>`);
+          if (content.texto) printWindow.document.write(`<p>${content.texto}</p>`);
+          if (content.pontos) printWindow.document.write(`<ul>${content.pontos.map((p: any) => `<li>${p}</li>`).join('')}</ul>`);
+          printWindow.document.write('</div>');
+        });
+        printWindow.document.write('</body></html>');
+        printWindow.document.close();
+        printWindow.print();
+      }
+    }
+  };
 
   const selected = slides.find((s) => s.id === selectedId) ?? null;
   const selectedIdx = slides.findIndex((s) => s.id === selectedId);
@@ -343,6 +383,44 @@ export function SlideEditor({ slides, onChange, onGerarSlides, podeRegenerar }: 
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {/* Botão Compartilhar */}
+          {slides.length > 0 && (
+            <div className="relative">
+              <button
+                onClick={() => setShowShareMenu(!showShareMenu)}
+                className="flex items-center gap-1.5 rounded-xl border border-ink-300 bg-white px-3 py-2 text-[11.5px] font-medium text-ink-700 transition hover:bg-ink-50 active:scale-95 dark:border-ink-700 dark:bg-ink-900 dark:text-ink-300 dark:hover:bg-ink-800 sm:px-2"
+              >
+                <Share2 className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Compartilhar</span>
+              </button>
+              {/* Menu de compartilhar */}
+              {showShareMenu && (
+                <div className="absolute right-0 top-full mt-2 z-20 w-48 rounded-xl border border-ink-200 bg-white shadow-xl dark:border-ink-700 dark:bg-ink-900">
+                  <button
+                    onClick={() => handleExport('copy')}
+                    className="flex w-full items-center gap-2 px-4 py-3 text-left text-[13px] hover:bg-ink-50 dark:hover:bg-ink-800"
+                  >
+                    <Copy className="h-4 w-4" />
+                    Copiar texto
+                  </button>
+                  <button
+                    onClick={() => handleExport('json')}
+                    className="flex w-full items-center gap-2 px-4 py-3 text-left text-[13px] hover:bg-ink-50 dark:hover:bg-ink-800"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                    Copiar JSON
+                  </button>
+                  <button
+                    onClick={() => handleExport('print')}
+                    className="flex w-full items-center gap-2 px-4 py-3 text-left text-[13px] hover:bg-ink-50 dark:hover:bg-ink-800"
+                  >
+                    <Download className="h-4 w-4" />
+                    Imprimir slides
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
           {onGerarSlides && podeRegenerar && (
             <button
               onClick={onGerarSlides}
@@ -400,8 +478,8 @@ export function SlideEditor({ slides, onChange, onGerarSlides, podeRegenerar }: 
         <div className="flex flex-col">
           {/* ── Preview grande do slide ─────────────────────────────── */}
           {selected && (
-            <div className="relative bg-[#0c0c14]">
-              <div className="mx-auto max-h-[260px] w-full max-w-lg overflow-hidden sm:max-h-[320px]">
+            <div className="relative bg-[#0c0c14] pb-4">
+              <div className="mx-auto max-h-[260px] w-full max-w-lg overflow-hidden pt-2 sm:max-h-[320px]">
                 <SlideRenderer slide={selected} />
               </div>
               {/* Badge do tipo no preview */}
