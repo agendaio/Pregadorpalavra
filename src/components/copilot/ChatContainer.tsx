@@ -19,7 +19,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Send, Sparkles, Loader2, RotateCcw, Trash2, Copy, CheckCheck,
   AlertCircle, Plus, MessageSquare, ChevronLeft, ChevronRight,
-  BookOpen, ArrowRight, PanelRightOpen,
+  BookOpen, ArrowRight, PanelRightOpen, Share2, Wand2, Download,
+  Pencil,
 } from 'lucide-react';
 import { SYSTEM_PROMPT, SYSTEM_PROMPT_CHAT, SERMON_PARSING_INSTRUCTION } from '@/lib/ai/prompt';
 import { construirContextoMemoria } from '@/lib/ai/memory';
@@ -86,6 +87,7 @@ export function ChatContainer({ onTogglePanel, onEsboçoPending }: ChatContainer
   const [streamId, setStreamId] = useState<string | null>(null);
   const [sidebarAberta, setSidebarAberta] = useState(false);
   const [copiadoId, setCopiadoId] = useState<string | null>(null);
+  const [improvingId, setImprovingId] = useState<string | null>(null);
   const [modo, setModo] = useState<'chat' | 'sermon'>('chat');
   const [sermonAtivado, setSermonAtivado] = useState(false);
   const [selection, setSelection] = useState<{
@@ -452,6 +454,33 @@ export function ChatContainer({ onTogglePanel, onEsboçoPending }: ChatContainer
     setTimeout(() => setCopiadoId(null), 2000);
   };
 
+  const compartilharMensagem = (content: string) => {
+    if (navigator.share) {
+      navigator.share({ text: content }).catch(() => {});
+    } else {
+      navigator.clipboard.writeText(content);
+    }
+  };
+
+  const adicionarAoEsboco = (msg: ChatMessage) => {
+    setFolderPickerState({
+      ação: 'adicionar_esboco',
+      açãoLabel: 'Adicionar ao Esboço',
+      açãoIcon: '📋',
+      texto: msg.content,
+    });
+  };
+
+  const melhorarResposta = async (msg: ChatMessage) => {
+    if (loading || improvingId) return;
+    const improvePrompt = `Analise e melhore esta resposta bíblica/teológica. A resposta atual é:\n\n${msg.content}\n\nPor favor, melhore: corrija imprecisões teológicas, enriqueça com mais detalhes bíblicos (versículos, contexto histórico), melhore a clareza e organização, e adicione aplicações práticas relevantes. Responda em português brasileiro, com formatação clara usando markdown (## Títulos, **negrito**, listas).`;
+
+    // Add "improving" user message and re-send
+    setImprovingId(msg.id);
+    setInput(improvePrompt);
+    inputRef.current?.focus();
+  };
+
   const handleSugestão = (sug: string) => {
     setInput(sug);
     inputRef.current?.focus();
@@ -565,7 +594,7 @@ export function ChatContainer({ onTogglePanel, onEsboçoPending }: ChatContainer
           <div key={msg.id} className="mb-4 flex animate-fade-in" data-message-id={msg.id}>
             <div
               className={cn(
-                'group relative max-w-[85%] rounded-2xl px-4 py-3 text-[13.5px] leading-relaxed',
+                'group relative max-w-[88%] rounded-2xl px-4 pt-3 pb-2 text-[13.5px] leading-relaxed',
                 msg.role === 'user'
                   ? 'ml-auto bg-sky-100 text-sky-900 dark:bg-sky-200 dark:text-sky-900'
                   : 'border border-ink-200 bg-white text-ink-900 dark:border-ink-700 dark:bg-sky-50 dark:text-ink-900',
@@ -574,22 +603,57 @@ export function ChatContainer({ onTogglePanel, onEsboçoPending }: ChatContainer
               <div className="prose prose-sm dark:prose-invert max-w-none">
                 <MarkdownRenderer content={msg.content} />
               </div>
+
               {msg.role === 'assistant' && (
-                <div className="mt-2 flex items-center gap-2 border-t border-ink-100 pt-1.5 dark:border-ink-800">
-                  <span className="text-[10.5px] text-ink-400">
-                    {formatarRelativo(msg.timestamp)}
-                  </span>
-                  <button
-                    onClick={() => copiarMensagem(msg.id, msg.content)}
-                    title="Copiar"
-                    className="opacity-0 transition-opacity group-hover:opacity-100"
-                  >
-                    {copiadoId === msg.id ? (
-                      <CheckCheck className="h-3.5 w-3.5 text-emerald-500" />
-                    ) : (
-                      <Copy className="h-3.5 w-3.5 text-ink-400" />
+                <div className="mt-3 border-t border-ink-100 pt-2 dark:border-ink-200">
+                  {/* Meta row */}
+                  <div className="mb-2 flex items-center justify-between">
+                    <span className="text-[10.5px] text-ink-400">
+                      {formatarRelativo(msg.timestamp)}
+                    </span>
+                    {improvingId === msg.id && (
+                      <span className="flex items-center gap-1 text-[10.5px] text-amber-600">
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                        Melhorando…
+                      </span>
                     )}
-                  </button>
+                  </div>
+
+                  {/* Action bar — sempre visível */}
+                  <div className="flex flex-wrap items-center gap-1">
+                    {/* Copiar */}
+                    <ActionBtn
+                      icon={copiadoId === msg.id ? <CheckCheck className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                      label={copiadoId === msg.id ? 'Copiado!' : 'Copiar'}
+                      onClick={() => copiarMensagem(msg.id, msg.content)}
+                      variant={copiadoId === msg.id ? 'success' : 'ghost'}
+                    />
+
+                    {/* Compartilhar */}
+                    <ActionBtn
+                      icon={<Share2 className="h-3.5 w-3.5" />}
+                      label="Compartilhar"
+                      onClick={() => compartilharMensagem(msg.content)}
+                      variant="ghost"
+                    />
+
+                    {/* Adicionar ao esboço */}
+                    <ActionBtn
+                      icon={<BookOpen className="h-3.5 w-3.5" />}
+                      label="Adicionar"
+                      onClick={() => adicionarAoEsboco(msg)}
+                      variant="ghost"
+                    />
+
+                    {/* Melhorar */}
+                    <ActionBtn
+                      icon={improvingId === msg.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Wand2 className="h-3.5 w-3.5" />}
+                      label="Melhorar"
+                      onClick={() => melhorarResposta(msg)}
+                      variant="ghost"
+                      disabled={loading || !!improvingId}
+                    />
+                  </div>
                 </div>
               )}
             </div>
@@ -729,6 +793,41 @@ export function ChatContainer({ onTogglePanel, onEsboçoPending }: ChatContainer
   );
 }
 
+// ─── ActionBtn — botão da barra de ações ───────────────────────────────
+
+function ActionBtn({
+  icon,
+  label,
+  onClick,
+  variant = 'ghost',
+  disabled,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  onClick: () => void;
+  variant?: 'ghost' | 'success';
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      title={label}
+      className={cn(
+        'flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11.5px] font-medium transition-all active:scale-95',
+        variant === 'success'
+          ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
+          : 'text-ink-500 hover:bg-ink-100 hover:text-ink-800 dark:text-ink-400 dark:hover:bg-ink-800/60 dark:hover:text-ink-200',
+        disabled && 'opacity-40 cursor-not-allowed',
+      )}
+    >
+      {icon}
+      <span className="hidden sm:inline">{label}</span>
+    </button>
+  );
+}
+
 // ─── Greeting ──────────────────────────────────────────────────────────────
 
 function Greeting({ onSugestão }: { onSugestão: (s: string) => void }) {
@@ -765,15 +864,44 @@ function MarkdownRenderer({ content }: { content: string }) {
   return (
     <div className="space-y-2">
       {parts.map((part, i) => {
-        if (part.type === 'h1') return <h1 key={i} className="text-[16px] font-bold text-ink-900 dark:text-white">{part.text}</h1>;
-        if (part.type === 'h2') return <h2 key={i} className="text-[15px] font-semibold text-ink-900 dark:text-white">{part.text}</h2>;
-        if (part.type === 'h3') return <h3 key={i} className="text-[13.5px] font-semibold text-ink-800 dark:text-white">{part.text}</h3>;
-        if (part.type === 'li') return <li key={i} className="ml-4 list-disc text-[13px] text-ink-700 dark:text-ink-200">{part.text}</li>;
+        if (part.type === 'h1') return (
+          <h1 key={i} className="mt-3 mb-1 text-[17px] font-bold tracking-tight text-ink-900 dark:text-white border-b border-ink-200 dark:border-ink-700 pb-1.5">
+            {part.text}
+          </h1>
+        );
+        if (part.type === 'h2') return (
+          <h2 key={i} className="mt-2 text-[15px] font-semibold text-indigo-700 dark:text-indigo-300">
+            {part.text}
+          </h2>
+        );
+        if (part.type === 'h3') return (
+          <h3 key={i} className="text-[13.5px] font-semibold text-emerald-700 dark:text-emerald-400">
+            {part.text}
+          </h3>
+        );
+        if (part.type === 'li') return (
+          <li key={i} className="ml-4 list-disc text-[13px] text-ink-700 dark:text-ink-200 leading-relaxed">
+            {part.text}
+          </li>
+        );
         if (part.type === 'bold') return <strong key={i} className="font-semibold text-ink-900 dark:text-white">{part.text}</strong>;
         if (part.type === 'italic') return <em key={i} className="italic text-ink-600 dark:text-ink-300">{part.text}</em>;
-        if (part.type === 'code') return <code key={i} className="rounded bg-ink-100 px-1.5 py-0.5 font-mono text-[12px] text-ink-800 dark:bg-ink-800 dark:text-ink-200">{part.text}</code>;
-        if (part.type === 'ref') return <span key={i} className="rounded bg-amber-50 px-1.5 py-0.5 font-mono text-[12px] text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">{part.text}</span>;
-        return <p key={i} className="text-[13.5px] leading-relaxed text-ink-700 dark:text-ink-200">{part.text}</p>;
+        if (part.type === 'code') return (
+          <code key={i} className="rounded bg-ink-100 px-1.5 py-0.5 font-mono text-[12px] text-ink-800 dark:bg-ink-800 dark:text-ink-200">
+            {part.text}
+          </code>
+        );
+        if (part.type === 'ref') return (
+          <span key={i} className="inline-block rounded bg-amber-50 px-1.5 py-0.5 font-mono text-[12px] font-medium text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
+            {part.text}
+          </span>
+        );
+        if (part.type === 'blank') return null;
+        return (
+          <p key={i} className="text-[13.5px] leading-relaxed text-ink-700 dark:text-ink-200">
+            {part.text}
+          </p>
+        );
       })}
     </div>
   );

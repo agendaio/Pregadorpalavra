@@ -105,7 +105,10 @@ export const useAuthAdminStore = create<AuthState>((set, get) => ({
   checarAdmin: async () => {
     const sb = supabase()!;
     const { data: { user } } = await sb.auth.getUser();
-    if (!user) return null;
+    if (!user) {
+      console.warn('[admin] checarAdmin: sem usuário autenticado');
+      return null;
+    }
 
     const { data, error } = await sb
       .from('admins')
@@ -114,10 +117,17 @@ export const useAuthAdminStore = create<AuthState>((set, get) => ({
       .eq('ativo', true)
       .maybeSingle();
 
-    if (error || !data) {
+    if (error) {
+      console.error('[admin] checarAdmin erro:', error.message, error.code);
       set({ admin: null });
       return null;
     }
+    if (!data) {
+      console.warn('[admin] checarAdmin: usuário', user.email, 'autenticado mas não está em admins (ou inativo)');
+      set({ admin: null });
+      return null;
+    }
+    console.log('[admin] admin encontrado:', data.email, data.role);
     set({ admin: data as Admin });
     return data as Admin;
   },

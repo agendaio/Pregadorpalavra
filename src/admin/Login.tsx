@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { Lock, Mail, Sparkles, AlertCircle, Loader2, Shield } from 'lucide-react';
 import { useAuthAdminStore } from '@/stores/authAdmin';
 import { SUPABASE_CONFIGURED } from '@/lib/supabase';
+import { APP_VERSION } from '@/v.config';
 
 export function AdminLoginPage() {
   const navigate = useNavigate();
@@ -29,7 +30,14 @@ export function AdminLoginPage() {
     try {
       await login(email, senha);
     } catch (err) {
-      setSubmitErro((err as Error).message || 'Erro ao entrar');
+      const e = err as Error & { status?: number };
+      let msg = e.message || 'Erro ao entrar';
+      if (msg.includes('Invalid login credentials')) {
+        msg = 'Email ou senha incorretos. Verifique se o Caps Lock está desligado.';
+      } else if (msg.includes('Sem permissão')) {
+        msg = 'Email logado, mas você NÃO é administrador. Peça acesso ao super_admin.';
+      }
+      setSubmitErro(msg);
     }
   };
 
@@ -166,7 +174,7 @@ export function AdminLoginPage() {
         </div>
 
         <div className="mt-6 text-center text-[11px] text-white/30">
-          pregador-os.vercel.app/admin · v0.4.0
+          pregadorpalavra.vercel.app/admin · v{APP_VERSION}
         </div>
       </motion.div>
     </div>
