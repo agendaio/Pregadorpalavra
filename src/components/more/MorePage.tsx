@@ -8,8 +8,13 @@ import {
   Info,
   ChevronRight,
   Github,
+  LogIn,
+  LogOut,
+  User,
+  Shield,
 } from 'lucide-react';
 import { useUIStore } from '@/stores/ui';
+import { useAuthStore } from '@/stores/authUser';
 import { MobileHeader } from '@/components/layout/MobileHeader';
 import { cn } from '@/lib/utils';
 import { APP_VERSION } from '@/v.config';
@@ -26,6 +31,7 @@ interface Item {
 export function MorePage() {
   const tema = useUIStore((s) => s.tema);
   const alternarTema = useUIStore((s) => s.alternarTema);
+  const { user, logout } = useAuthStore();
 
   const grupos: { titulo: string; itens: Item[] }[] = [
     {
@@ -65,6 +71,63 @@ export function MorePage() {
 
       <div className="flex-1 overflow-y-auto pb-32">
         <div className="mx-auto max-w-2xl space-y-6 px-4 py-5">
+
+          {/* Card de Auth - Destacado no topo */}
+          <div className="overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 via-blue-700 to-emerald-600 p-4 shadow-xl shadow-blue-900/20">
+            {user ? (
+              <div className="flex items-center gap-3">
+                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-white/20 backdrop-blur">
+                  <User className="h-6 w-6 text-white" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-[15px] font-semibold text-white">
+                    {user.nome || user.email?.split('@')[0]}
+                  </div>
+                  <div className="truncate text-[13px] text-white/80">
+                    {user.email}
+                  </div>
+                </div>
+                <button
+                  onClick={() => logout()}
+                  className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-white/20 text-white backdrop-blur transition-all hover:bg-white/30 active:scale-95"
+                  title="Sair"
+                >
+                  <LogOut className="h-5 w-5" />
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-white/20 backdrop-blur">
+                    <Shield className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <div className="text-[16px] font-bold text-white">
+                      Acesse sua conta
+                    </div>
+                    <div className="text-[13px] text-white/80">
+                      Salve suas mensagens na nuvem
+                    </div>
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <Link
+                    to="/login"
+                    className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-white py-3 text-[14px] font-semibold text-blue-700 shadow-lg transition-all hover:shadow-xl hover:brightness-105 active:scale-[0.98]"
+                  >
+                    <LogIn className="h-4 w-4" />
+                    Entrar
+                  </Link>
+                  <Link
+                    to="/login?signup=true"
+                    className="flex flex-1 items-center justify-center gap-2 rounded-xl border-2 border-white/50 bg-emerald-500 py-3 text-[14px] font-semibold text-white shadow-lg transition-all hover:border-white/70 hover:bg-emerald-400 active:scale-[0.98]"
+                  >
+                    Cadastrar
+                  </Link>
+                </div>
+              </div>
+            )}
+          </div>
 
           {grupos.filter(g => g.itens.length > 0).map((g) => (
             <section key={g.titulo}>

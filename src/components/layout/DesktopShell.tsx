@@ -18,6 +18,9 @@ import { useMensagensStore } from '@/stores/mensagens';
 import { Button } from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
 import { APP_VERSION } from '@/v.config';
+import { Link } from 'react-router-dom';
+import { useAuthStore } from '@/stores/authUser';
+import { LogIn, LogOut, User, Shield } from 'lucide-react';
 
 const NAV = [
   { to: '/', label: 'Início', icon: Home, end: true },
@@ -34,6 +37,7 @@ export function DesktopShell({ children }: { children: ReactNode }) {
   const setBusca = useUIStore((s) => s.setBusca);
   const nova = useMensagensStore((s) => s.nova);
   const mostrarToast = useUIStore((s) => s.mostrarToast);
+  const { user, logout } = useAuthStore();
 
   const handleNova = async () => {
     const m = await nova();
@@ -125,6 +129,81 @@ export function DesktopShell({ children }: { children: ReactNode }) {
             ))}
           </ul>
         </nav>
+
+        {/* Card de Auth na Sidebar */}
+        {sidebarAberta ? (
+          <div className="mx-3 mb-2 overflow-hidden rounded-xl border border-emerald-200/60 bg-gradient-to-br from-emerald-50 to-cyan-50 p-3 dark:border-emerald-800/40 dark:from-emerald-950/50 dark:to-cyan-950/50">
+            {user ? (
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-emerald-500 to-cyan-600 text-white shadow-sm">
+                  <User className="h-4 w-4" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-[13px] font-semibold text-emerald-900 dark:text-emerald-100">
+                    {user.nome || user.email?.split('@')[0]}
+                  </div>
+                  <div className="truncate text-[11px] text-emerald-700/70 dark:text-emerald-400/70">
+                    {user.email}
+                  </div>
+                </div>
+                <button
+                  onClick={() => logout()}
+                  className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg text-emerald-700/60 hover:bg-emerald-100 hover:text-emerald-900 dark:text-emerald-400/60 dark:hover:bg-emerald-900/40 dark:hover:text-emerald-300"
+                  title="Sair"
+                >
+                  <LogOut className="h-4 w-4" />
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-500 to-cyan-600 text-white shadow-sm">
+                    <Shield className="h-4 w-4" />
+                  </div>
+                  <div className="text-[12px] font-medium text-emerald-900 dark:text-emerald-100">
+                    Acesso gratuito
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Link
+                    to="/login"
+                    className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-gradient-to-r from-emerald-500 to-cyan-600 py-2 text-[12px] font-semibold text-white shadow-sm transition-all hover:shadow-md hover:brightness-105"
+                  >
+                    <LogIn className="h-3.5 w-3.5" />
+                    Entrar
+                  </Link>
+                  <Link
+                    to="/login?signup=true"
+                    className="flex flex-1 items-center justify-center gap-1 rounded-lg border border-emerald-300 bg-white/80 py-2 text-[12px] font-semibold text-emerald-700 shadow-sm transition-all hover:bg-white dark:border-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300"
+                  >
+                    Cadastrar
+                  </Link>
+                </div>
+              </div>
+            )}
+          </div>
+        ) : (
+          /* Sidebar colapsada: ícone minimalista */
+          <div className="mx-3 mb-2 flex justify-center">
+            {user ? (
+              <button
+                onClick={() => logout()}
+                className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-cyan-600 text-white shadow-sm"
+                title={`${user.nome} — Sair`}
+              >
+                <LogOut className="h-4 w-4" />
+              </button>
+            ) : (
+              <Link
+                to="/login"
+                className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-cyan-600 text-white shadow-sm"
+                title="Entrar / Cadastrar"
+              >
+                <LogIn className="h-4 w-4" />
+              </Link>
+            )}
+          </div>
+        )}
 
         <div className="border-t border-ink-200/70 p-3 space-y-1">
           <button
