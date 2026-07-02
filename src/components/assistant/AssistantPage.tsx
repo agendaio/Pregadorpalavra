@@ -4,7 +4,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Send, X, Plus, Copy, CheckCheck, AlertCircle, Loader2,
   MessageSquare, Trash2, Menu, Square, Mic, MicOff,
-  Sparkles,
+  Sparkles, Share2, Wand2, BookOpen, Megaphone, ClipboardList,
+  Globe, Users, HelpCircle, GraduationCap, Drama, Scroll,
+  History, ListChecks,
 } from 'lucide-react';
 import { supabase, SUPABASE_ANON_KEY } from '@/lib/supabase';
 import { aiDB } from '@/lib/ai';
@@ -13,6 +15,25 @@ import { cn, formatarRelativo } from '@/lib/utils';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 import { useCopilotOutlineStore } from '@/stores/copilotOutline';
 import { construirContextoMemoria } from '@/lib/ai/memory';
+
+// ─── Ícones profissionais por especialista (substitui os emojis) ───────────
+
+const SPECIALIST_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
+  'estudos-biblicos': BookOpen,
+  'criar-pregacoes': Megaphone,
+  'esbocos': ClipboardList,
+  'contexto-historico': Globe,
+  'estudo-celulas': Users,
+  'duvidas-biblicas': HelpCircle,
+  'teologia': GraduationCap,
+  'criar-dinamicas': Drama,
+  'criar-parabolas': Scroll,
+};
+
+function SpecialistIcon({ id, className }: { id: string; className?: string }) {
+  const Icon = SPECIALIST_ICONS[id] ?? Sparkles;
+  return <Icon className={className} />;
+}
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -63,7 +84,9 @@ export function AssistantPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showSessoes, setShowSessoes] = useState(false);
+  const [sessoesTab, setSessoesTab] = useState<'historico' | 'esboco'>('historico');
   const [copiadoId, setCopiadoId] = useState<string | null>(null);
+  const [improvingId, setImprovingId] = useState<string | null>(null);
   const [especialistaId, setEspecialistaId] = useState<string | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -112,6 +135,18 @@ export function AssistantPage() {
     setMessages(msgs ?? []);
     setEspecialistaId(sessao.especialistaId ?? null);
     setShowSessoes(false);
+  }, []);
+
+  // ── Restaura a última conversa automaticamente ao abrir a página ──
+  // Nunca começa "do zero" se já existe histórico — só limpa quando o
+  // usuário clica em "Nova conversa" ou "Limpar" explicitamente.
+  useEffect(() => {
+    if (sessionId) return;
+    (async () => {
+      const ultima = await aiDB.sessoes.orderBy('updatedAt').reverse().first() as ChatSession | undefined;
+      if (ultima) await carregarSessao(ultima);
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const deletarSessao = async (id: string) => {
@@ -328,6 +363,24 @@ export function AssistantPage() {
     setTimeout(() => setCopiadoId(null), 2000);
   };
 
+  const compartilharMensagem = (content: string) => {
+    if (navigator.share) {
+      navigator.share({ text: content }).catch(() => {});
+    } else {
+      navigator.clipboard.writeText(content);
+    }
+  };
+
+  const melhorarResposta = (msg: ChatMessage) => {
+    if (loading) return;
+    const prompt = `Analise e melhore esta resposta bíblica/teológica. A resposta atual é:\n\n${msg.content}\n\nPor favor, melhore: corrija imprecisões teológicas, enriqueça com mais detalhes bíblicos (versículos, contexto histórico), melhore a clareza e organização, e adicione aplicações práticas relevantes. Responda em português brasileiro, com formatação clara usando markdown (## Títulos, **negrito**, listas).`;
+    setImprovingId(msg.id);
+    setInput(prompt);
+    inputRef.current?.focus();
+    // Feedback visual breve — não trava o botão permanentemente
+    setTimeout(() => setImprovingId((cur) => (cur === msg.id ? null : cur)), 1500);
+  };
+
   // ── Microfone: iniciar / parar ──
 
   const toggleMicrofone = useCallback(() => {
@@ -373,7 +426,7 @@ export function AssistantPage() {
         <div className="min-w-0 flex-1 text-center">
           {especialistaAtivo ? (
             <div className="flex items-center justify-center gap-1.5">
-              <span className="text-[15px]">{especialistaAtivo.icon}</span>
+              <SpecialistIcon id={especialistaAtivo.id} className="h-4 w-4 text-violet-600 dark:text-violet-400" />
               <h1 className="truncate text-[14.5px] font-semibold tracking-[-0.01em] text-ink-900 dark:text-white">
                 {especialistaAtivo.nome}
               </h1>
@@ -422,7 +475,7 @@ export function AssistantPage() {
             >
               <div className="flex items-center justify-between border-b border-ink-200 px-4 py-3 dark:border-ink-800">
                 <h3 className="text-[14px] font-semibold text-ink-900 dark:text-white">
-                  Conversas
+                  {sessoesTab === 'historico' ? 'Histórico' : 'Esboço'}
                 </h3>
                 <button
                   onClick={() => setShowSessoes(false)}
@@ -431,50 +484,130 @@ export function AssistantPage() {
                   <X className="h-4 w-4" />
                 </button>
               </div>
-              <button
-                onClick={() => void criarSessao(especialistaId)}
-                className="mx-3 mt-3 flex items-center gap-2 rounded-xl border border-dashed border-ink-300 px-3 py-2.5 text-[13px] text-ink-600 transition-colors hover:border-ink-400 hover:bg-ink-50 dark:border-ink-700 dark:text-ink-300"
-              >
-                <Plus className="h-4 w-4" /> Nova conversa
-              </button>
-              <div className="flex-1 overflow-y-auto px-3 py-2">
-                {(sessoes ?? []).length === 0 && (
-                  <p className="px-2 py-6 text-center text-[12px] text-ink-400">
-                    Nenhuma conversa ainda
-                  </p>
-                )}
-                {(sessoes ?? []).map((s) => {
-                  const esp = getSpecialist(s.especialistaId ?? null);
-                  return (
-                    <button
-                      key={s.id}
-                      onClick={() => void carregarSessao(s)}
-                      className={cn(
-                        'group mb-1 flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-[13px] transition-colors',
-                        sessionId === s.id
-                          ? 'bg-ink-100 text-ink-900 dark:bg-ink-800/60 dark:text-white'
-                          : 'text-ink-600 hover:bg-ink-50 dark:text-ink-300 dark:hover:bg-ink-800/40',
-                      )}
-                    >
-                      <MessageSquare className="h-3.5 w-3.5 flex-shrink-0" />
-                      <div className="min-w-0 flex-1">
-                        <div className="truncate">{s.titulo}</div>
-                        {esp && (
-                          <div className="text-[10.5px] text-ink-400">
-                            {esp.icon} {esp.nome}
-                          </div>
-                        )}
-                      </div>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); void deletarSessao(s.id); }}
-                        className="opacity-0 transition-opacity group-hover:opacity-100"
-                      >
-                        <Trash2 className="h-3.5 w-3.5 text-ink-400 hover:text-red-500" />
-                      </button>
-                    </button>
-                  );
-                })}
+
+              {/* Tabs: Histórico / Esboço (igual ChatGPT) */}
+              <div className="flex gap-1 border-b border-ink-200 px-3 py-2 dark:border-ink-800">
+                <button
+                  onClick={() => setSessoesTab('historico')}
+                  className={cn(
+                    'flex flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-[12px] font-medium transition-colors',
+                    sessoesTab === 'historico'
+                      ? 'bg-ink-900 text-white dark:bg-white dark:text-ink-900'
+                      : 'text-ink-500 hover:bg-ink-100 dark:text-ink-400 dark:hover:bg-ink-800',
+                  )}
+                >
+                  <History className="h-3.5 w-3.5" /> Histórico
+                </button>
+                <button
+                  onClick={() => setSessoesTab('esboco')}
+                  className={cn(
+                    'flex flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-[12px] font-medium transition-colors',
+                    sessoesTab === 'esboco'
+                      ? 'bg-ink-900 text-white dark:bg-white dark:text-ink-900'
+                      : 'text-ink-500 hover:bg-ink-100 dark:text-ink-400 dark:hover:bg-ink-800',
+                  )}
+                >
+                  <ListChecks className="h-3.5 w-3.5" /> Esboço
+                </button>
               </div>
+
+              {sessoesTab === 'historico' ? (
+                <>
+                  <button
+                    onClick={() => void criarSessao(especialistaId)}
+                    className="mx-3 mt-3 flex items-center gap-2 rounded-xl border border-dashed border-ink-300 px-3 py-2.5 text-[13px] text-ink-600 transition-colors hover:border-ink-400 hover:bg-ink-50 dark:border-ink-700 dark:text-ink-300"
+                  >
+                    <Plus className="h-4 w-4" /> Nova conversa
+                  </button>
+                  <div className="flex-1 overflow-y-auto px-3 py-2">
+                    {(sessoes ?? []).length === 0 && (
+                      <p className="px-2 py-6 text-center text-[12px] text-ink-400">
+                        Nenhuma conversa ainda
+                      </p>
+                    )}
+                    {(sessoes ?? []).map((s) => {
+                      const esp = getSpecialist(s.especialistaId ?? null);
+                      return (
+                        <div
+                          key={s.id}
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => void carregarSessao(s)}
+                          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); void carregarSessao(s); } }}
+                          className={cn(
+                            'group mb-1 flex w-full cursor-pointer items-center gap-2 rounded-xl px-3 py-2.5 text-left text-[13px] transition-colors',
+                            sessionId === s.id
+                              ? 'bg-ink-100 text-ink-900 dark:bg-ink-800/60 dark:text-white'
+                              : 'text-ink-600 hover:bg-ink-50 dark:text-ink-300 dark:hover:bg-ink-800/40',
+                          )}
+                        >
+                          {esp ? (
+                            <SpecialistIcon id={esp.id} className="h-3.5 w-3.5 flex-shrink-0 text-violet-500" />
+                          ) : (
+                            <MessageSquare className="h-3.5 w-3.5 flex-shrink-0" />
+                          )}
+                          <div className="min-w-0 flex-1">
+                            <div className="truncate">{s.titulo}</div>
+                            {esp && (
+                              <div className="text-[10.5px] text-ink-400">
+                                {esp.nome}
+                              </div>
+                            )}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); void deletarSessao(s.id); }}
+                            className="opacity-0 transition-opacity group-hover:opacity-100"
+                          >
+                            <Trash2 className="h-3.5 w-3.5 text-ink-400 hover:text-red-500" />
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              ) : (
+                <div className="flex-1 overflow-y-auto px-4 py-3">
+                  {ctxOutline.titulo || ctxOutline.tema || ctxOutline.pontos.length > 0 ? (
+                    <div className="space-y-3 text-[13px] text-ink-700 dark:text-ink-200">
+                      {ctxOutline.titulo && (
+                        <div>
+                          <div className="text-[10.5px] font-semibold uppercase tracking-wide text-ink-400">Título</div>
+                          <div>{ctxOutline.titulo}</div>
+                        </div>
+                      )}
+                      {ctxOutline.tema && (
+                        <div>
+                          <div className="text-[10.5px] font-semibold uppercase tracking-wide text-ink-400">Tema</div>
+                          <div>{ctxOutline.tema}</div>
+                        </div>
+                      )}
+                      {ctxOutline.textoBase && (
+                        <div>
+                          <div className="text-[10.5px] font-semibold uppercase tracking-wide text-ink-400">Texto Base</div>
+                          <div>{ctxOutline.textoBase}</div>
+                        </div>
+                      )}
+                      {ctxOutline.pontos.length > 0 && (
+                        <div>
+                          <div className="mb-1 text-[10.5px] font-semibold uppercase tracking-wide text-ink-400">
+                            Pontos ({ctxOutline.pontos.length})
+                          </div>
+                          <ol className="list-decimal space-y-1 pl-4">
+                            {ctxOutline.pontos.map((p) => (
+                              <li key={p.id}>{p.texto}</li>
+                            ))}
+                          </ol>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="px-2 py-6 text-center text-[12px] text-ink-400">
+                      Nenhum esboço em construção ainda. Peça pra criar uma pregação, estudo ou esboço na conversa.
+                    </p>
+                  )}
+                </div>
+              )}
             </motion.aside>
           </>
         )}
@@ -513,7 +646,7 @@ export function AssistantPage() {
                         esp.cor,
                       )}
                     >
-                      <span className="text-[16px]">{esp.icon}</span>
+                      <SpecialistIcon id={esp.id} className="h-[18px] w-[18px]" />
                     </div>
                     <div className="mt-1 text-[13px] font-semibold leading-tight text-ink-900 dark:text-white">
                       {esp.nome}
@@ -538,7 +671,7 @@ export function AssistantPage() {
               {especialistaAtivo && (
                 <div className="mb-4 flex items-center justify-center">
                   <div className="inline-flex items-center gap-1.5 rounded-full border border-violet-200 bg-violet-50/80 px-3 py-1 text-[11px] font-medium text-violet-700 dark:border-violet-800/60 dark:bg-violet-900/20 dark:text-violet-300">
-                    <span>{especialistaAtivo.icon}</span>
+                    <SpecialistIcon id={especialistaAtivo.id} className="h-3 w-3" />
                     <span>Especialista ativo: {especialistaAtivo.nome}</span>
                   </div>
                 </div>
@@ -549,7 +682,11 @@ export function AssistantPage() {
                   key={msg.id}
                   msg={msg}
                   copiado={copiadoId === msg.id}
+                  melhorando={improvingId === msg.id}
+                  loading={loading}
                   onCopiar={() => copiarMensagem(msg.id, msg.content)}
+                  onCompartilhar={() => compartilharMensagem(msg.content)}
+                  onMelhorar={() => melhorarResposta(msg)}
                 />
               ))}
 
@@ -624,10 +761,10 @@ export function AssistantPage() {
             {/* Caixa de input */}
             <div
               className={cn(
-                'flex items-end gap-2 rounded-3xl border bg-white px-3 py-2.5 transition-colors dark:bg-ink-900/40',
+                'flex items-center gap-2 rounded-3xl border bg-white px-3.5 py-2.5 shadow-sm transition-all dark:bg-ink-900/40',
                 speech.isListening
                   ? 'border-red-300 dark:border-red-800/60'
-                  : 'border-ink-300 focus-within:border-ink-500 dark:border-ink-700 dark:focus-within:border-ink-600',
+                  : 'border-ink-300 focus-within:border-ink-500 focus-within:shadow-md dark:border-ink-700 dark:focus-within:border-ink-600',
               )}
             >
               <textarea
@@ -711,11 +848,19 @@ export function AssistantPage() {
 function MessageBubble({
   msg,
   copiado,
+  melhorando,
+  loading,
   onCopiar,
+  onCompartilhar,
+  onMelhorar,
 }: {
   msg: ChatMessage;
   copiado: boolean;
+  melhorando: boolean;
+  loading: boolean;
   onCopiar: () => void;
+  onCompartilhar: () => void;
+  onMelhorar: () => void;
 }) {
   const isUser = msg.role === 'user';
 
@@ -725,7 +870,7 @@ function MessageBubble({
       animate={{ opacity: 1, y: 0 }}
       className={cn('mb-5 flex w-full', isUser ? 'justify-end' : 'justify-start')}
     >
-      <div className={cn('group flex max-w-[88%] flex-col gap-1', isUser && 'items-end')}>
+      <div className={cn('flex max-w-[88%] flex-col gap-1', isUser && 'items-end')}>
         <div
           className={cn(
             'rounded-2xl px-4 py-2.5 text-[14.5px] leading-relaxed',
@@ -736,23 +881,82 @@ function MessageBubble({
         >
           <div className="whitespace-pre-wrap break-words">{msg.content}</div>
         </div>
-        <div className={cn('flex items-center gap-1.5 px-1 text-[10.5px] text-ink-400')}>
-          <span>{formatarRelativo(msg.timestamp)}</span>
-          {!isUser && (
-            <button
-              onClick={onCopiar}
-              aria-label="Copiar"
-              className="opacity-0 transition-opacity group-hover:opacity-100"
-            >
-              {copiado ? (
-                <CheckCheck className="h-3.5 w-3.5 text-emerald-500" />
-              ) : (
-                <Copy className="h-3.5 w-3.5 text-ink-400 hover:text-ink-700" />
+
+        {isUser ? (
+          <div className="px-1 text-[10.5px] text-ink-400">
+            {formatarRelativo(msg.timestamp)}
+          </div>
+        ) : (
+          <div className="flex w-full flex-col gap-1.5 px-1">
+            <div className="flex items-center justify-between">
+              <span className="text-[10.5px] text-ink-400">{formatarRelativo(msg.timestamp)}</span>
+              {melhorando && (
+                <span className="flex items-center gap-1 text-[10.5px] text-amber-600 dark:text-amber-400">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  Melhorando…
+                </span>
               )}
-            </button>
-          )}
-        </div>
+            </div>
+            {/* Ações — sempre visíveis, não só no hover */}
+            <div className="flex flex-wrap items-center gap-1">
+              <MsgActionBtn
+                icon={copiado ? <CheckCheck className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                label={copiado ? 'Copiado!' : 'Copiar'}
+                onClick={onCopiar}
+                variant={copiado ? 'success' : 'ghost'}
+              />
+              <MsgActionBtn
+                icon={<Share2 className="h-3.5 w-3.5" />}
+                label="Compartilhar"
+                onClick={onCompartilhar}
+                variant="ghost"
+              />
+              <MsgActionBtn
+                icon={melhorando ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Wand2 className="h-3.5 w-3.5" />}
+                label="Melhorar"
+                onClick={onMelhorar}
+                variant="ghost"
+                disabled={loading}
+              />
+            </div>
+          </div>
+        )}
       </div>
     </motion.div>
+  );
+}
+
+// ─── Botão de ação da bolha de mensagem ─────────────────────────────────────
+
+function MsgActionBtn({
+  icon,
+  label,
+  onClick,
+  variant = 'ghost',
+  disabled,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  onClick: () => void;
+  variant?: 'ghost' | 'success';
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      title={label}
+      className={cn(
+        'flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11.5px] font-medium transition-all active:scale-95',
+        variant === 'success'
+          ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
+          : 'text-ink-500 hover:bg-ink-100 hover:text-ink-800 dark:text-ink-400 dark:hover:bg-ink-800/60 dark:hover:text-ink-200',
+        disabled && 'opacity-40 cursor-not-allowed',
+      )}
+    >
+      {icon}
+      <span className="hidden sm:inline">{label}</span>
+    </button>
   );
 }
