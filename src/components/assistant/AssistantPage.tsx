@@ -15,6 +15,8 @@ import { cn, formatarRelativo } from '@/lib/utils';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 import { useCopilotOutlineStore } from '@/stores/copilotOutline';
 import { construirContextoMemoria } from '@/lib/ai/memory';
+import { useUIStore } from '@/stores/ui';
+import { autoGenerateSlides } from '@/lib/autoGenerateSlides';
 
 // ─── Ícones profissionais por especialista (substitui os emojis) ───────────
 
@@ -381,6 +383,21 @@ export function AssistantPage() {
     setTimeout(() => setImprovingId((cur) => (cur === msg.id ? null : cur)), 1500);
   };
 
+  const adicionarAoEsboco = async (msg: ChatMessage) => {
+    const store = useCopilotOutlineStore.getState();
+    const novoPonto = {
+      id: crypto.randomUUID(),
+      texto: msg.content,
+      subpontos: [],
+      aplicacoes: [],
+    };
+    store.importar({ pontos: [...store.pontos, novoPonto] });
+    useUIStore.getState().mostrarToast('Adicionado ao esboço', 'sucesso');
+    try {
+      await autoGenerateSlides(store);
+    } catch { /* ignore */ }
+  };
+
   // ── Microfone: iniciar / parar ──
 
   const toggleMicrofone = useCallback(() => {
@@ -629,30 +646,32 @@ export function AssistantPage() {
                 Escolha um especialista abaixo para começar.
               </p>
 
-              <div className="grid w-full grid-cols-2 gap-2.5 sm:grid-cols-3">
+              <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-2">
                 {SPECIALISTS.map((esp) => (
                   <button
                     key={esp.id}
                     onClick={() => void ativarEspecialista(esp)}
                     className={cn(
-                      'group relative flex flex-col items-start gap-1.5 rounded-2xl border border-ink-200 bg-white p-3.5 text-left transition-all',
+                      'group relative flex items-center gap-3 rounded-2xl border border-ink-200 bg-white px-3.5 py-2.5 text-left transition-all',
                       'hover:-translate-y-0.5 hover:border-ink-300 hover:shadow-md',
                       'dark:border-ink-800 dark:bg-ink-900/40 dark:hover:border-ink-700',
                     )}
                   >
                     <div
                       className={cn(
-                        'flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br text-white shadow-sm',
+                        'flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-white shadow-sm',
                         esp.cor,
                       )}
                     >
                       <SpecialistIcon id={esp.id} className="h-[18px] w-[18px]" />
                     </div>
-                    <div className="mt-1 text-[13px] font-semibold leading-tight text-ink-900 dark:text-white">
-                      {esp.nome}
-                    </div>
-                    <div className="text-[11px] leading-snug text-ink-500 dark:text-ink-400">
-                      {esp.descricao}
+                    <div className="min-w-0 flex-1">
+                      <div className="text-[13px] font-semibold leading-tight text-ink-900 dark:text-white">
+                        {esp.nome}
+                      </div>
+                      <div className="truncate text-[11px] leading-snug text-ink-500 dark:text-ink-400">
+                        {esp.descricao}
+                      </div>
                     </div>
                   </button>
                 ))}
@@ -686,6 +705,7 @@ export function AssistantPage() {
                   loading={loading}
                   onCopiar={() => copiarMensagem(msg.id, msg.content)}
                   onCompartilhar={() => compartilharMensagem(msg.content)}
+                  onEsboco={() => void adicionarAoEsboco(msg)}
                   onMelhorar={() => melhorarResposta(msg)}
                 />
               ))}
@@ -852,6 +872,7 @@ function MessageBubble({
   loading,
   onCopiar,
   onCompartilhar,
+  onEsboco,
   onMelhorar,
 }: {
   msg: ChatMessage;
@@ -860,6 +881,7 @@ function MessageBubble({
   loading: boolean;
   onCopiar: () => void;
   onCompartilhar: () => void;
+  onEsboco: () => void;
   onMelhorar: () => void;
 }) {
   const isUser = msg.role === 'user';
@@ -897,22 +919,28 @@ function MessageBubble({
                 </span>
               )}
             </div>
-            {/* Ações — sempre visíveis, não só no hover */}
-            <div className="flex flex-wrap items-center gap-1">
+            {/* Ações — sempre visíveis, não só no hover; ícone em cima, texto embaixo */}
+            <div className="flex items-stretch gap-1.5">
               <MsgActionBtn
-                icon={copiado ? <CheckCheck className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-                label={copiado ? 'Copiado!' : 'Copiar'}
+                icon={copiado ? <CheckCheck className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                label={copiado ? 'Copiado' : 'Copiar'}
                 onClick={onCopiar}
                 variant={copiado ? 'success' : 'ghost'}
               />
               <MsgActionBtn
-                icon={<Share2 className="h-3.5 w-3.5" />}
+                icon={<Share2 className="h-4 w-4" />}
                 label="Compartilhar"
                 onClick={onCompartilhar}
                 variant="ghost"
               />
               <MsgActionBtn
-                icon={melhorando ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Wand2 className="h-3.5 w-3.5" />}
+                icon={<ClipboardList className="h-4 w-4" />}
+                label="Esboço"
+                onClick={onEsboco}
+                variant="ghost"
+              />
+              <MsgActionBtn
+                icon={melhorando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
                 label="Melhorar"
                 onClick={onMelhorar}
                 variant="ghost"
@@ -948,15 +976,15 @@ function MsgActionBtn({
       disabled={disabled}
       title={label}
       className={cn(
-        'flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11.5px] font-medium transition-all active:scale-95',
+        'flex min-w-[58px] flex-1 flex-col items-center justify-center gap-1 rounded-xl border px-2 py-2 text-center transition-all active:scale-95 sm:flex-none',
         variant === 'success'
-          ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
-          : 'text-ink-500 hover:bg-ink-100 hover:text-ink-800 dark:text-ink-400 dark:hover:bg-ink-800/60 dark:hover:text-ink-200',
-        disabled && 'opacity-40 cursor-not-allowed',
+          ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800/50 dark:bg-emerald-900/30 dark:text-emerald-300'
+          : 'border-ink-200 bg-white text-ink-500 hover:border-ink-300 hover:bg-ink-50 hover:text-ink-800 dark:border-ink-700 dark:bg-ink-900/40 dark:text-ink-400 dark:hover:bg-ink-800/60 dark:hover:text-ink-200',
+        disabled && 'cursor-not-allowed opacity-40',
       )}
     >
       {icon}
-      <span className="hidden sm:inline">{label}</span>
+      <span className="text-[10px] font-medium leading-none">{label}</span>
     </button>
   );
 }

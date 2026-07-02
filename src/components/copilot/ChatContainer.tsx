@@ -515,14 +515,15 @@ export function ChatContainer({ onTogglePanel, onEsboçoPending }: ChatContainer
     });
   };
 
-  const melhorarResposta = async (msg: ChatMessage) => {
-    if (loading || improvingId) return;
+  const melhorarResposta = (msg: ChatMessage) => {
+    if (loading) return;
     const improvePrompt = `Analise e melhore esta resposta bíblica/teológica. A resposta atual é:\n\n${msg.content}\n\nPor favor, melhore: corrija imprecisões teológicas, enriqueça com mais detalhes bíblicos (versículos, contexto histórico), melhore a clareza e organização, e adicione aplicações práticas relevantes. Responda em português brasileiro, com formatação clara usando markdown (## Títulos, **negrito**, listas).`;
 
-    // Add "improving" user message and re-send
     setImprovingId(msg.id);
     setInput(improvePrompt);
     inputRef.current?.focus();
+    // Feedback visual breve — não trava o botão permanentemente
+    setTimeout(() => setImprovingId((cur) => (cur === msg.id ? null : cur)), 1500);
   };
 
   const handleSugestão = (sug: string) => {
@@ -687,19 +688,19 @@ export function ChatContainer({ onTogglePanel, onEsboçoPending }: ChatContainer
                     )}
                   </div>
 
-                  {/* Action bar — sempre visível */}
-                  <div className="flex flex-wrap items-center gap-1">
+                  {/* Action bar — sempre visível; ícone em cima, texto embaixo */}
+                  <div className="flex items-stretch gap-1.5">
                     {/* Copiar */}
                     <ActionBtn
-                      icon={copiadoId === msg.id ? <CheckCheck className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-                      label={copiadoId === msg.id ? 'Copiado!' : 'Copiar'}
+                      icon={copiadoId === msg.id ? <CheckCheck className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                      label={copiadoId === msg.id ? 'Copiado' : 'Copiar'}
                       onClick={() => copiarMensagem(msg.id, msg.content)}
                       variant={copiadoId === msg.id ? 'success' : 'ghost'}
                     />
 
                     {/* Compartilhar */}
                     <ActionBtn
-                      icon={<Share2 className="h-3.5 w-3.5" />}
+                      icon={<Share2 className="h-4 w-4" />}
                       label="Compartilhar"
                       onClick={() => compartilharMensagem(msg.content)}
                       variant="ghost"
@@ -707,19 +708,19 @@ export function ChatContainer({ onTogglePanel, onEsboçoPending }: ChatContainer
 
                     {/* Adicionar ao esboço */}
                     <ActionBtn
-                      icon={<BookOpen className="h-3.5 w-3.5" />}
-                      label="Adicionar"
+                      icon={<BookOpen className="h-4 w-4" />}
+                      label="Esboço"
                       onClick={() => adicionarAoEsboco(msg)}
                       variant="ghost"
                     />
 
                     {/* Melhorar */}
                     <ActionBtn
-                      icon={improvingId === msg.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Wand2 className="h-3.5 w-3.5" />}
+                      icon={improvingId === msg.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
                       label="Melhorar"
                       onClick={() => melhorarResposta(msg)}
                       variant="ghost"
-                      disabled={loading || !!improvingId}
+                      disabled={loading}
                     />
                   </div>
                 </div>
@@ -969,15 +970,15 @@ function ActionBtn({
       disabled={disabled}
       title={label}
       className={cn(
-        'flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11.5px] font-medium transition-all active:scale-95',
+        'flex min-w-[58px] flex-1 flex-col items-center justify-center gap-1 rounded-xl border px-2 py-2 text-center transition-all active:scale-95 sm:flex-none',
         variant === 'success'
-          ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
-          : 'text-ink-500 hover:bg-ink-100 hover:text-ink-800 dark:text-ink-400 dark:hover:bg-ink-800/60 dark:hover:text-ink-200',
-        disabled && 'opacity-40 cursor-not-allowed',
+          ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800/50 dark:bg-emerald-900/30 dark:text-emerald-300'
+          : 'border-ink-200 bg-white text-ink-500 hover:border-ink-300 hover:bg-ink-50 hover:text-ink-800 dark:border-ink-700 dark:bg-ink-900/40 dark:text-ink-400 dark:hover:bg-ink-800/60 dark:hover:text-ink-200',
+        disabled && 'cursor-not-allowed opacity-40',
       )}
     >
       {icon}
-      <span className="hidden sm:inline">{label}</span>
+      <span className="text-[10px] font-medium leading-none">{label}</span>
     </button>
   );
 }

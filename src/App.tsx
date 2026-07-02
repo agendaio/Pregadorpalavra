@@ -137,7 +137,10 @@ export function App() {
 
   return (
     <BrowserRouter>
-      <div className="flex h-screen flex-col overflow-hidden">
+      {/* h-full (não h-screen) — herda do #root, que usa 100dvh e encolhe
+          corretamente quando o teclado do celular abre. h-screen (100vh)
+          fica fixo e o teclado cobre o input por cima. */}
+      <div className="flex h-full flex-col overflow-hidden">
         <AnimatedRoutes />
         <Toast />
         <PWAUpdatePrompt />
