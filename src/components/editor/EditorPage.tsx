@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import {
@@ -17,6 +17,7 @@ import {
   FileCode,
   Loader2,
 } from 'lucide-react';
+import { useSpeechToText } from '@/lib/useSpeechToText';
 import { motion, AnimatePresence } from 'framer-motion';
 import { db } from '@/db/schema';
 import { useMensagensStore } from '@/stores/mensagens';
@@ -60,6 +61,42 @@ export function EditorPage() {
   const [showMenu, setShowMenu] = useState(false);
   const [exportando, setExportando] = useState<FormatoExport | null>(null);
   const ultimoEsbocoRef = useRef('');
+
+  // Speech to text para ditado
+  const [microphoneActive, setMicrophoneActive] = useState(false);
+  const [microphoneTarget, setMicrophoneTarget] = useState<string | null>(null);
+
+  const { isListening, isSupported: micSupported, toggle: toggleMic } = useSpeechToText({
+    onTranscript: useCallback((text: string) => {
+      if (!microphoneTarget || !mensagem) return;
+      // Atualiza o campo atual com o texto ditado
+      if (microphoneTarget === 'titulo') {
+        patch({ titulo: text });
+      } else if (microphoneTarget === 'tema') {
+        patch({ tema: text });
+      } else if (microphoneTarget === 'esboco') {
+        patch({ esboco: text });
+      }
+    }, [microphoneTarget, mensagem, patch]),
+  });
+
+  const activateMicrophone = (target: string) => {
+    if (microphoneTarget === target && isListening) {
+      // Desativa
+      toggleMic();
+      setMicrophoneActive(false);
+      setMicrophoneTarget(null);
+    } else {
+      // Ativa para o campo específico
+      if (microphoneTarget !== target) {
+        // Muda de campo - reinicia
+        if (isListening) toggleMic();
+        setMicrophoneTarget(target);
+      }
+      if (!isListening) toggleMic();
+      setMicrophoneActive(true);
+    }
+  };
 
   useEffect(() => {
     if (id) carregar(id);
@@ -199,12 +236,33 @@ export function EditorPage() {
         <div className="flex flex-1 flex-col overflow-hidden">
           <div className="flex-1 overflow-y-auto pb-32 md:pb-12">
             <div className="px-5 pt-4 md:px-8 md:pt-6">
-              <input
-                value={mensagem.titulo}
-                onChange={(e) => patchComIndicador({ titulo: e.target.value })}
-                placeholder="Título da mensagem"
-                className="w-full bg-transparent text-[22px] font-semibold tracking-[-0.018em] text-ink-900 outline-none placeholder:text-ink-300 dark:text-white md:text-[26px]"
-              />
+              <div className="flex items-center gap-2">
+                <input
+                  value={mensagem.titulo}
+                  onChange={(e) => patchComIndicador({ titulo: e.target.value })}
+                  placeholder="Título da mensagem"
+                  className="flex-1 bg-transparent text-[22px] font-semibold tracking-[-0.018em] text-ink-900 outline-none placeholder:text-ink-300 dark:text-white md:text-[26px]"
+                />
+                {micSupported && (
+                  <button
+                    type="button"
+                    onClick={() => activateMicrophone('titulo')}
+                    className={`flex h-8 w-8 items-center justify-center rounded-full transition-all ${
+                      microphoneTarget === 'titulo' && isListening
+                        ? 'bg-red-100 text-red-500 animate-pulse dark:bg-red-900/30'
+                        : 'text-ink-400 hover:bg-ink-100 dark:hover:bg-ink-800'
+                    }`}
+                    title="Ditar título"
+                  >
+                    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+                      <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                      <line x1="12" y1="19" x2="12" y2="23" />
+                      <line x1="8" y1="23" x2="16" y2="23" />
+                    </svg>
+                  </button>
+                )}
+              </div>
               {mensagem.textoBase && (
                 <div className="mt-1.5 inline-flex items-center rounded-full bg-ink-100 px-2.5 py-0.5 text-[11.5px] font-medium text-ink-700 dark:bg-ink-800 dark:text-ink-200">
                   {mensagem.textoBase}
@@ -216,7 +274,28 @@ export function EditorPage() {
               <div className="mx-auto max-w-3xl px-5 pt-5 md:px-8">
                 <div className="grid grid-cols-2 gap-x-4 gap-y-3 md:gap-y-4">
                   <div>
-                    <Label>Tema</Label>
+                    <div className="flex items-center justify-between">
+                      <Label>Tema</Label>
+                      {micSupported && (
+                        <button
+                          type="button"
+                          onClick={() => activateMicrophone('tema')}
+                          className={`flex h-6 w-6 items-center justify-center rounded-full transition-all ${
+                            microphoneTarget === 'tema' && isListening
+                              ? 'bg-red-100 text-red-500 animate-pulse dark:bg-red-900/30'
+                              : 'text-ink-400 hover:bg-ink-100 dark:hover:bg-ink-800'
+                          }`}
+                          title="Ditar tema"
+                        >
+                          <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+                            <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                            <line x1="12" y1="19" x2="12" y2="23" />
+                            <line x1="8" y1="23" x2="16" y2="23" />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
                     <Input value={mensagem.tema} onChange={(e) => patchComIndicador({ tema: e.target.value })} placeholder="Tema central" />
                   </div>
                   <div>
@@ -312,7 +391,28 @@ export function EditorPage() {
             <div className="mx-auto max-w-3xl px-5 pb-6 md:px-8">
               <div className="mb-2 flex items-center justify-between">
                 <h2 className="text-[13.5px] font-semibold tracking-tight text-ink-900 dark:text-white">Esboço</h2>
-                <span className="text-[11px] text-ink-500 dark:text-ink-400">dica: peça ao assistente →</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] text-ink-500 dark:text-ink-400">dica: peça ao assistente →</span>
+                  {micSupported && (
+                    <button
+                      type="button"
+                      onClick={() => activateMicrophone('esboco')}
+                      className={`flex h-7 w-7 items-center justify-center rounded-full transition-all ${
+                        microphoneTarget === 'esboco' && isListening
+                          ? 'bg-red-100 text-red-500 animate-pulse dark:bg-red-900/30'
+                          : 'text-ink-400 hover:bg-ink-100 dark:hover:bg-ink-800'
+                      }`}
+                      title="Ditar esboço"
+                    >
+                      <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+                        <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                        <line x1="12" y1="19" x2="12" y2="23" />
+                        <line x1="8" y1="23" x2="16" y2="23" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
               </div>
               <RichEditor
                 value={mensagem.esboco}

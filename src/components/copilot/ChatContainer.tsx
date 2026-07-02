@@ -729,37 +729,126 @@ export function ChatContainer({ onTogglePanel, onEsboçoPending }: ChatContainer
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input */}
-      <div className="border-t border-ink-200/70 bg-white px-4 py-3 dark:border-ink-800 dark:bg-sky-50">
-        <div className="flex items-end gap-2 rounded-2xl border border-ink-200 bg-white px-4 py-3 transition-colors focus-within:border-ink-400 dark:border-ink-700 dark:bg-sky-50/80">
+      {/* Input — Layout ChatGPT */}
+      <div className="border-t border-ink-200/70 bg-white px-3 py-3 dark:border-ink-700 dark:bg-sky-50 sm:px-4 sm:py-4">
+        {/* Faixa de transcrição em tempo real (durante gravação) */}
+        <AnimatePresence>
+          {speech.isListening && (
+            <motion.div
+              initial={{ opacity: 0, height: 0, marginBottom: 0 }}
+              animate={{ opacity: 1, height: 'auto', marginBottom: 8 }}
+              exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+              className="overflow-hidden rounded-xl border border-red-200 bg-red-50/60 dark:border-red-700/40 dark:bg-red-900/10"
+            >
+              <div className="flex items-start gap-2 px-3 py-2.5">
+                <div className="relative flex h-7 w-7 flex-shrink-0 items-center justify-center">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-60" />
+                  <span className="relative inline-flex h-3 w-3 rounded-full bg-red-500" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[10.5px] font-semibold uppercase tracking-wider text-red-600 dark:text-red-300">
+                    Gravando… clique no ■ para concluir
+                  </p>
+                  <p className="mt-0.5 text-[13px] text-ink-700 dark:text-ink-100">
+                    {speech.interimTranscript || speech.transcript || <span className="opacity-50">Fale agora…</span>}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => speech.stop()}
+                  className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-red-500 text-white transition-all hover:bg-red-600 active:scale-95"
+                  aria-label="Concluir gravação"
+                >
+                  <Square className="h-3 w-3 fill-current" />
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Erro de voz */}
+        {speech.error && (
+          <div className="mb-2 flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] text-amber-700 dark:border-amber-700/40 dark:bg-amber-900/20 dark:text-amber-200">
+            <AlertCircle className="h-3.5 w-3.5 flex-shrink-0" />
+            <span className="flex-1">{speech.error}</span>
+            <button
+              type="button"
+              onClick={() => speech.reset()}
+              className="text-amber-700/70 hover:text-amber-700 dark:text-amber-200/70 dark:hover:text-amber-200"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        )}
+
+        <div
+          className={cn(
+            'flex items-end gap-1.5 rounded-3xl border bg-white px-3 py-2.5 transition-all',
+            speech.isListening
+              ? 'border-red-300 ring-2 ring-red-200 dark:border-red-700/60 dark:bg-sky-100/80 dark:ring-red-900/30'
+              : 'border-ink-200 focus-within:border-ink-400 dark:border-ink-700 dark:bg-sky-100/60 dark:focus-within:border-sky-400',
+          )}
+        >
           <textarea
             ref={inputRef}
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => {
-              if (e.key === 'Enter' && !e.shiftKey) {
+              if (e.key === 'Enter' && !e.shiftKey && !speech.isListening) {
                 e.preventDefault();
                 void enviarMensagem();
               }
             }}
-            placeholder="Pergunte qualquer coisa sobre a Bíblia..."
+            placeholder={
+              speech.isListening
+                ? 'Fale algo…'
+                : 'Pergunte qualquer coisa sobre a Bíblia...'
+            }
             rows={1}
-            className="flex-1 resize-none bg-transparent text-[14px] text-ink-900 outline-none placeholder:text-ink-400"
-            style={{ maxHeight: '140px' }}
+            disabled={speech.isListening}
+            className="flex-1 resize-none bg-transparent px-1 text-[14.5px] leading-relaxed text-ink-900 outline-none placeholder:text-ink-400 disabled:opacity-60 dark:text-ink-900 dark:placeholder:text-ink-500"
+            style={{ maxHeight: '160px' }}
           />
+
+          {/* Mic — ChatGPT style */}
+          {speech.isSupported && !loading && (
+            <button
+              type="button"
+              onClick={() => (speech.isListening ? speech.stop() : speech.start())}
+              className={cn(
+                'flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full transition-all',
+                speech.isListening
+                  ? 'bg-red-500 text-white hover:bg-red-600'
+                  : 'text-ink-500 hover:bg-ink-100 hover:text-ink-900 dark:text-sky-700 dark:hover:bg-sky-200 dark:hover:text-sky-900',
+              )}
+              aria-label={speech.isListening ? 'Concluir gravação' : 'Gravar áudio'}
+              title={speech.isListening ? 'Concluir' : 'Falar'}
+            >
+              {speech.isListening ? <Square className="h-3.5 w-3.5 fill-current" /> : <Mic className="h-4 w-4" />}
+            </button>
+          )}
+
+          {/* Send */}
           <button
+            type="button"
             onClick={() => void enviarMensagem()}
-            disabled={!input.trim() || loading}
+            disabled={!input.trim() || loading || speech.isListening}
             className={cn(
-              'flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl transition-all',
-              input.trim() && !loading
-                ? 'bg-ink-900 text-white hover:bg-ink-800 dark:bg-white dark:text-ink-900'
-                : 'bg-ink-100 text-ink-400 dark:bg-sky-100 dark:text-sky-300',
+              'flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full transition-all',
+              input.trim() && !loading && !speech.isListening
+                ? 'bg-ink-900 text-white hover:bg-ink-800 active:scale-95 dark:bg-ink-900 dark:text-white'
+                : 'bg-ink-100 text-ink-400 dark:bg-sky-200 dark:text-sky-400',
             )}
+            aria-label="Enviar"
           >
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
           </button>
         </div>
+        <p className="mt-1.5 text-center text-[10.5px] text-ink-400 dark:text-ink-500">
+          {speech.isListening
+            ? 'Fale com clareza. O texto aparece abaixo em tempo real.'
+            : 'IA pode cometer erros. Verifique sempre as referências bíblicas. Enter para enviar · Shift+Enter para nova linha.'}
+        </p>
       </div>
 
       {/* Selection menu */}
