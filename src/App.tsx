@@ -79,7 +79,7 @@ function AnimatedRoutes() {
             <Route path="/" element={<HomePage />} />
             <Route path="/biblioteca" element={<LibraryPage />} />
             <Route path="/esbocos" element={<OutlinesPage />} />
-            <Route path="/assistente" element={<Navigate to="/" replace />} />
+            <Route path="/assistente" element={<AssistantPage />} />
             <Route path="/mais" element={<MorePage />} />
             <Route path="/editar/:id" element={<EditorPage />} />
             <Route path="/estudo" element={<Navigate to="/" replace />} />
