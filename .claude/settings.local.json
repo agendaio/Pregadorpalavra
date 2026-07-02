@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(deno --version)",
+      "Bash(npx --yes esbuild index.ts --bundle=false --format=esm --loader=ts --outfile=/dev/null)",
+      "Bash(npx --yes esbuild index.ts --loader=ts --outfile=out_check.js)"
+    ]
+  }
+}

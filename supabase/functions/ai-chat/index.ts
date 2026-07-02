@@ -476,7 +476,33 @@ function estimarCusto(provider: string, model: string, tokensInput: number, toke
 
 // ─── Sistema de prompts ─────────────────────────────────────────────────────
 
-const SYSTEM_BASE = `Você é o **Assistente Ministerial** do Pregador OS — um mentor especializado em teologia bíblica, hermenêutica, homilética e preparação de mensagens.`;
+const SYSTEM_BASE = `Você é o **Assistente Ministerial** do Pregador OS — um mentor especializado em teologia bíblica, hermenêutica, homilética e preparação de mensagens.
+
+Sua missão é apoiar pregadores, líderes e estudiosos da Bíblia de forma respeitosa, fundamentada e acolhedora.
+
+## Especializações:
+- Bíblia Sagrada (Antigo e Novo Testamento)
+- Contexto Bíblico e Histórico
+- Hermenêutica e Exegese
+- Homilética e Estrutura de Sermões
+- Teologia Bíblica e Sistemática
+- Apologética
+- História da Igreja
+- Cultura Judaica e do Novo Testamento
+- Personagens, Cronologia e Geografia Bíblica
+- Hebraico e Grego Bíblico (conceitos)
+- Preparação de Esboços e Sermões
+- Estudos para Células e Devocionais
+- Liderança Cristã e Discipulado
+
+## Regras importantes:
+1. Nunca afirme autoridade religiosa. Ofereça apoio de estudo, não decisões teológicas definitivas.
+2. Quando houver diferentes interpretações entre tradições cristãs, apresente-as com equilíbrio e respeito.
+3. Baseie respostas na Bíblia, citações de commentaries reconhecidos e fontes históricas.
+4. Seja claro, direto e prático — o pregador precisa de conteúdo útil.
+5. Responda em português brasileiro.
+6. Organize respostas com estrutura clara (títulos, listas, tabelas quando útil).
+7. Para esboços, siga a estrutura: Título, Subtítulo, Texto Base, Tema, Objetivo, Introdução, Contextualização, Pontos (com aplicações), Conclusão, Referências.`;
 
 // Prompt leve para modo chat — sem overhead de esboço ou parsing
 const SYSTEM_BASE_LIGHT = `# Identidade
@@ -513,32 +539,6 @@ Seu caráter é: sóbrio, erudito mas não pedante, cuidadoso com a Escritura, r
 - Use markdown simples: títulos (##), listas, **negrito**.
 - Seja direto. Tamanho proporcional à pergunta.
 - Responda em **português** salvo quando o usuário pedir outro idioma.`;
-
-Sua missão é apoiar pregadores, líderes e estudiosos da Bíblia de forma respeitosa, fundamentada e acolhedora.
-
-## Especializações:
-- Bíblia Sagrada (Antigo e Novo Testamento)
-- Contexto Bíblico e Histórico
-- Hermenêutica e Exegese
-- Homilética e Estrutura de Sermões
-- Teologia Bíblica e Sistemática
-- Apologética
-- História da Igreja
-- Cultura Judaica e do Novo Testamento
-- Personagens, Cronologia e Geografia Bíblica
-- Hebraico e Grego Bíblico (conceitos)
-- Preparação de Esboços e Sermões
-- Estudos para Células e Devocionais
-- Liderança Cristã e Discipulado
-
-## Regras importantes:
-1. Nunca afirme autoridade religiosa. Ofereça apoio de estudo, não decisões teológicas definitivas.
-2. Quando houver diferentes interpretações entre tradições cristãs, apresente-as com equilíbrio e respeito.
-3. Baseie respostas na Bíblia, citações de commentaries reconhecidos e fontes históricas.
-4. Seja claro, direto e prático — o pregador precisa de conteúdo útil.
-5. Responda em português brasileiro.
-6. Organize respostas com estrutura clara (títulos, listas, tabelas quando útil).
-7. Para esboços, siga a estrutura: Título, Subtítulo, Texto Base, Tema, Objetivo, Introdução, Contextualização, Pontos (com aplicações), Conclusão, Referências.`;
 
 // ─── Handler principal ───────────────────────────────────────────────────────
 
@@ -586,7 +586,7 @@ serve(async (req) => {
           }
         }
       } catch {
-        // JWT inválido ou expirado —无所谓, usuário anônimo continua
+        // JWT inválido ou expirado — segue como usuário anônimo
       }
     }
 
@@ -646,6 +646,75 @@ serve(async (req) => {
     if (!apiKey) {
       return jsonError(500, 'no_api_key', `Nenhuma chave ${provider} configurada. Solicite ao administrador que cadastre uma chave na aba API Keys do painel admin.`);
     }
+
+    // ── CHAT MODE: resposta rápida, sem overhead de esboço ─────────────────────
+    if (modo === 'chat') {
+      const start = Date.now();
+
+      // Prompt leve: usa o que o frontend enviou, ou fallback mínimo
+      const systemContent = systemPrompt || systemAppend || SYSTEM_BASE_LIGHT;
+
+      const result = await callProvider({
+        provider,
+        apiKey,
+        model,
+        messages: messages.map((m: { role: string; content: string }) => ({
+          role: m.role,
+          content: m.content,
+        })),
+        systemContent,
+        maxTokens,
+        temperature,
+        streaming: stream,
+      });
+
+      if (stream) {
+        // Log básico assíncrono (sem extrair esboço)
+        sbAdmin.from('usage_log').insert({
+          user_id: userId,
+          tipo: 'ia_request',
+          acao: 'chat',
+          provider,
+          duracao_ms: Date.now() - start,
+          meta: { model, stream: true, modo: 'chat' },
+          ip: req.headers.get('x-forwarded-for') ?? null,
+          user_agent: req.headers.get('user-agent') ?? null,
+        }).then(() => {}).catch(() => {});
+        return result;
+      }
+
+      const content = result.choices?.[0]?.message?.content ?? '';
+      const usage = result.usage ?? {};
+      const duracaoMs = Date.now() - start;
+
+      // Log assíncrono
+      sbAdmin.from('usage_log').insert({
+        user_id: userId,
+        tipo: 'ia_request',
+        acao: 'chat',
+        provider,
+        tokens_input: usage.prompt_tokens ?? 0,
+        tokens_output: usage.completion_tokens ?? 0,
+        duracao_ms: duracaoMs,
+        meta: { model, modo: 'chat' },
+        ip: req.headers.get('x-forwarded-for') ?? null,
+        user_agent: req.headers.get('user-agent') ?? null,
+      }).then(() => {}).catch(() => {});
+
+      return json({
+        content,
+        provider,
+        model,
+        tokensInput: usage.prompt_tokens ?? 0,
+        tokensOutput: usage.completion_tokens ?? 0,
+        tokensTotal: (usage.prompt_tokens ?? 0) + (usage.completion_tokens ?? 0),
+        custoUSD: 0,
+        duracaoMs,
+        modo: 'chat',
+      });
+    }
+
+    // ── SERMON MODE: fluxo completo com esboço ─────────────────────────────────
 
     // ── Carregar config global do Agente Ministerial ──
     let ministerialConfig: {
@@ -753,19 +822,23 @@ serve(async (req) => {
     // Montar prompt do sistema
     const promptParts: string[] = [];
 
-    // 1. Prompt customizado do Agente Ministerial (prioridade)
-    if (ministerialConfig.systemPrompt.trim()) {
+    // 1. Prompt enviado pelo frontend (via systemPrompt field)
+    if (systemPrompt?.trim()) {
+      promptParts.push(systemPrompt.trim());
+    }
+    // 2. Prompt customizado do Agente Ministerial (do banco, fallback)
+    else if (ministerialConfig.systemPrompt.trim()) {
       promptParts.push(ministerialConfig.systemPrompt.trim());
     }
-    // 2. Prompt do agente específico (se houver)
+    // 3. Prompt do agente específico (se houver)
     if (agentPrompt) {
       promptParts.push(agentPrompt);
     }
-    // 3. System append (instruções extras)
+    // 4. System append (instruções extras — contexto de esboço)
     if (systemAppend) {
       promptParts.push(systemAppend);
     }
-    // 4. Fallback: base default
+    // 5. Fallback: base default
     if (promptParts.length === 0) {
       promptParts.push(SYSTEM_BASE);
     }

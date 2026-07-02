@@ -23,37 +23,36 @@ export type ChatModo = 'chat' | 'sermon';
 
 // Padrões que ACTIVAM o modo sermon
 const SERMON_TRIGGERS = [
-  // Português
-  /^(crie|monte|prepare|desenvolva|faça|gere|criar|montar|preparar|desenvolver|fazer|gerar)\b.*(sermão|sermao|esboço|esboco|pregação|pregacao|mensagem|estudo|study|sermon)/i,
-  /^(crie|monte|prepare|desenvolva|faça|gere)\b/i,
-  /\b(criar|montar|preparar|desenvolver|fazer|gerar)\b.*\b(sermão|sermao|esboço|esboco|pregação|pregacao|mensagem|estudo|discurso|palestra)/i,
+  // Português - SEMPRE junto com palavras de pregação
+  /^(crie|monte|prepare|desenvolva|faça|gere|criar|montar|preparar|desenvolver|fazer|gerar)\b.*(sermão|sermao|esboço|esboco|pregação|pregacao|mensagem|estudo|study|sermon|pregador)/i,
+  /\b(criar|montar|preparar|desenvolver|fazer|gerar)\b.*\b(sermão|sermao|esboço|esboco|pregação|pregacao|mensagem|estudo|discurso|palavra|pregador)/i,
   /\b(serie|série|sequência|sequencia)\b.*\b(mensagem|pregação|esboço)/i,
   /\b(estudo\b.*\bcélula|célula\b.*\bestudo|célula\b)/i,
-  /\b(planning|planeje|planejar|planeamento)\b/i,
+  /\b(planning|planeje|planejar|planeamento)\b.*\b(pregação|sermão|esboço)/i,
   /\b(material\b.*\bpregação|pregação\b.*\bmaterial)\b/i,
+  /\b(esboço|esboco)\b/i,
 
   // English (fallback)
   /\b(create|make|build|prepare|generate)\b.*\b(sermon|outline|message|study|preaching)\b/i,
-  /\bdevelop\b.*\bsermon/i,
 ];
 
 // Padrões que SÃO perguntas rápidas (chat) — mesmo que contenham keywords ambíguas
 const CHAT_TRIGGERS = [
+  // Perguntas diretas com ?
+  /\?$/,
   // Quem/o que/onde/por que/como
   /^(quem|o que|oq|onde|por que|porquê|como|qual|quando)\b/i,
   /\b(o que|oq|quem|onde|por que|porque|como|qual|quando)\s/i,
-  // Explicar/definir/traduzir/interpretar
-  /^(explique|defina|traduza|interprete|resuma|resuma-me|diga-me|me explique)/i,
+  // Explicar/definir/traduzir/interpretar/resumir
+  /^(explique|defina|traduza|interprete|resuma|resuma-me|diga-me|me explique|dê-me|dme)/i,
   /\b(explique|defina|traduza|interprete|resuma|diga-me|me explique)\b/i,
   // Versículos específicos
   /\b(joão|mateus|marcos|lucas|atos|romanos|hebreu|apocalipse|sl|jó|joel|amós|gn|ex|lv|nm|dt|js|2sam|1rs|2rs|1cr|2cr|ne|et|sl|pr|ec|ct|is|jr|lm|ez|dn|os|jl|am|ob|jon|mq|na|hc|hg|zc|ml|mt|mc|lc|jo|at|rm|1co|2co|gl|ef|fp|cl|1ts|2ts|1ti|2ti|tit|fm|hb|tg|1pe|2pe|1jo|2jo|3jo|jd|ap)\s+\d+[\s:,]\d+/i,
   /\b(versículo|versiculo|capítulo|capitulo)\b/i,
   // Pesquisar/comparar/contrastar
-  /\b(pesquise|busque|encontre|compare|contraste)\b/i,
-  // Perguntas diretas com ponto de interrogação
-  /^[^a-zA-ZáàâãéèêíïóôõúüÁÀÂÃÉÈÊÍÏÓÔÕÚÜ]*.+\?$/,
+  /\b(pesquise|busque|encontre|compare|contraste|pesquisa)\b/i,
   // English
-  /\b(who is|who was|what is|what was|where is|where was|why is|how to|how does|explain|define|translate)\b/i,
+  /\b(who is|who was|what is|what was|where is|where was|why is|how to|how does|explain|define|translate|give me|tell me)\b/i,
 ];
 
 export interface IntentResult {
@@ -84,13 +83,18 @@ export function detectarIntencao(mensagem: string): IntentResult {
     }
   }
 
-  // 3. Heurística de tamanho: mensagens curtas (< 15 palavras) → chat
+  // 3. Heurística de tamanho: mensagens curtas (< 10 palavras) → chat
   const palavras = texto.split(/\s+/);
-  if (palavras.length < 15) {
+  if (palavras.length < 10) {
     return { modo: 'chat', motivo: 'mensagem_curta' };
   }
 
-  // 4. Ambíguo mas potencialmente sermon: default para chat
-  // (o usuário pode refinar no chat se precisar)
+  // 4. Mensagens longas (> 30 palavras) sem padrão claro: ainda chat
+  // (evita criar esboço por engano em conversas longas)
+  if (palavras.length > 30) {
+    return { modo: 'chat', motivo: 'conversa_longa' };
+  }
+
+  // 5. Ambíguo: default para chat
   return { modo: 'chat', motivo: 'default' };
 }
