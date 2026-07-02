@@ -135,10 +135,9 @@ export class OpenAIProvider implements AIProvider {
     const inicioMs = Date.now();
     const querStream = req.stream === true && typeof req.onChunk === "function";
 
-    // Pega JWT da sessao atual (Edge Function exige Authorization)
+    // Pega JWT da sessao atual — agora funciona anônimo (app sem login)
     const { data: { session } } = await sb.auth.getSession();
-    const jwt = session?.access_token;
-    if (!jwt) throw new AIError("Sessao expirada. Faca login novamente.", "sem-chave", "openai");
+    const jwt = session?.access_token ?? null;
 
     const supabaseUrl = (import.meta.env.VITE_SUPABASE_URL as string | undefined) ?? "";
     const anonKey = (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined) ?? "";
@@ -153,13 +152,15 @@ export class OpenAIProvider implements AIProvider {
       agente_id: (req as { agenteId?: string }).agenteId ?? null,
     });
 
+    const fetchHeaders: Record<string, string> = {
+      "Content-Type": "application/json",
+      "apikey": anonKey,
+    };
+    if (jwt) fetchHeaders["Authorization"] = `Bearer ${jwt}`;
+
     const fetchOpts: RequestInit = {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${jwt}`,
-        "apikey": anonKey,
-      },
+      headers: fetchHeaders,
       body,
       signal: req.signal,
     };
