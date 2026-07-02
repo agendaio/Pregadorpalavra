@@ -309,20 +309,52 @@ export function ChatContainer({ onTogglePanel, onEsboçoPending }: ChatContainer
         }));
 
         const timeoutId = window.setTimeout(() => controller.abort(), 90_000);
-        const vercelRes = await fetch('/api/chat-fast', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-stream': 'true' },
-          body: JSON.stringify({ messages: messagesForApi, systemPrompt, temperature: 0.7, maxTokens: 600 }),
-          signal: controller.signal,
-        });
+        let chatRes: Response | null = null;
+        try {
+          chatRes = await fetch('/api/chat-fast', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-stream': 'true' },
+            body: JSON.stringify({ messages: messagesForApi, systemPrompt, temperature: 0.7, maxTokens: 600 }),
+            signal: controller.signal,
+          });
+        } catch { /* rede falhou — cai pro fallback abaixo */ }
+
+        // Fallback: Supabase ai-chat (modo chat) — cobre dev local (Vite não
+        // serve /api/*) e qualquer indisponibilidade da função Vercel.
+        if (!chatRes || !chatRes.ok) {
+          const supabaseLib = await import('@/lib/supabase');
+          const sb = supabaseLib.supabase();
+          const { data: sessData } = await sb?.auth.getSession() ?? {};
+          const userToken = (sessData?.session as { access_token?: string } | null | undefined)?.access_token;
+          const token = userToken ?? supabaseLib.SUPABASE_ANON_KEY;
+          if (!token) throw new Error('Não autenticado');
+
+          chatRes = await fetch(`${supabaseLib.SUPABASE_URL}/functions/v1/ai-chat`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+              'apikey': supabaseLib.SUPABASE_ANON_KEY,
+            },
+            body: JSON.stringify({
+              messages: messagesForApi,
+              stream: true,
+              temperature: 0.7,
+              maxTokens: 600,
+              modo: 'chat',
+              systemPrompt,
+            }),
+            signal: controller.signal,
+          });
+        }
         window.clearTimeout(timeoutId);
 
-        if (!vercelRes.ok) {
-          const errData = await vercelRes.json().catch(() => ({})) as { error?: string };
-          throw new Error(errData.error ?? `Erro HTTP ${vercelRes.status}`);
+        if (!chatRes.ok) {
+          const errData = await chatRes.json().catch(() => ({})) as { error?: string; message?: string };
+          throw new Error(errData.message ?? errData.error ?? `Erro HTTP ${chatRes.status}`);
         }
 
-        const acc = await streamSSE(vercelRes, assistantId);
+        const acc = await streamSSE(chatRes, assistantId);
 
         // Salva no cache IndexedDB (24h) + persiste mensagem
         if (acc) {
