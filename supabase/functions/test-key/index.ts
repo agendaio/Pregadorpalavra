@@ -39,6 +39,7 @@ async function runTests(
     else if (provider === 'anthropic') validFormat = k.startsWith('sk-ant-') || k.startsWith('anthropic-');
     else if (provider === 'google') validFormat = k.length > 10;
     else if (provider === 'azure') validFormat = k.length > 10;
+    else if (provider === 'groq') validFormat = k.startsWith('gsk_');
     else validFormat = k.length > 5;
 
     tests.push({
@@ -57,12 +58,16 @@ async function runTests(
   try {
     const t0 = Date.now();
 
-    if (provider === 'openai') {
-      const res = await fetch('https://api.openai.com/v1/chat/completions', {
+    if (provider === 'openai' || provider === 'groq') {
+      const url = provider === 'groq'
+        ? 'https://api.groq.com/openai/v1/chat/completions'
+        : 'https://api.openai.com/v1/chat/completions';
+      const defaultModel = provider === 'groq' ? 'llama-3.3-70b-versatile' : 'gpt-4o-mini';
+      const res = await fetch(url, {
         method: 'POST',
         headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          model: model || 'gpt-4o-mini',
+          model: model || defaultModel,
           messages: [{ role: 'user', content: 'Responda apenas com "OK".' }],
           max_tokens: 10,
           temperature: 0,
@@ -216,7 +221,7 @@ async function runTests(
     success: tests.every((t) => t.passed),
     tests,
     latencyMs: totalLatency,
-    model: model || 'gpt-4o-mini',
+    model: model || (provider === 'groq' ? 'llama-3.3-70b-versatile' : 'gpt-4o-mini'),
   };
 }
 

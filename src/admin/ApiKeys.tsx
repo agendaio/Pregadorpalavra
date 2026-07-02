@@ -69,6 +69,7 @@ const TABS = [
 ];
 
 const PROVIDERS: ProviderMeta[] = [
+  { id: 'groq',      label: 'Groq (grátis)',   logo: '⚡', modelos: [{ id: 'llama-3.3-70b-versatile', label: 'Llama 3.3 70B Versatile' }, { id: 'llama-3.1-8b-instant', label: 'Llama 3.1 8B Instant' }], docsUrl: 'https://console.groq.com/keys' },
   { id: 'openai',    label: 'OpenAI',          logo: '🤖', modelos: [{ id: 'gpt-4o', label: 'GPT-4o' }, { id: 'gpt-4o-mini', label: 'GPT-4o Mini' }, { id: 'gpt-4-turbo', label: 'GPT-4 Turbo' }, { id: 'gpt-3.5-turbo', label: 'GPT-3.5 Turbo' }], docsUrl: 'https://platform.openai.com/api-keys' },
   { id: 'anthropic', label: 'Anthropic Claude',logo: '🧠', modelos: [{ id: 'claude-3-5-sonnet', label: 'Claude 3.5 Sonnet' }, { id: 'claude-3-5-haiku', label: 'Claude 3.5 Haiku' }, { id: 'claude-3-opus', label: 'Claude 3 Opus' }], docsUrl: 'https://console.anthropic.com/settings/keys' },
   { id: 'google',    label: 'Google Gemini',   logo: '💎', modelos: [{ id: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash' }, { id: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro' }, { id: 'gemini-1.5-flash', label: 'Gemini 1.5 Flash' }], docsUrl: 'https://aistudio.google.com/app/apikey' },

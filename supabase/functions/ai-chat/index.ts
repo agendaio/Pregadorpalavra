@@ -103,7 +103,9 @@ interface ChatOptions {
   streaming: boolean;
 }
 
-async function callOpenAI(opts: ChatOptions) {
+// callOpenAI e callGroq usam o mesmo formato de API (Groq é compatível com
+// o schema OpenAI) — só muda a URL base e o rótulo do erro.
+async function callOpenAICompatible(opts: ChatOptions, baseUrl: string, errorLabel: string, errorCode: string) {
   const { apiKey, model, messages, systemContent, maxTokens, temperature, streaming } = opts;
 
   if (streaming) {
@@ -112,7 +114,7 @@ async function callOpenAI(opts: ChatOptions) {
     const stream = new ReadableStream({
       async start(controller) {
         try {
-          const res = await fetch('https://api.openai.com/v1/chat/completions', {
+          const res = await fetch(baseUrl, {
             method: 'POST',
             headers: {
               Authorization: `Bearer ${apiKey}`,
@@ -129,7 +131,7 @@ async function callOpenAI(opts: ChatOptions) {
 
           if (!res.ok) {
             const err = await res.text();
-            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: 'openai_error', message: err.slice(0, 300) })}\n\n`));
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: errorCode, message: err.slice(0, 300) })}\n\n`));
             controller.close();
             return;
           }
@@ -181,7 +183,7 @@ async function callOpenAI(opts: ChatOptions) {
   }
 
   // Non-streaming
-  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+  const res = await fetch(baseUrl, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${apiKey}`,
@@ -197,10 +199,18 @@ async function callOpenAI(opts: ChatOptions) {
 
   if (!res.ok) {
     const err = await res.text();
-    throw new Error(`OpenAI ${res.status}: ${err.slice(0, 300)}`);
+    throw new Error(`${errorLabel} ${res.status}: ${err.slice(0, 300)}`);
   }
 
   return await res.json();
+}
+
+async function callOpenAI(opts: ChatOptions) {
+  return callOpenAICompatible(opts, 'https://api.openai.com/v1/chat/completions', 'OpenAI', 'openai_error');
+}
+
+async function callGroq(opts: ChatOptions) {
+  return callOpenAICompatible(opts, 'https://api.groq.com/openai/v1/chat/completions', 'Groq', 'groq_error');
 }
 
 async function callAzureOpenAI(opts: ChatOptions) {
@@ -500,6 +510,7 @@ async function callProvider(opts: ChatOptions) {
     case 'azure': return await callAzureOpenAI(opts);
     case 'anthropic': return await callAnthropic(opts);
     case 'google': return await callGoogleGemini(opts);
+    case 'groq': return await callGroq(opts);
     default: return await callOpenAI(opts);
   }
 }
@@ -517,8 +528,12 @@ function estimarCusto(provider: string, model: string, tokensInput: number, toke
     'claude-3-haiku': { input: 0.25, output: 1.25 },
     'gemini-1.5-pro': { input: 0, output: 0 },
     'gemini-1.5-flash': { input: 0, output: 0 },
+    // Groq: free tier generoso — custo tratado como 0 pra não estimar valor incorreto.
+    'llama-3.3-70b-versatile': { input: 0, output: 0 },
+    'llama-3.1-8b-instant': { input: 0, output: 0 },
   };
-  const p = precos[model] ?? { input: 0.15, output: 0.6 };
+  const fallback = provider === 'groq' ? { input: 0, output: 0 } : { input: 0.15, output: 0.6 };
+  const p = precos[model] ?? fallback;
   return (tokensInput / 1_000_000) * p.input + (tokensOutput / 1_000_000) * p.output;
 }
 
@@ -683,15 +698,22 @@ serve(async (req) => {
       }
     }
 
-    // Obter API key ativa do banco
+    // Obter API key ativa do banco.
+    // Não filtramos por `provider` aqui: o frontend nunca envia esse campo
+    // explicitamente (sempre cai no default 'openai'), então filtrar por ele
+    // faria a chave ativa de qualquer outro provedor (ex: Groq) nunca ser
+    // encontrada. O admin escolhe qual provedor fica "ativo" — usamos esse.
     const { data: keyData } = await sbAdmin
       .from('api_keys')
       .select('key_ciphertext, provider, modelo_padrao')
       .eq('ativo', true)
-      .eq('provider', provider)
+      .order('atualizado_em', { ascending: false })
+      .limit(1)
       .maybeSingle();
 
     let apiKey = keyData?.key_ciphertext;
+    // provider efetivo: o da chave ativa encontrada, ou o solicitado como fallback
+    const effectiveProviderChat = keyData?.provider ?? provider;
 
     // Fallback: se não houver key no banco, tenta env var (compatibilidade)
     if (!apiKey) {
@@ -699,7 +721,7 @@ serve(async (req) => {
     }
 
     if (!apiKey) {
-      return jsonError(500, 'no_api_key', `Nenhuma chave ${provider} configurada. Solicite ao administrador que cadastre uma chave na aba API Keys do painel admin.`);
+      return jsonError(500, 'no_api_key', `Nenhuma chave de IA configurada. Solicite ao administrador que cadastre uma chave na aba API Keys do painel admin.`);
     }
 
     // ── CHAT MODE: resposta rápida, sem overhead de esboço ─────────────────────
@@ -709,10 +731,12 @@ serve(async (req) => {
       // Prompt leve: usa o que o frontend enviou, ou fallback mínimo
       const systemContent = systemPrompt || systemAppend || SYSTEM_BASE_LIGHT;
 
+      const effectiveModelChat = keyData?.modelo_padrao || model;
+
       const result = await callProvider({
-        provider,
+        provider: effectiveProviderChat,
         apiKey,
-        model,
+        model: effectiveModelChat,
         messages: messages.map((m: { role: string; content: string }) => ({
           role: m.role,
           content: m.content,
@@ -729,9 +753,9 @@ serve(async (req) => {
           user_id: userId,
           tipo: 'ia_request',
           acao: 'chat',
-          provider,
+          provider: effectiveProviderChat,
           duracao_ms: Date.now() - start,
-          meta: { model, stream: true, modo: 'chat' },
+          meta: { model: effectiveModelChat, stream: true, modo: 'chat' },
           ip: req.headers.get('x-forwarded-for') ?? null,
           user_agent: req.headers.get('user-agent') ?? null,
         }).then(() => {}).catch(() => {});
@@ -739,6 +763,9 @@ serve(async (req) => {
         // Intercepta o stream pra popular o cache ao final, sem atrasar
         // nem um milissegundo a entrega ao cliente — cada chunk é repassado
         // imediatamente; a extração de texto acontece em paralelo.
+        // Usa `model` (não effectiveModelChat) pra bater com a chave calculada
+        // no lookup acima — o lookup roda antes de sabermos qual provider/key
+        // está ativo (de propósito, pra não pagar a query no cache-hit).
         const cacheKeyWrite = buildChatCacheKey(model, systemContent, ultimaPerguntaDoUsuario(messages));
         const streamResponse = result as Response;
         let acc = '';
@@ -785,19 +812,19 @@ serve(async (req) => {
         user_id: userId,
         tipo: 'ia_request',
         acao: 'chat',
-        provider,
+        provider: effectiveProviderChat,
         tokens_input: usage.prompt_tokens ?? 0,
         tokens_output: usage.completion_tokens ?? 0,
         duracao_ms: duracaoMs,
-        meta: { model, modo: 'chat' },
+        meta: { model: effectiveModelChat, modo: 'chat' },
         ip: req.headers.get('x-forwarded-for') ?? null,
         user_agent: req.headers.get('user-agent') ?? null,
       }).then(() => {}).catch(() => {});
 
       return json({
         content,
-        provider,
-        model,
+        provider: effectiveProviderChat,
+        model: effectiveModelChat,
         tokensInput: usage.prompt_tokens ?? 0,
         tokensOutput: usage.completion_tokens ?? 0,
         tokensTotal: (usage.prompt_tokens ?? 0) + (usage.completion_tokens ?? 0),
