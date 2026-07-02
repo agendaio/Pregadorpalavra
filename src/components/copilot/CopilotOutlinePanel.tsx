@@ -148,22 +148,22 @@ export function CopilotOutlinePanel({ asBottomSheet = false, onClose, onChangeFo
           )
         )}
         {!asBottomSheet && (
-          <>
-            <button
-              onClick={() => setFullscreen(f => !f)}
-              className="rounded-lg p-1 text-ink-400 hover:bg-ink-100 dark:hover:bg-ink-800"
-              title={fullscreen ? 'Modo normal' : 'Tela cheia'}
-            >
-              {fullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
-            </button>
-            <button
-              onClick={() => onClose?.()}
-              className="rounded-lg p-1 text-ink-400 hover:bg-ink-100 dark:hover:bg-ink-800"
-              title="Fechar painel"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </>
+          <button
+            onClick={() => setFullscreen(f => !f)}
+            className="rounded-lg p-1 text-ink-400 hover:bg-ink-100 dark:hover:bg-ink-800"
+            title={fullscreen ? 'Modo normal' : 'Tela cheia'}
+          >
+            {fullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+          </button>
+        )}
+        {(onClose || asBottomSheet) && (
+          <button
+            onClick={() => onClose?.()}
+            className="rounded-lg p-1 text-ink-400 hover:bg-ink-100 dark:hover:bg-ink-800"
+            title="Fechar painel"
+          >
+            <X className="h-4 w-4" />
+          </button>
         )}
       </div>
 
@@ -555,7 +555,7 @@ export function CopilotOutlinePanel({ asBottomSheet = false, onClose, onChangeFo
   if (asBottomSheet) {
     return (
       <>
-        {/* Overlay */}
+        {/* Overlay — acima da barra de navegação (z-40) pra não vazar clique nela */}
         <AnimatePresence>
           {showPanel && (
             <motion.div
@@ -563,11 +563,13 @@ export function CopilotOutlinePanel({ asBottomSheet = false, onClose, onChangeFo
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => { setShowPanel(false); onClose?.(); }}
-              className="fixed inset-0 z-30 bg-black/20 backdrop-blur-sm md:hidden"
+              className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm md:hidden"
             />
           )}
         </AnimatePresence>
-        {/* Sheet */}
+        {/* Sheet — quase tela cheia, sempre acima da barra de navegação inferior
+            (mesma z-40 do BottomNav causava sobreposição imprevisível dos
+            botões "Editar Slides"/"Apresentar" com o menu) */}
         <AnimatePresence>
           {showPanel && (
             <motion.div
@@ -575,10 +577,10 @@ export function CopilotOutlinePanel({ asBottomSheet = false, onClose, onChangeFo
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-              className="fixed inset-x-0 bottom-0 z-40 flex max-h-[80vh] flex-col rounded-t-3xl border-t border-ink-200/80 bg-paper dark:border-ink-800 dark:bg-sky-50 shadow-2xl md:hidden"
+              className="fixed inset-x-0 bottom-0 top-[max(env(safe-area-inset-top),16px)] z-50 flex flex-col overflow-hidden rounded-t-3xl border-t border-ink-200/80 bg-paper pb-safe dark:border-ink-800 dark:bg-sky-50 shadow-2xl md:hidden"
             >
               {/* Drag handle */}
-              <div className="flex justify-center py-2">
+              <div className="flex flex-shrink-0 justify-center py-2">
                 <div className="h-1 w-10 rounded-full bg-ink-200 dark:bg-ink-700" />
               </div>
               {content}
