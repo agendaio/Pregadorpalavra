@@ -155,6 +155,37 @@ export function AuthPage() {
             </motion.div>
           )}
 
+          {modo === 'login' && (
+            <div className="text-right">
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!email) {
+                    setErroLocal('Digite seu email acima para recuperar a senha');
+                    return;
+                  }
+                  setErroLocal(null);
+                  try {
+                    const { supabase } = await import('@/lib/supabase');
+                    const sb = supabase();
+                    if (!sb) { setErroLocal('Servidor indisponível'); return; }
+                    const { error } = await sb.auth.resetPasswordForEmail(email, {
+                      redirectTo: window.location.origin + '/auth',
+                    });
+                    if (error) throw error;
+                    setErroLocal(null);
+                    alert('Email de recuperação enviado! Verifique sua caixa de entrada.');
+                  } catch (e) {
+                    setErroLocal('Erro ao enviar email: ' + (e as Error).message);
+                  }
+                }}
+                className="text-[12px] text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300"
+              >
+                Esqueci minha senha
+              </button>
+            </div>
+          )}
+
           <button
             type="submit"
             disabled={carregando}
