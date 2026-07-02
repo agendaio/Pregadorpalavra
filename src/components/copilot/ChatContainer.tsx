@@ -68,6 +68,27 @@ function getSaudação(): string {
   return 'Boa noite!';
 }
 
+/** Converte erros técnicos (OpenAI/rede) em mensagem clara em português. */
+function traduzirErroIA(raw: string): string {
+  const m = raw.toLowerCase();
+  if (m.includes('insufficient_quota') || m.includes('exceeded your current quota') || m.includes('429')) {
+    return 'A chave da OpenAI está sem créditos. Adicione saldo em platform.openai.com (Billing) ou cadastre uma chave com créditos no painel admin → API Keys.';
+  }
+  if (m.includes('invalid_api_key') || m.includes('incorrect api key') || m.includes('401')) {
+    return 'A chave da OpenAI é inválida ou foi revogada. Cadastre uma chave válida no painel admin → API Keys.';
+  }
+  if (m.includes('no_api_key') || m.includes('nenhuma chave')) {
+    return 'Nenhuma chave de IA configurada. Cadastre uma chave da OpenAI no painel admin → API Keys.';
+  }
+  if (m.includes('rate_limit') || m.includes('rate limit')) {
+    return 'Muitas requisições em pouco tempo. Aguarde alguns segundos e tente de novo.';
+  }
+  if (m.includes('abort') || m.includes('timeout')) {
+    return 'A resposta demorou demais e foi cancelada. Tente novamente.';
+  }
+  return `Não consegui responder: ${raw}`;
+}
+
 /** Gera chave de cache (mesma fórmula do edge function — precisa bater) */
 function buildCacheKey(systemPrompt: string, lastUserMsg: string): string {
   const norm = (s: string) => s.toLowerCase().trim().replace(/\s+/g, ' ');
@@ -239,22 +260,26 @@ export function ChatContainer({ onTogglePanel, onEsboçoPending }: ChatContainer
           for (const evt of events) {
             const data = evt.replace(/^data:\s*/, '').trim();
             if (!data || data === '[DONE]') continue;
+            // Parse protegido (JSON malformado é ignorado); erro do provedor
+            // é propagado DE FORA do try de parsing, senão seria engolido aqui.
+            let parsed: { content?: string; error?: string; message?: string } | null = null;
             try {
-              const parsed = JSON.parse(data) as { content?: string; error?: string; message?: string };
-              if (parsed.error) throw new Error(parsed.message ?? parsed.error);
-              if (parsed.content) {
-                acc += parsed.content;
-                setStreamContent(prev => prev + parsed.content!);
-                setMensagens(prev => {
-                  const exists = prev.some(m => m.id === assistantId);
-                  if (exists) {
-                    return prev.map(m => m.id === assistantId ? { ...m, content: m.content + parsed.content! } : m);
-                  } else {
-                    return [...prev, { id: assistantId, role: 'assistant' as const, content: acc, timestamp: Date.now() }];
-                  }
-                });
-              }
-            } catch { /* skip */ }
+              parsed = JSON.parse(data) as { content?: string; error?: string; message?: string };
+            } catch { /* fragmento SSE incompleto — ignora */ }
+            if (!parsed) continue;
+            if (parsed.error) { reject(new Error(parsed.message ?? parsed.error)); return; }
+            if (parsed.content) {
+              acc += parsed.content;
+              setStreamContent(prev => prev + parsed!.content!);
+              setMensagens(prev => {
+                const exists = prev.some(m => m.id === assistantId);
+                if (exists) {
+                  return prev.map(m => m.id === assistantId ? { ...m, content: m.content + parsed!.content! } : m);
+                } else {
+                  return [...prev, { id: assistantId, role: 'assistant' as const, content: acc, timestamp: Date.now() }];
+                }
+              });
+            }
           }
         }
       } catch (err) { reject(err); return; }
@@ -445,10 +470,12 @@ export function ChatContainer({ onTogglePanel, onEsboçoPending }: ChatContainer
       setStreamId(null);
       onEsboçoPending?.(false);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Erro desconhecido';
+      const rawMsg = err instanceof Error ? err.message : 'Erro desconhecido';
+      // Traduz erros técnicos da OpenAI em mensagem clara e acionável
+      const msg = traduzirErroIA(rawMsg);
       setError(msg);
       setLoading(false);
-      const errorMsg: ChatMessage = { id: crypto.randomUUID(), role: 'assistant', content: `⚠️ Não consegui responder: ${msg}`, timestamp: Date.now() };
+      const errorMsg: ChatMessage = { id: crypto.randomUUID(), role: 'assistant', content: `⚠️ ${msg}`, timestamp: Date.now() };
       setMensagens(prev => [...prev, errorMsg]);
       await adicionarMensagem(sid, 'assistant', errorMsg.content).catch(() => {});
       setStreamContent('');
@@ -783,10 +810,10 @@ export function ChatContainer({ onTogglePanel, onEsboçoPending }: ChatContainer
 
         <div
           className={cn(
-            'flex items-end gap-1.5 rounded-3xl border bg-white px-3 py-2.5 transition-all',
+            'flex items-end gap-1.5 rounded-3xl border bg-white px-3 py-3 shadow-lg shadow-ink-900/10 transition-all dark:shadow-black/20',
             speech.isListening
-              ? 'border-red-300 ring-2 ring-red-200 dark:border-red-700/60 dark:bg-sky-100/80 dark:ring-red-900/30'
-              : 'border-ink-200 focus-within:border-ink-400 dark:border-ink-700 dark:bg-sky-100/60 dark:focus-within:border-sky-400',
+              ? 'border-red-300 ring-2 ring-red-200 dark:border-red-700/60 dark:bg-sky-100/90 dark:ring-red-900/30'
+              : 'border-ink-200 focus-within:border-ink-400 focus-within:shadow-xl focus-within:shadow-ink-900/15 dark:border-ink-700 dark:bg-sky-100/80 dark:focus-within:border-sky-400',
           )}
         >
           <textarea
@@ -806,7 +833,7 @@ export function ChatContainer({ onTogglePanel, onEsboçoPending }: ChatContainer
             }
             rows={1}
             disabled={speech.isListening}
-            className="flex-1 resize-none bg-transparent px-1 text-[14.5px] leading-relaxed text-ink-900 outline-none placeholder:text-ink-400 disabled:opacity-60 dark:text-ink-900 dark:placeholder:text-ink-500"
+            className="flex-1 resize-none bg-transparent px-1 text-[15px] font-medium leading-relaxed text-ink-900 outline-none placeholder:font-normal placeholder:text-ink-500 disabled:opacity-60 dark:text-ink-900 dark:placeholder:text-ink-600"
             style={{ maxHeight: '160px' }}
           />
 
@@ -816,15 +843,15 @@ export function ChatContainer({ onTogglePanel, onEsboçoPending }: ChatContainer
               type="button"
               onClick={() => (speech.isListening ? speech.stop() : speech.start())}
               className={cn(
-                'flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full transition-all',
+                'flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full transition-all',
                 speech.isListening
                   ? 'bg-red-500 text-white hover:bg-red-600'
-                  : 'text-ink-500 hover:bg-ink-100 hover:text-ink-900 dark:text-sky-700 dark:hover:bg-sky-200 dark:hover:text-sky-900',
+                  : 'text-ink-600 hover:bg-ink-100 hover:text-ink-900 dark:text-sky-700 dark:hover:bg-sky-200 dark:hover:text-sky-900',
               )}
               aria-label={speech.isListening ? 'Concluir gravação' : 'Gravar áudio'}
               title={speech.isListening ? 'Concluir' : 'Falar'}
             >
-              {speech.isListening ? <Square className="h-3.5 w-3.5 fill-current" /> : <Mic className="h-4 w-4" />}
+              {speech.isListening ? <Square className="h-5 w-5 fill-current" /> : <Mic className="h-[22px] w-[22px]" />}
             </button>
           )}
 
@@ -834,14 +861,14 @@ export function ChatContainer({ onTogglePanel, onEsboçoPending }: ChatContainer
             onClick={() => void enviarMensagem()}
             disabled={!input.trim() || loading || speech.isListening}
             className={cn(
-              'flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full transition-all',
+              'flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full transition-all',
               input.trim() && !loading && !speech.isListening
-                ? 'bg-ink-900 text-white hover:bg-ink-800 active:scale-95 dark:bg-ink-900 dark:text-white'
+                ? 'bg-ink-900 text-white shadow-md hover:bg-ink-800 active:scale-95 dark:bg-ink-900 dark:text-white'
                 : 'bg-ink-100 text-ink-400 dark:bg-sky-200 dark:text-sky-400',
             )}
             aria-label="Enviar"
           >
-            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+            {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-[22px] w-[22px]" />}
           </button>
         </div>
         <p className="mt-1.5 text-center text-[10.5px] text-ink-400 dark:text-ink-500">

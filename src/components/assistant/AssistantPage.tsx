@@ -14,6 +14,29 @@ import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 import { useCopilotOutlineStore } from '@/stores/copilotOutline';
 import { construirContextoMemoria } from '@/lib/ai/memory';
 
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+/** Converte erros técnicos (OpenAI/rede) em mensagem clara em português. */
+function traduzirErroIA(raw: string): string {
+  const m = raw.toLowerCase();
+  if (m.includes('insufficient_quota') || m.includes('exceeded your current quota') || m.includes('429')) {
+    return 'A chave da OpenAI está sem créditos. Adicione saldo em platform.openai.com (Billing) ou cadastre uma chave com créditos no painel admin → API Keys.';
+  }
+  if (m.includes('invalid_api_key') || m.includes('incorrect api key') || m.includes('401')) {
+    return 'A chave da OpenAI é inválida ou foi revogada. Cadastre uma chave válida no painel admin → API Keys.';
+  }
+  if (m.includes('no_api_key') || m.includes('nenhuma chave')) {
+    return 'Nenhuma chave de IA configurada. Cadastre uma chave da OpenAI no painel admin → API Keys.';
+  }
+  if (m.includes('rate_limit') || m.includes('rate limit')) {
+    return 'Muitas requisições em pouco tempo. Aguarde alguns segundos e tente de novo.';
+  }
+  if (m.includes('abort') || m.includes('timeout')) {
+    return 'A resposta demorou demais e foi cancelada. Tente novamente.';
+  }
+  return `Não consegui responder: ${raw}`;
+}
+
 // ─── Tipos ─────────────────────────────────────────────────────────────────
 
 interface ChatMessage {
@@ -285,10 +308,10 @@ export function AssistantPage() {
         await aiDB.sessoes.update(currentSessionId, { titulo: tituloAuto });
       }
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Erro desconhecido';
-      console.error('[ai-chat] Erro na stream:', msg);
+      const raw = err instanceof Error ? err.message : 'Erro desconhecido';
+      console.error('[ai-chat] Erro na stream:', raw);
       setMessages((prev) => prev.filter((m) => m.id !== streamId));
-      setError(msg);
+      setError(traduzirErroIA(raw));
     } finally {
       setLoading(false);
     }
@@ -309,7 +332,7 @@ export function AssistantPage() {
 
   const toggleMicrofone = useCallback(() => {
     if (!speech.isSupported) {
-      setError('Seu navegador não suporta reconhecimento de voz. Use Chrome, Edge ou Safari.');
+      setError(traduzirErroIA('Seu navegador não suporta reconhecimento de voz. Use Chrome, Edge ou Safari.'));
       return;
     }
     if (speech.isListening) {
@@ -327,6 +350,8 @@ export function AssistantPage() {
 
   const especialistaAtivo = getSpecialist(especialistaId);
   const temConversa = messages.length > 0;
+  // Quando há especialista ativo mas sem mensagens, vai direto pro chat (não mostra empty state)
+  const mostrarEmptyState = !temConversa && !loading && !especialistaAtivo;
 
   return (
     <div className="flex h-full flex-col bg-white dark:bg-paper-dark">
@@ -458,7 +483,7 @@ export function AssistantPage() {
       {/* ── Conteúdo principal ── */}
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* ── Empty state: 9 cards de especialistas ── */}
-        {!temConversa && !loading ? (
+        {mostrarEmptyState ? (
           <div className="flex-1 overflow-y-auto">
             <div className="mx-auto flex min-h-full max-w-3xl flex-col items-center justify-center px-4 py-8">
               <div className="mb-2 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-100 to-purple-100 dark:from-violet-900/40 dark:to-purple-900/40">
