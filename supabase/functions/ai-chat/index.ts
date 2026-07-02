@@ -76,6 +76,20 @@ function cacheSet(key: string, value: string): void {
   cache.set(key, { value, expires: Date.now() + CACHE_TTL_MS });
 }
 
+// Chave única usada tanto na leitura quanto na escrita — precisa ser
+// EXATAMENTE a mesma fórmula nos dois lugares, senão o cache nunca dá hit.
+function buildChatCacheKey(model: string, systemContent: string, pergunta: string): string {
+  const norm = (s: string) => s.toLowerCase().trim().replace(/\s+/g, ' ');
+  return `${model}|${norm(systemContent).slice(0, 120)}|${norm(pergunta)}`;
+}
+
+function ultimaPerguntaDoUsuario(messages: unknown): string {
+  if (!Array.isArray(messages)) return '';
+  return (messages as Array<{ role: string; content: string }>)
+    .filter((m) => m.role === 'user')
+    .slice(-1)[0]?.content ?? '';
+}
+
 // ─── Provedores ─────────────────────────────────────────────────────────────
 
 interface ChatOptions {
@@ -663,16 +677,11 @@ serve(async (req) => {
     }
 
     // ── CACHE INTELIGENTE (chat mode apenas) ────────────────────────────────
-    // Hash simples da última pergunta do usuário + systemContent (normalizado).
+    // Chave normalizada (modelo + system prompt + última pergunta).
     // Janela: 5 minutos. Tamanho máximo: 200 entradas.
     if (modo === 'chat' && Array.isArray(messages) && messages.length > 0) {
-      const ultimaPergunta = (messages as Array<{ role: string; content: string }>)
-        .filter((m) => m.role === 'user')
-        .slice(-1)[0]?.content ?? '';
-      // Normaliza a chave do cache: lowercase, trim, colapsa espaços
-      const norm = (s: string) => s.toLowerCase().trim().replace(/\s+/g, ' ');
-      const sysBase = systemPrompt || systemAppend || SYSTEM_BASE_LIGHT;
-      const cacheKey = `${model}|${norm(sysBase).slice(0, 120)}|${norm(ultimaPergunta)}`;
+      const sysBaseLookup = systemPrompt || systemAppend || SYSTEM_BASE_LIGHT;
+      const cacheKey = buildChatCacheKey(model, sysBaseLookup, ultimaPerguntaDoUsuario(messages));
       const cached = cacheGet(cacheKey);
       if (cached) {
         // Cache hit — devolve na mesma velocidade do ChatGPT
@@ -752,7 +761,39 @@ serve(async (req) => {
           ip: req.headers.get('x-forwarded-for') ?? null,
           user_agent: req.headers.get('user-agent') ?? null,
         }).then(() => {}).catch(() => {});
-        return result;
+
+        // Intercepta o stream pra popular o cache ao final, sem atrasar
+        // nem um milissegundo a entrega ao cliente — cada chunk é repassado
+        // imediatamente; a extração de texto acontece em paralelo.
+        const cacheKeyWrite = buildChatCacheKey(model, systemContent, ultimaPerguntaDoUsuario(messages));
+        const streamResponse = result as Response;
+        let acc = '';
+        let sseBuffer = '';
+        const decoder = new TextDecoder();
+        const tap = new TransformStream<Uint8Array, Uint8Array>({
+          transform(chunk, controller) {
+            controller.enqueue(chunk);
+            sseBuffer += decoder.decode(chunk, { stream: true });
+            const events = sseBuffer.split('\n\n');
+            sseBuffer = events.pop() ?? '';
+            for (const evt of events) {
+              const data = evt.replace(/^data:\s*/, '').trim();
+              if (!data || data === '[DONE]') continue;
+              try {
+                const parsed = JSON.parse(data) as { content?: string; error?: string };
+                if (parsed.content) acc += parsed.content;
+              } catch { /* skip */ }
+            }
+          },
+          flush() {
+            if (acc) cacheSet(cacheKeyWrite, acc);
+          },
+        });
+
+        return new Response(streamResponse.body?.pipeThrough(tap) ?? null, {
+          status: streamResponse.status,
+          headers: streamResponse.headers,
+        });
       }
 
       const content = result.choices?.[0]?.message?.content ?? '';
@@ -761,12 +802,7 @@ serve(async (req) => {
 
       // ── Salvar no cache para perguntas idênticas (chave normalizada) ──
       if (content && Array.isArray(messages) && messages.length > 0) {
-        const ultimaPergunta = (messages as Array<{ role: string; content: string }>)
-          .filter((m) => m.role === 'user')
-          .slice(-1)[0]?.content ?? '';
-        const norm = (s: string) => s.toLowerCase().trim().replace(/\s+/g, ' ');
-        const sysBase = systemPrompt || systemAppend || SYSTEM_BASE_LIGHT;
-        const cacheKey = `${model}|${norm(sysBase).slice(0, 120)}|${norm(ultimaPergunta)}`;
+        const cacheKey = buildChatCacheKey(model, systemContent, ultimaPerguntaDoUsuario(messages));
         cacheSet(cacheKey, content);
       }
 

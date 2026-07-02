@@ -31,7 +31,7 @@ import { cn, formatarRelativo } from '@/lib/utils';
 import { SelectionMenu } from './SelectionMenu';
 import { FolderPicker } from './FolderPicker';
 import { autoGenerateSlides } from '@/lib/autoGenerateSlides';
-import type { SeleçãoAção } from '@/types/copilotOutline';
+import type { SeleçãoAção, SessionContext, PontoEsboço } from '@/types/copilotOutline';
 
 interface ChatMessage {
   id: string;
@@ -60,7 +60,13 @@ function getSaudação(): string {
   return 'Boa noite!';
 }
 
-export function ChatContainer({ onTogglePanel }: { onTogglePanel?: () => void }) {
+interface ChatContainerProps {
+  onTogglePanel?: () => void;
+  /** Disparado assim que a intenção da mensagem é classificada como sermon — usado para abrir o painel automaticamente, mesmo antes da resposta terminar. */
+  onEsboçoPending?: (pending: boolean) => void;
+}
+
+export function ChatContainer({ onTogglePanel, onEsboçoPending }: ChatContainerProps) {
   const [sessaoId, setSessaoId] = useState<string | null>(null);
   const [mensagens, setMensagens] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
@@ -150,51 +156,57 @@ export function ChatContainer({ onTogglePanel }: { onTogglePanel?: () => void })
   }, []);
 
   // Parse da resposta da IA para auto-popular outline
+  // Acumula tudo num único patch — evita um re-render do painel por campo extraído.
   const parseRespostaParaOutline = useCallback((content: string) => {
     const store = useCopilotOutlineStore.getState();
+    const patch: Partial<SessionContext> = {};
 
     // Título
     const tituloMatch = content.match(/^#?\s*(?:Título|Title)[:\s]+(.+)/im);
     if (tituloMatch && !store.titulo) {
-      store.patchTitulo(tituloMatch[1].trim());
+      patch.titulo = tituloMatch[1].trim();
     }
 
     // Subtítulo
     const subtituloMatch = content.match(/Subtítulo|Subtítulo|Subtitulo[:\s]+(.+)/im);
     if (subtituloMatch && !store.subtitulo) {
-      store.patchSubtitulo(subtituloMatch[1].trim());
+      patch.subtitulo = subtituloMatch[1].trim();
     }
 
     // Tema
     const temaMatch = content.match(/^[*_]?Tema[*_]?[:\s]+(.+)/im);
     if (temaMatch && !store.tema) {
-      store.patchTema(temaMatch[1].trim());
+      patch.tema = temaMatch[1].trim();
     }
 
     // Texto base
     const textoMatch = content.match(/Text[oO]\s*(?:Base|base)[:\s]+(.+)/im);
     if (textoMatch && !store.textoBase) {
-      store.patchTextoBase(textoMatch[1].trim());
+      patch.textoBase = textoMatch[1].trim();
     }
 
     // Pontos — padrão "1. Título do ponto" ou "- Título do ponto"
     const pontoRegex = /^[#]?\s*(?:\d+[.)]\s*|\-\s*)(.+)/gm;
     let match;
+    const novosPontos: PontoEsboço[] = [];
     while ((match = pontoRegex.exec(content)) !== null) {
       const pontoTexto = match[1].trim();
       if (pontoTexto.length > 10 && pontoTexto.length < 200) {
-        const existe = store.pontos.some(p => p.texto === pontoTexto);
+        const existe = store.pontos.some(p => p.texto === pontoTexto) || novosPontos.some(p => p.texto === pontoTexto);
         if (!existe) {
-          store.addPonto(pontoTexto);
+          novosPontos.push({ id: crypto.randomUUID(), texto: pontoTexto, subpontos: [], aplicacoes: [] });
         }
       }
+    }
+    if (novosPontos.length > 0) {
+      patch.pontos = [...store.pontos, ...novosPontos];
     }
 
     // Introdução
     if (content.includes('Introdução') || content.includes('## Introdução')) {
       const introMatch = content.match(/Introdução[:\s]*\n([\s\S]+?)(?=\n##|\n#|$)/i);
       if (introMatch && !store.introducao) {
-        store.patchIntroducao(introMatch[1].trim().slice(0, 500));
+        patch.introducao = introMatch[1].trim().slice(0, 500);
       }
     }
 
@@ -202,8 +214,12 @@ export function ChatContainer({ onTogglePanel }: { onTogglePanel?: () => void })
     if (content.includes('Conclusão') || content.includes('## Conclusão')) {
       const conclMatch = content.match(/Conclus(?:ão|ao)[:\s]*\n([\s\S]+?)(?=\n##|\n#|$)/i);
       if (conclMatch && !store.conclusao) {
-        store.patchConclusao(conclMatch[1].trim().slice(0, 500));
+        patch.conclusao = conclMatch[1].trim().slice(0, 500);
       }
+    }
+
+    if (Object.keys(patch).length > 0) {
+      store.importar(patch);
     }
   }, []);
 
@@ -219,6 +235,9 @@ export function ChatContainer({ onTogglePanel }: { onTogglePanel?: () => void })
 
     // Se ativou sermon mode pela primeira vez, marca visualmente
     if (isSermonMode) setSermonAtivado(true);
+
+    // Abre o painel de esboço imediatamente — não espera a resposta terminar
+    if (isSermonMode) onEsboçoPending?.(true);
 
     // ── 2. Setup de sessão ────────────────────────────────────────────
     let sid = sessaoId;
@@ -356,6 +375,7 @@ export function ChatContainer({ onTogglePanel }: { onTogglePanel?: () => void })
       setLoading(false);
       setStreamContent('');
       setStreamId(null);
+      if (isSermonMode) onEsboçoPending?.(false);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Erro desconhecido';
       setError(msg);
@@ -371,8 +391,9 @@ export function ChatContainer({ onTogglePanel }: { onTogglePanel?: () => void })
       await adicionarMensagem(sid, 'assistant', errorMsg.content);
       setStreamContent('');
       setStreamId(null);
+      if (isSermonMode) onEsboçoPending?.(false);
     }
-  }, [input, loading, sessaoId, mensagens, streamId, parseRespostaParaOutline, outline]);
+  }, [input, loading, sessaoId, mensagens, streamId, parseRespostaParaOutline, outline, onEsboçoPending]);
 
   const cancelarStream = () => {
     abortRef.current?.abort();
