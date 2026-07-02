@@ -20,7 +20,7 @@ import {
   Send, Sparkles, Loader2, RotateCcw, Trash2, Copy, CheckCheck,
   AlertCircle, Plus, MessageSquare, ChevronLeft, ChevronRight,
   BookOpen, ArrowRight, PanelRightOpen, Share2, Wand2, Download,
-  Pencil,
+  Pencil, Mic, MicOff, Square, X,
 } from 'lucide-react';
 import { SYSTEM_PROMPT, SYSTEM_PROMPT_CHAT, SERMON_PARSING_INSTRUCTION } from '@/lib/ai/prompt';
 import { construirContextoMemoria } from '@/lib/ai/memory';
@@ -36,7 +36,9 @@ import type { Sessao } from '@/lib/ai';
 import { cn, formatarRelativo } from '@/lib/utils';
 import { SelectionMenu } from './SelectionMenu';
 import { FolderPicker } from './FolderPicker';
+import { MarkdownRenderer } from './MarkdownRenderer';
 import { autoGenerateSlides } from '@/lib/autoGenerateSlides';
+import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 import type { SeleçãoAção, SessionContext, PontoEsboço } from '@/types/copilotOutline';
 
 interface ChatMessage {
@@ -85,6 +87,21 @@ export function ChatContainer({ onTogglePanel, onEsboçoPending }: ChatContainer
   const [error, setError] = useState<string | null>(null);
   const [streamContent, setStreamContent] = useState('');
   const [streamId, setStreamId] = useState<string | null>(null);
+
+  // ── Gravação de voz (Web Speech API) ──────────────────────────────────
+  const speech = useSpeechRecognition('pt-BR');
+  // Quando o usuário para de gravar, coloca o texto no input (pode editar)
+  useEffect(() => {
+    if (!speech.isListening && speech.transcript) {
+      setInput(prev => {
+        const novo = speech.transcript.trim();
+        if (!novo) return prev;
+        return prev ? prev + ' ' + novo : novo;
+      });
+      // Limpa o buffer depois de jogar pro input
+      window.setTimeout(() => speech.reset(), 100);
+    }
+  }, [speech.isListening]); // eslint-disable-line react-hooks/exhaustive-deps
   const [sidebarAberta, setSidebarAberta] = useState(false);
   const [copiadoId, setCopiadoId] = useState<string | null>(null);
   const [improvingId, setImprovingId] = useState<string | null>(null);
@@ -601,7 +618,31 @@ export function ChatContainer({ onTogglePanel, onEsboçoPending }: ChatContainer
               )}
             >
               <div className="prose prose-sm dark:prose-invert max-w-none">
-                <MarkdownRenderer content={msg.content} />
+                <MarkdownRenderer
+                  content={msg.content}
+                  onCopySection={(text) => {
+                    navigator.clipboard.writeText(text).catch(() => {});
+                  }}
+                  onShareSection={(text) => {
+                    if (navigator.share) {
+                      navigator.share({ text }).catch(() => {});
+                    } else {
+                      navigator.clipboard.writeText(text).catch(() => {});
+                    }
+                  }}
+                  onAddSectionToOutline={(text, title) => {
+                    // Adiciona o conteúdo da seção como ponto/observação no esboço atual
+                    const store = useCopilotOutlineStore.getState();
+                    const novoPonto = {
+                      id: crypto.randomUUID(),
+                      texto: `${title}\n\n${text}`.trim(),
+                      subpontos: [],
+                      aplicacoes: [],
+                    };
+                    store.importar({ pontos: [...store.pontos, novoPonto] });
+                    void autoGenerateSlides(store).catch(() => {});
+                  }}
+                />
               </div>
 
               {msg.role === 'assistant' && (
@@ -719,9 +760,6 @@ export function ChatContainer({ onTogglePanel, onEsboçoPending }: ChatContainer
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
           </button>
         </div>
-        <p className="mt-1.5 text-center text-[10.5px] text-ink-400">
-          {modo === 'chat' ? 'Resposta rápida — sem contexto de esboço.' : 'Modo pregação — criando esboço.'} Verifique sempre as referências bíblicas.
-        </p>
       </div>
 
       {/* Selection menu */}
@@ -857,102 +895,4 @@ function Greeting({ onSugestão }: { onSugestão: (s: string) => void }) {
   );
 }
 
-// ─── Markdown renderer simples ─────────────────────────────────────────────
-
-function MarkdownRenderer({ content }: { content: string }) {
-  const parts = parseMarkdown(content);
-  return (
-    <div className="space-y-2">
-      {parts.map((part, i) => {
-        if (part.type === 'h1') return (
-          <h1 key={i} className="mt-3 mb-1 text-[17px] font-bold tracking-tight text-ink-900 dark:text-white border-b border-ink-200 dark:border-ink-700 pb-1.5">
-            {part.text}
-          </h1>
-        );
-        if (part.type === 'h2') return (
-          <h2 key={i} className="mt-2 text-[15px] font-semibold text-indigo-700 dark:text-indigo-300">
-            {part.text}
-          </h2>
-        );
-        if (part.type === 'h3') return (
-          <h3 key={i} className="text-[13.5px] font-semibold text-emerald-700 dark:text-emerald-400">
-            {part.text}
-          </h3>
-        );
-        if (part.type === 'li') return (
-          <li key={i} className="ml-4 list-disc text-[13px] text-ink-700 dark:text-ink-200 leading-relaxed">
-            {part.text}
-          </li>
-        );
-        if (part.type === 'bold') return <strong key={i} className="font-semibold text-ink-900 dark:text-white">{part.text}</strong>;
-        if (part.type === 'italic') return <em key={i} className="italic text-ink-600 dark:text-ink-300">{part.text}</em>;
-        if (part.type === 'code') return (
-          <code key={i} className="rounded bg-ink-100 px-1.5 py-0.5 font-mono text-[12px] text-ink-800 dark:bg-ink-800 dark:text-ink-200">
-            {part.text}
-          </code>
-        );
-        if (part.type === 'ref') return (
-          <span key={i} className="inline-block rounded bg-amber-50 px-1.5 py-0.5 font-mono text-[12px] font-medium text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
-            {part.text}
-          </span>
-        );
-        if (part.type === 'blank') return null;
-        return (
-          <p key={i} className="text-[13.5px] leading-relaxed text-ink-700 dark:text-ink-200">
-            {part.text}
-          </p>
-        );
-      })}
-    </div>
-  );
-}
-
-function parseMarkdown(content: string): Array<{ type: string; text: string }> {
-  const parts: Array<{ type: string; text: string }> = [];
-  const lines = content.split('\n');
-  let inList = false;
-
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (!trimmed) {
-      if (inList) { inList = false; parts.push({ type: 'blank', text: '' }); }
-      continue;
-    }
-    if (trimmed.startsWith('# ')) {
-      parts.push({ type: 'h1', text: trimmed.slice(2).replace(/\*\*(.+?)\*\*/g, '$1') });
-    } else if (trimmed.startsWith('## ')) {
-      parts.push({ type: 'h2', text: trimmed.slice(3).replace(/\*\*(.+?)\*\*/g, '$1') });
-    } else if (trimmed.startsWith('### ')) {
-      parts.push({ type: 'h3', text: trimmed.slice(4).replace(/\*\*(.+?)\*\*/g, '$1') });
-    } else if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
-      parts.push({ type: 'li', text: trimmed.slice(2) });
-      inList = true;
-    } else if (/^\d+\)\s/.test(trimmed)) {
-      parts.push({ type: 'li', text: trimmed.replace(/^\d+\)\s/, '') });
-      inList = true;
-    } else {
-      if (inList) inList = false;
-      let processed = trimmed
-        .replace(/\*\*(.+?)\*\*/g, '§§bold§§$1§§endbold§§')
-        .replace(/\*(.+?)\*/g, '§§italic§§$1§§enditalic§§')
-        .replace(/`(.+?)`/g, '§§code§§$1§§endcode§§');
-      processed = processed.replace(/([\w\s]+:\s*)([\d]+[,:;\s\d]+)/g, '§§ref§§$1$2§§endref§§');
-      // O split precisa incluir também os marcadores de fechamento — senão
-      // "§§endref§§" fica colado no texto e aparece cru na tela.
-      const segments = processed.split(/§§(bold|endbold|italic|enditalic|code|endcode|ref|endref)§§/);
-      let currentType = 'text';
-      for (const seg of segments) {
-        if (seg === 'bold') { currentType = 'bold'; continue; }
-        if (seg === 'endbold') { currentType = 'text'; continue; }
-        if (seg === 'italic') { currentType = 'italic'; continue; }
-        if (seg === 'enditalic') { currentType = 'text'; continue; }
-        if (seg === 'code') { currentType = 'code'; continue; }
-        if (seg === 'endcode') { currentType = 'text'; continue; }
-        if (seg === 'ref') { currentType = 'ref'; continue; }
-        if (seg === 'endref') { currentType = 'text'; continue; }
-        if (seg) parts.push({ type: currentType, text: seg });
-      }
-    }
-  }
-  return parts;
-}
+// ─── Markdown renderer — agora em ./MarkdownRenderer.tsx ────────────────────
