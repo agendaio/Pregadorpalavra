@@ -9,7 +9,6 @@ import {
 import { supabase, SUPABASE_ANON_KEY } from '@/lib/supabase';
 import { aiDB } from '@/lib/ai';
 import { SPECIALISTS, getSpecialist, type Specialist } from '@/lib/ai/specialists';
-import { useUIStore } from '@/stores/ui';
 import { cn, formatarRelativo } from '@/lib/utils';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 import { useCopilotOutlineStore } from '@/stores/copilotOutline';
@@ -67,9 +66,10 @@ export function AssistantPage() {
   // ── Sessão: criar / carregar ──
 
   const criarSessao = useCallback(async (espId: string | null) => {
+    const esp = getSpecialist(espId);
     const sessao: ChatSession = {
       id: crypto.randomUUID(),
-      titulo: 'Nova conversa',
+      titulo: esp ? `${esp.icon} ${esp.nome}` : 'Nova conversa',
       especialistaId: espId,
       createdAt: Date.now(),
       updatedAt: Date.now(),
@@ -314,8 +314,7 @@ export function AssistantPage() {
     }
     if (speech.isListening) {
       speech.stop();
-      // O transcript completo vai pra textarea ao final (onend já faz isso)
-      // mas garantimos também que interimTranscript seja concatenado
+      // Ao concluir: junta transcript final + interim (caso ainda tenha) → vai pra textarea editável
       const full = [speech.transcript, speech.interimTranscript].filter(Boolean).join(' ').trim();
       if (full) {
         setInput((prev) => (prev ? prev + ' ' : '') + full);
@@ -325,14 +324,6 @@ export function AssistantPage() {
       speech.start();
     }
   }, [speech]);
-
-  // Quando o recognition para sozinho (timeout/silêncio), preencher input
-  useEffect(() => {
-    if (!speech.isListening && speech.transcript) {
-      // não auto-preenche — só preenche quando o user clica em Concluir/Pra parar
-      // (efeito ChatGPT: ele edita antes de enviar)
-    }
-  }, [speech.isListening]);
 
   const especialistaAtivo = getSpecialist(especialistaId);
   const temConversa = messages.length > 0;
@@ -616,10 +607,10 @@ export function AssistantPage() {
             >
               <textarea
                 ref={inputRef}
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
+                value={speech.isListening ? (speech.transcript + (speech.interimTranscript ? ' ' + speech.interimTranscript : '')) : input}
+                onChange={(e) => !speech.isListening && setInput(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
+                  if (e.key === 'Enter' && !e.shiftKey && !speech.isListening) {
                     e.preventDefault();
                     void enviarMensagem();
                   }
@@ -630,26 +621,30 @@ export function AssistantPage() {
                     : 'Pergunte sobre a Bíblia, sermões, personagens…'
                 }
                 rows={1}
-                className="flex-1 resize-none bg-transparent px-1 text-[14.5px] leading-snug text-ink-900 outline-none placeholder:text-ink-400 dark:text-white dark:placeholder:text-ink-500"
+                disabled={speech.isListening}
+                className={cn(
+                  'flex-1 resize-none bg-transparent px-1 text-[14.5px] leading-snug outline-none',
+                  speech.isListening
+                    ? 'cursor-default text-red-900 placeholder:text-red-400/70 dark:text-red-100'
+                    : 'text-ink-900 placeholder:text-ink-400 dark:text-white dark:placeholder:text-ink-500',
+                )}
                 style={{ maxHeight: '180px' }}
               />
 
               {/* Mic button (esquerda do send, estilo ChatGPT) */}
-              {!input.trim() && (
+              {!input.trim() && !speech.isListening && (
                 <button
                   onClick={toggleMicrofone}
                   disabled={loading}
-                  aria-label={speech.isListening ? 'Parar gravação' : 'Gravar áudio'}
+                  aria-label="Gravar áudio"
                   className={cn(
                     'flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full transition-all',
-                    speech.isListening
-                      ? 'bg-red-500 text-white hover:bg-red-600'
-                      : 'text-ink-500 hover:bg-ink-100 hover:text-ink-900 dark:text-ink-400 dark:hover:bg-ink-800 dark:hover:text-white',
+                    'text-ink-500 hover:bg-ink-100 hover:text-ink-900 dark:text-ink-400 dark:hover:bg-ink-800 dark:hover:text-white',
                     loading && 'opacity-50',
                   )}
                 >
                   {speech.isSupported ? (
-                    speech.isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />
+                    <Mic className="h-4 w-4" />
                   ) : (
                     <MicOff className="h-4 w-4 opacity-50" />
                   )}
@@ -659,11 +654,11 @@ export function AssistantPage() {
               {/* Send button */}
               <button
                 onClick={() => void enviarMensagem()}
-                disabled={!input.trim() || loading}
+                disabled={!input.trim() || loading || speech.isListening}
                 aria-label="Enviar"
                 className={cn(
                   'flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full transition-all',
-                  input.trim() && !loading
+                  input.trim() && !loading && !speech.isListening
                     ? 'bg-ink-900 text-white hover:bg-ink-800 dark:bg-white dark:text-ink-900 dark:hover:bg-ink-200'
                     : 'bg-ink-100 text-ink-300 dark:bg-ink-800 dark:text-ink-600',
                 )}
