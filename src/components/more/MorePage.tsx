@@ -81,10 +81,6 @@ export function MorePage() {
       <div className="flex-1 overflow-y-auto pb-32">
         <div className="mx-auto max-w-2xl space-y-6 px-4 py-5">
 
-          {/* Card de login — só aparece quando deslogado */}
-          {!user && (
-            <LoginPromoCard />
-          )}
           {grupos.filter(g => g.itens.length > 0).map((g) => (
             <section key={g.titulo}>
               <h2 className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-500 dark:text-ink-400">
@@ -150,8 +146,13 @@ export function MorePage() {
             </section>
           ))}
 
+          {/* Card de login — aparece no final quando deslogado */}
+          {!user && (
+            <LoginPromoCard />
+          )}
+
           <div className="pb-4 text-center text-[11px] text-ink-400 dark:text-ink-500">
-            Pregador OS Â· Sistema Operacional para Pregadores
+            Pregador OS · Sistema Operacional para Pregadores
           </div>
         </div>
       </div>
