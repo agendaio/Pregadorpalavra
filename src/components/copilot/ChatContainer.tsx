@@ -17,9 +17,9 @@ import {
   AlertCircle, Plus, MessageSquare, ChevronLeft, ChevronRight,
   BookOpen, ArrowRight, PanelRightOpen,
 } from 'lucide-react';
-import { openaiProvider } from '@/lib/ai/openai';
-import { SYSTEM_PROMPT } from '@/lib/ai/prompt';
+import { SYSTEM_PROMPT, SYSTEM_PROMPT_CHAT, SERMON_PARSING_INSTRUCTION } from '@/lib/ai/prompt';
 import { construirContextoMemoria } from '@/lib/ai/memory';
+import { detectarIntencao } from '@/lib/ai/intent';
 import { useCopilotOutlineStore } from '@/stores/copilotOutline';
 import {
   aiDB, listarSessoesRecentes, adicionarMensagem,
@@ -70,6 +70,8 @@ export function ChatContainer({ onTogglePanel }: { onTogglePanel?: () => void })
   const [streamId, setStreamId] = useState<string | null>(null);
   const [sidebarAberta, setSidebarAberta] = useState(false);
   const [copiadoId, setCopiadoId] = useState<string | null>(null);
+  const [modo, setModo] = useState<'chat' | 'sermon'>('chat');
+  const [sermonAtivado, setSermonAtivado] = useState(false);
   const [selection, setSelection] = useState<{
     text: string;
     position: { x: number; y: number };
@@ -210,7 +212,15 @@ export function ChatContainer({ onTogglePanel }: { onTogglePanel?: () => void })
     const textoFinal = (texto ?? input).trim();
     if (!textoFinal || loading) return;
 
-    // Garante sessão
+    // ── 1. Detectar intenção ───────────────────────────────────────────
+    const intent = detectarIntencao(textoFinal);
+    const isSermonMode = intent.modo === 'sermon';
+    setModo(isSermonMode ? 'sermon' : 'chat');
+
+    // Se ativou sermon mode pela primeira vez, marca visualmente
+    if (isSermonMode) setSermonAtivado(true);
+
+    // ── 2. Setup de sessão ────────────────────────────────────────────
     let sid = sessaoId;
     if (!sid) {
       const sessao = await obterOuCriarSessao();
@@ -232,53 +242,67 @@ export function ChatContainer({ onTogglePanel }: { onTogglePanel?: () => void })
     setStreamContent('');
     setStreamId(crypto.randomUUID());
 
-    // Persist user message
     await adicionarMensagem(sid, 'user', textoFinal);
     await atualizarSessao(sid, {});
 
-    // Build messages array
     const todasMensagens = [...mensagens, userMsg];
 
-      // Timeout 60s — streaming pode demorar na primeira chamada
-      const controller = new AbortController();
-      const timeoutId = window.setTimeout(() => controller.abort(), 60_000);
-      abortRef.current = controller;
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), 60_000);
+    abortRef.current = controller;
 
-      try {
-        const supabaseLib = await import('@/lib/supabase');
-        const sb = supabaseLib.supabase();
-        const { data: sessData } = await sb?.auth.getSession() ?? {};
-        const userToken = (sessData?.session as { access_token?: string } | null | undefined)?.access_token;
-        // Usa token do usuário logado; se não estiver logado, usa ANON_KEY (funciona com RLS configurado)
-        const token = userToken ?? supabaseLib.SUPABASE_ANON_KEY;
-        if (!token) throw new Error('Não autenticado');
+    try {
+      const supabaseLib = await import('@/lib/supabase');
+      const sb = supabaseLib.supabase();
+      const { data: sessData } = await sb?.auth.getSession() ?? {};
+      const userToken = (sessData?.session as { access_token?: string } | null | undefined)?.access_token;
+      const token = userToken ?? supabaseLib.SUPABASE_ANON_KEY;
+      if (!token) throw new Error('Não autenticado');
 
+      const supabaseUrl = supabaseLib.SUPABASE_URL;
+
+      // ── 3. Construir prompt baseado no modo ──────────────────────────
+      let systemPrompt: string;
+      let systemAppend: string;
+
+      if (isSermonMode) {
+        // Sermon mode: prompt completo + contexto do esboço + instrução de parsing
         const contextoMemoria = construirContextoMemoria(useCopilotOutlineStore.getState());
-        const supabaseUrl = supabaseLib.SUPABASE_URL;
+        systemPrompt = SYSTEM_PROMPT;
+        systemAppend = contextoMemoria
+          ? `${contextoMemoria}\n\n${SERMON_PARSING_INSTRUCTION}`
+          : SERMON_PARSING_INSTRUCTION;
+      } else {
+        // Chat mode: prompt leve, sem contexto, sem parsing
+        systemPrompt = SYSTEM_PROMPT_CHAT;
+        systemAppend = '';
+      }
 
-        const messagesForApi: Array<{ role: 'user' | 'assistant' | 'system'; content: string }> = [
-          ...(contextoMemoria ? [{ role: 'system' as const, content: contextoMemoria }] : []),
-          { role: 'system' as const, content: SYSTEM_PROMPT },
-          ...todasMensagens.map(m => ({ role: m.role as 'user' | 'assistant', content: m.content })),
-        ];
+      const messagesForApi: Array<{ role: 'user' | 'assistant' | 'system'; content: string }> = [
+        { role: 'system' as const, content: systemPrompt },
+        ...todasMensagens.map(m => ({ role: m.role as 'user' | 'assistant', content: m.content })),
+      ];
 
-        const res = await fetch(`${supabaseUrl}/functions/v1/ai-chat`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-            'apikey': supabaseLib.SUPABASE_ANON_KEY,
-          },
-          body: JSON.stringify({
-            messages: messagesForApi.map(m => ({ role: m.role, content: m.content })),
-            stream: true,
-            temperature: 0.7,
-            maxTokens: 2500,
-            session_context: useCopilotOutlineStore.getState(),
-          }),
-          signal: controller.signal,
-        });
-        window.clearTimeout(timeoutId);
+      // ── 4. Enviar para a Edge Function ────────────────────────────
+      const res = await fetch(`${supabaseUrl}/functions/v1/ai-chat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+          'apikey': supabaseLib.SUPABASE_ANON_KEY,
+        },
+        body: JSON.stringify({
+          messages: messagesForApi.map(m => ({ role: m.role, content: m.content })),
+          stream: true,
+          temperature: 0.7,
+          maxTokens: 2500,
+          modo: isSermonMode ? 'sermon' : 'chat',
+          // Só manda contexto se for sermon mode
+          ...(isSermonMode ? { session_context: useCopilotOutlineStore.getState(), systemAppend } : { systemAppend }),
+        }),
+        signal: controller.signal,
+      });
+      window.clearTimeout(timeoutId);
 
       if (!res.ok) {
         const errData = await res.json().catch(() => ({})) as { message?: string };
@@ -320,10 +344,12 @@ export function ChatContainer({ onTogglePanel }: { onTogglePanel?: () => void })
         }
       }
 
-      // Parse para o outline
-      parseRespostaParaOutline(acc);
+      // ── 5. Pós-resposta ────────────────────────────────────────────
+      // Só faz parsing do esboço se estiver em modo sermon
+      if (isSermonMode) {
+        parseRespostaParaOutline(acc);
+      }
 
-      // Persist
       await adicionarMensagem(sid, 'assistant', acc);
       await atualizarSessao(sid, {});
 
