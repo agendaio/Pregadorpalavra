@@ -499,8 +499,10 @@ export function AssistantPage() {
           )}
         </div>
 
-        {/* Direita: quando há especialista ativo, abre o menu (histórico/esboço);
-            senão, botão Nova conversa em destaque. */}
+        {/* Direita: quando há especialista ativo, abre o menu (histórico/esboço).
+            Sem especialista, "Nova conversa" já existe dentro do painel de
+            Histórico — botão duplicado aqui só ocupava espaço; um espaçador
+            invisível mantém o título centralizado. */}
         {especialistaAtivo ? (
           <button
             onClick={() => openPainel()}
@@ -510,14 +512,7 @@ export function AssistantPage() {
             <Menu className="h-5 w-5" />
           </button>
         ) : (
-          <button
-            onClick={() => void criarSessao(especialistaId)}
-            aria-label="Nova conversa"
-            className="flex h-10 flex-shrink-0 items-center gap-1.5 rounded-full bg-violet-600 px-3 text-white shadow-sm transition-colors hover:bg-violet-500 active:scale-95"
-          >
-            <Plus className="h-4 w-4" />
-            <span className="hidden text-[12.5px] font-semibold sm:inline">Novo</span>
-          </button>
+          <div className="h-10 w-10 flex-shrink-0" aria-hidden="true" />
         )}
       </header>
 
