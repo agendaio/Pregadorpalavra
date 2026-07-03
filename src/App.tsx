@@ -14,6 +14,7 @@ import { MorePage } from '@/components/more/MorePage';
 import { AssistantPage } from '@/components/assistant/AssistantPage';
 import { OutlinesPage } from '@/components/outlines/OutlinesPage';
 import { AuthPage } from '@/components/auth/AuthPage';
+import { ProfilePage } from '@/components/profile/ProfilePage';
 import { Toast } from '@/components/ui/Toast';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { PWAUpdatePrompt } from '@/components/pwa/PWAUpdatePrompt';
@@ -89,6 +90,7 @@ function AnimatedRoutes() {
             <Route path="/estudo" element={<Navigate to="/inicio" replace />} />
             <Route path="/analista" element={<AnalystPage />} />
             <Route path="/sobre" element={<AboutPage />} />
+            <Route path="/perfil" element={<ProfilePage />} />
             <Route path="/configuracoes" element={<SettingsPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>

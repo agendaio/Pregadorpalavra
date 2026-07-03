@@ -12,6 +12,7 @@ import {
   LogOut,
   User,
   Shield,
+  Pencil,
 } from 'lucide-react';
 import { useUIStore } from '@/stores/ui';
 import { useAuthStore } from '@/stores/authUser';
@@ -75,25 +76,36 @@ export function MorePage() {
           {/* Card de Auth - Destacado no topo */}
           <div className="overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 via-blue-700 to-emerald-600 p-4 shadow-xl shadow-blue-900/20">
             {user ? (
-              <div className="flex items-center gap-3">
-                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-white/20 backdrop-blur">
-                  <User className="h-6 w-6 text-white" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="text-[15px] font-semibold text-white">
-                    {user.nome || user.email?.split('@')[0]}
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-white/20 backdrop-blur">
+                    <User className="h-6 w-6 text-white" />
                   </div>
-                  <div className="truncate text-[13px] text-white/80">
-                    {user.email}
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[15px] font-semibold text-white">
+                      {user.nome || user.email?.split('@')[0]}
+                    </div>
+                    <div className="truncate text-[13px] text-white/80">
+                      {user.email}
+                    </div>
                   </div>
                 </div>
-                <button
-                  onClick={() => logout()}
-                  className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-white/20 text-white backdrop-blur transition-all hover:bg-white/30 active:scale-95"
-                  title="Sair"
-                >
-                  <LogOut className="h-5 w-5" />
-                </button>
+                <div className="flex gap-2">
+                  <Link
+                    to="/perfil"
+                    className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-white py-2.5 text-[13px] font-semibold text-blue-700 shadow-sm transition-all hover:shadow-md active:scale-[0.98]"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                    Editar perfil
+                  </Link>
+                  <button
+                    onClick={() => logout()}
+                    className="flex flex-shrink-0 items-center justify-center gap-2 rounded-xl border border-white/40 bg-white/10 px-4 py-2.5 text-[13px] font-semibold text-white backdrop-blur transition-all hover:bg-white/20 active:scale-[0.98]"
+                  >
+                    <LogOut className="h-3.5 w-3.5" />
+                    Sair
+                  </button>
+                </div>
               </div>
             ) : (
               <div className="space-y-4">
