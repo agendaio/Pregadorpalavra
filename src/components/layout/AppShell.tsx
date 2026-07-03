@@ -7,10 +7,6 @@ import { useIsMobile } from '@/lib/responsive';
 import { DesktopShell } from './DesktopShell';
 import { cn } from '@/lib/utils';
 
-const éCampoDeTexto = (el: EventTarget | null) =>
-  el instanceof HTMLElement &&
-  (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable);
-
 /**
  * AppShell decide entre mobile (BottomNav) e desktop (sidebar).
  *
@@ -39,24 +35,22 @@ export function AppShell() {
   // Some com a bottom-nav enquanto o teclado do celular está aberto — libera
   // o espaço pro card de digitar ficar sempre visível, colado acima do
   // teclado, em vez de disputar espaço com o menu.
+  //
+  // Usa o VisualViewport (mede o espaço realmente visível) em vez de
+  // foco/blur do campo de texto: em telas de chat o campo costuma
+  // permanecer focado entre mensagens (refoca sozinho após enviar), então
+  // rastrear foco deixava `tecladoAberto` preso em `true` pra sempre e o
+  // menu sumia de vez, sem clique nenhum funcionar mais.
   useEffect(() => {
-    if (!isMobile) return;
-    const onFocusIn = (e: FocusEvent) => {
-      if (éCampoDeTexto(e.target)) setTecladoAberto(true);
+    if (!isMobile || !window.visualViewport) return;
+    const vv = window.visualViewport;
+    const onResize = () => {
+      const diff = window.innerHeight - vv.height;
+      setTecladoAberto(diff > 120); // teclado normalmente reduz bem mais que isso
     };
-    const onFocusOut = () => {
-      // pequeno atraso: se o foco pulou pra OUTRO campo de texto (ex: do
-      // textarea pro botão de microfone e voltou), não pisca o menu
-      setTimeout(() => {
-        if (!éCampoDeTexto(document.activeElement)) setTecladoAberto(false);
-      }, 80);
-    };
-    document.addEventListener('focusin', onFocusIn);
-    document.addEventListener('focusout', onFocusOut);
-    return () => {
-      document.removeEventListener('focusin', onFocusIn);
-      document.removeEventListener('focusout', onFocusOut);
-    };
+    vv.addEventListener('resize', onResize);
+    onResize();
+    return () => vv.removeEventListener('resize', onResize);
   }, [isMobile]);
 
   return (
