@@ -15,8 +15,7 @@ export const APP_VERSION =
 export const APP_BUILD =
   typeof __APP_BUILD__ !== 'undefined' ? __APP_BUILD__ : 0;
 
-export const APP_HASH =
-  typeof __APP_HASH__ !== 'undefined' ? __APP_HASH__ : 'dev';
+export const APP_HASH = (__APP_HASH__ as string | undefined) ?? 'dev';
 
 /** Data/hora do build (ISO 8601). */
 export const BUILD_DATE =
