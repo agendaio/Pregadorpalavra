@@ -21,7 +21,7 @@ interface FabProps {
  * salvar na hora — sem isso, uma edição feita nos últimos segundos podia
  * ainda não estar persistida quando a apresentação abrisse.
  */
-export function PulpitFab({ to = '/pulpit', label = 'Iniciar apresentação', className }: FabProps) {
+export function PulpitFab({ to = '/pulpit', label = 'Apresentar', className }: FabProps) {
   const navigate = useNavigate();
   const [salvando, setSalvando] = useState(false);
 
