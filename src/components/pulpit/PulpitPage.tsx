@@ -1209,27 +1209,22 @@ return (
                   <ChevronRight className="h-6 w-6 rotate-180" />
                 </button>
 
-                {/* Slide atual — tela cheia real */}
+                {/* Slide atual — container idêntico ao preview do editor */}
                 <div
-                  className="absolute inset-0 flex flex-col"
+                  className="absolute inset-0 flex flex-col items-center justify-center"
                   onClick={() => {
                     if (slideIndex < mensagem.slides.length - 1) {
                       setSlideIndex((i) => i + 1);
                     }
                   }}
                 >
-                  <div className="flex flex-1 items-center justify-center p-4 sm:p-8">
-                    <div className="relative h-full w-full max-w-7xl" style={{ aspectRatio: '16/9', maxHeight: '100%' }}>
-                      <AnimatePresence mode="wait">
-                        <SlideRenderer
-                          key={slideIndex}
-                          slide={mensagem.slides[slideIndex] as Slide}
-                          indice={slideIndex}
-                          total={mensagem.slides.length}
-                          className="rounded-2xl shadow-2xl"
-                        />
-                      </AnimatePresence>
-                    </div>
+                  <div className="relative w-full max-w-5xl overflow-hidden px-3 sm:max-w-6xl sm:px-8" style={{ aspectRatio: '16/9' }}>
+                    <AnimatePresence mode="wait">
+                      <SlideRenderer
+                        key={slideIndex}
+                        slide={mensagem.slides[slideIndex] as Slide}
+                      />
+                    </AnimatePresence>
                   </div>
                 </div>
 
