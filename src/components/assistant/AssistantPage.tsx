@@ -688,27 +688,26 @@ export function AssistantPage() {
         {/* Área rolável (empty state ou mensagens) — pill flutua só aqui, acima do input */}
         <div className="relative flex flex-1 flex-col overflow-hidden">
           {/* Menu flutuante: Histórico | Esboço — some ao rolar pra cima, aparece ao rolar pra baixo */}
+          {/* x:'-50%' centraliza — o translate precisa vir pelo motion, senão
+              a animação de transform do framer sobrescreve o -translate-x-1/2 do CSS */}
           <motion.div
             initial={false}
-            // x:'-50%' centraliza — o translate precisa vir pelo motion, senão
-            // a animação de transform do framer sobrescreve o -translate-x-1/2 do CSS
-            animate={pillVisivel ? { opacity: 1, y: 0, x: '-50%', pointerEvents: 'auto' } : { opacity: 0, y: 16, x: '-50%', pointerEvents: 'none' }}
+            animate={pillVisivel ? { opacity: 1, y: 0, x: '-50%', pointerEvents: 'auto' } : { opacity: 0, y: 18, x: '-50%', pointerEvents: 'none' }}
             transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-            className="absolute bottom-3 left-1/2 z-20 flex items-center gap-0.5 rounded-full border border-ink-200 bg-white/95 p-1 shadow-lg shadow-ink-900/10 backdrop-blur dark:border-ink-700 dark:bg-ink-900/95"
+            className="absolute bottom-3 left-1/2 z-20 flex items-center gap-1.5 rounded-2xl border border-ink-200/80 bg-white/95 p-1.5 shadow-xl shadow-ink-900/15 backdrop-blur-md dark:border-ink-700 dark:bg-ink-900/95"
           >
             <button
               onClick={() => openPainel('historico')}
               aria-label="Abrir histórico"
-              className="flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[12.5px] font-semibold text-ink-600 transition-colors hover:bg-ink-100 dark:text-ink-300 dark:hover:bg-ink-800"
+              className="flex items-center gap-2 rounded-xl bg-blue-50 px-4 py-2 text-[13px] font-semibold text-blue-700 transition-all hover:bg-blue-100 active:scale-95 dark:bg-blue-950/40 dark:text-blue-300 dark:hover:bg-blue-900/50"
             >
               <History className="h-4 w-4" />
               Histórico
             </button>
-            <span className="h-4 w-px bg-ink-200 dark:bg-ink-700" />
             <button
               onClick={() => openPainel('esboco')}
               aria-label="Abrir esboço"
-              className="flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[12.5px] font-semibold text-ink-600 transition-colors hover:bg-ink-100 dark:text-ink-300 dark:hover:bg-ink-800"
+              className="flex items-center gap-2 rounded-xl bg-emerald-50 px-4 py-2 text-[13px] font-semibold text-emerald-700 transition-all hover:bg-emerald-100 active:scale-95 dark:bg-emerald-950/40 dark:text-emerald-300 dark:hover:bg-emerald-900/50"
             >
               <ListChecks className="h-4 w-4" />
               Esboço

@@ -103,10 +103,56 @@ interface ChatOptions {
   streaming: boolean;
 }
 
+// Retry automático em 429 (rate limit) / 503 (indisponível) com backoff curto.
+// O free-tier do Groq estoura o limite por minuto com facilidade quando o
+// usuário manda várias perguntas seguidas; um ou dois retries curtos resolvem
+// a grande maioria dos casos sem o usuário nem perceber.
+async function fetchWithRetry(url: string, init: RequestInit, tentativas = 3): Promise<Response> {
+  let ultima: Response | null = null;
+  for (let i = 0; i < tentativas; i++) {
+    const res = await fetch(url, init);
+    if (res.status !== 429 && res.status !== 503) return res;
+    ultima = res;
+    if (i < tentativas - 1) {
+      const retryAfter = Number(res.headers.get('retry-after'));
+      const espera = Number.isFinite(retryAfter) && retryAfter > 0
+        ? Math.min(retryAfter * 1000, 4000)
+        : 700 * (i + 1); // 0.7s, 1.4s
+      await res.text().catch(() => {}); // libera a conexão antes de esperar
+      await new Promise((r) => setTimeout(r, espera));
+    }
+  }
+  return ultima!;
+}
+
 // callOpenAI e callGroq usam o mesmo formato de API (Groq é compatível com
 // o schema OpenAI) — só muda a URL base e o rótulo do erro.
-async function callOpenAICompatible(opts: ChatOptions, baseUrl: string, errorLabel: string, errorCode: string) {
+// `fallbackModel`: se o modelo principal estourar rate limit (429), tenta um
+// modelo mais leve. No Groq o limite é POR MODELO, então cair pro 8b-instant
+// (cota bem maior no free tier) resolve a maioria dos 429 do 70b.
+async function callOpenAICompatible(
+  opts: ChatOptions,
+  baseUrl: string,
+  errorLabel: string,
+  errorCode: string,
+  fallbackModel?: string,
+) {
   const { apiKey, model, messages, systemContent, maxTokens, temperature, streaming } = opts;
+
+  const doFetch = (modelToUse: string, useStream: boolean) => fetchWithRetry(baseUrl, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: modelToUse,
+      messages: [{ role: 'system', content: systemContent }, ...messages],
+      max_tokens: Math.min(maxTokens, 4000),
+      temperature: Math.min(Math.max(temperature, 0), 2),
+      ...(useStream ? { stream: true } : {}),
+    }),
+  });
 
   if (streaming) {
     // Streaming via SSE
@@ -114,24 +160,21 @@ async function callOpenAICompatible(opts: ChatOptions, baseUrl: string, errorLab
     const stream = new ReadableStream({
       async start(controller) {
         try {
-          const res = await fetch(baseUrl, {
-            method: 'POST',
-            headers: {
-              Authorization: `Bearer ${apiKey}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              model,
-              messages: [{ role: 'system', content: systemContent }, ...messages],
-              max_tokens: Math.min(maxTokens, 4000),
-              temperature: Math.min(Math.max(temperature, 0), 2),
-              stream: true,
-            }),
-          });
+          let res = await doFetch(model, true);
+          // Rate limit no modelo principal → tenta o fallback (limite separado)
+          if (res.status === 429 && fallbackModel && fallbackModel !== model) {
+            await res.text().catch(() => {});
+            res = await doFetch(fallbackModel, true);
+          }
 
           if (!res.ok) {
             const err = await res.text();
-            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: errorCode, message: err.slice(0, 300) })}\n\n`));
+            // 429 depois dos retries: mensagem amigável e código específico
+            const code = res.status === 429 ? 'rate_limit' : errorCode;
+            const msg = res.status === 429
+              ? 'Muitas requisições em pouco tempo. Aguarde alguns segundos e tente de novo.'
+              : err.slice(0, 300);
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: code, message: msg })}\n\n`));
             controller.close();
             return;
           }
@@ -183,22 +226,17 @@ async function callOpenAICompatible(opts: ChatOptions, baseUrl: string, errorLab
   }
 
   // Non-streaming
-  const res = await fetch(baseUrl, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model,
-      messages: [{ role: 'system', content: systemContent }, ...messages],
-      max_tokens: Math.min(maxTokens, 4000),
-      temperature: Math.min(Math.max(temperature, 0), 2),
-    }),
-  });
+  let res = await doFetch(model, false);
+  if (res.status === 429 && fallbackModel && fallbackModel !== model) {
+    await res.text().catch(() => {});
+    res = await doFetch(fallbackModel, false);
+  }
 
   if (!res.ok) {
     const err = await res.text();
+    if (res.status === 429) {
+      throw new Error(`rate_limit: Muitas requisições em pouco tempo. Aguarde alguns segundos e tente de novo.`);
+    }
     throw new Error(`${errorLabel} ${res.status}: ${err.slice(0, 300)}`);
   }
 
@@ -210,7 +248,10 @@ async function callOpenAI(opts: ChatOptions) {
 }
 
 async function callGroq(opts: ChatOptions) {
-  return callOpenAICompatible(opts, 'https://api.groq.com/openai/v1/chat/completions', 'Groq', 'groq_error');
+  // Fallback pro modelo leve quando o principal estoura o rate limit do free
+  // tier (limite é por modelo; o 8b-instant tem cota bem maior).
+  const fallback = opts.model === 'llama-3.1-8b-instant' ? undefined : 'llama-3.1-8b-instant';
+  return callOpenAICompatible(opts, 'https://api.groq.com/openai/v1/chat/completions', 'Groq', 'groq_error', fallback);
 }
 
 async function callAzureOpenAI(opts: ChatOptions) {
@@ -654,6 +695,15 @@ serve(async (req) => {
       session_context = null, // Contexto do esboço em construção
       systemPrompt = '',       // Prompt customizado (enviado pelo frontend em modo chat)
     } = body;
+
+    // ── WARMUP ────────────────────────────────────────────────────────────────
+    // O frontend faz um POST invisível no load pra acordar o container Deno.
+    // Não faz sentido gastar uma requisição ao provedor (Groq) com isso —
+    // cada warmup era 1 chamada ao Groq e ajudava a estourar o rate limit.
+    // Respondemos na hora, sem tocar no provedor.
+    if ((body as { warmup?: boolean }).warmup === true) {
+      return json({ ok: true, warmup: true });
+    }
 
     if (!Array.isArray(messages) || messages.length === 0) {
       // Compatibilidade: aceita { mensagem: '...' } também

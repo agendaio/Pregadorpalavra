@@ -126,11 +126,13 @@ export function App() {
         const url = mod.SUPABASE_URL;
         const token = mod.SUPABASE_ANON_KEY;
         if (!url || !token) return;
-        // POST mínimo, sem stream — acorda o container Deno
+        // POST mínimo, sem stream — só acorda o container Deno. O flag
+        // `warmup` faz a Edge Function responder na hora, SEM chamar o
+        // provedor de IA (evita gastar cota/rate-limit do Groq à toa).
         void fetch(`${url}/functions/v1/ai-chat`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, apikey: token },
-          body: JSON.stringify({ messages: [{ role: 'user', content: 'ok' }], modo: 'chat', maxTokens: 1, stream: false }),
+          body: JSON.stringify({ warmup: true }),
         }).catch(() => {});
       } catch { /* ignore */ }
     };
