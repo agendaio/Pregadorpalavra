@@ -309,7 +309,7 @@ return (
           </section>
 
           <div className="pb-6 text-center text-[10.5px] text-ink-400 dark:text-ink-500">
-            Pregador OS Â· v{APP_VERSION} Â· Mobile-first + PWA
+            Pregador OS · v{APP_VERSION}
           </div>
         </div>
       </div>

@@ -58,7 +58,7 @@ export function MorePage() {
         {
           icon: Github,
           label: 'Código-fonte',
-          description: `v${APP_VERSION} Â· Mobile-first + PWA`,
+          description: `v${APP_VERSION}`,
           onClick: () => window.open('https://github.com/solabrasil/solabrasil', '_blank'),
         },
         { to: '/sobre', icon: Info, label: 'Sobre', description: 'O sistema operacional para pregadores' },
