@@ -167,63 +167,62 @@ function ActionBtn({
 
 // ─── Add Slide Modal ─────────────────────────────────────────────────────────
 
+// Tela cheia (não popup) — mais fácil de ler, entender e usar. Fecha rápido
+// pelo X e volta exatamente pro editor de slides de onde saiu.
 function AddSlideModal({ onAdd, onClose }: { onAdd: (tipo: SlideType) => void; onClose: () => void }) {
   const tipos = Object.entries(TIPO_META) as [SlideType, typeof TIPO_META[SlideType]][];
 
   return (
     <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-sm sm:items-center sm:p-4"
-      onClick={onClose}
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 12 }}
+      transition={{ duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
+      className="fixed inset-0 z-50 flex flex-col overflow-x-hidden bg-white pt-safe dark:bg-ink-950"
     >
-      <motion.div
-        initial={{ y: '100%' }}
-        animate={{ y: 0 }}
-        exit={{ y: '100%' }}
-        transition={{ type: 'spring', damping: 30, stiffness: 340 }}
-        onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-md rounded-t-3xl border-t border-ink-200 bg-white dark:border-ink-800 dark:bg-ink-900 sm:rounded-3xl"
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 pt-4 pb-3">
-          <h2 className="text-[15px] font-semibold text-ink-900 dark:text-white">
+      {/* Header */}
+      <div className="flex flex-shrink-0 items-center justify-between border-b border-ink-200/70 px-5 py-3.5 dark:border-ink-800">
+        <div>
+          <h2 className="text-[16px] font-semibold text-ink-900 dark:text-white">
             Adicionar slide
           </h2>
-          <button
-            onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-full text-ink-400 hover:bg-ink-100 dark:hover:bg-ink-800"
-          >
-            <X className="h-4 w-4" />
-          </button>
+          <p className="text-[11.5px] text-ink-400">Escolha o tipo para começar</p>
         </div>
+        <button
+          onClick={onClose}
+          aria-label="Fechar"
+          className="flex h-10 w-10 items-center justify-center rounded-full text-ink-500 hover:bg-ink-100 dark:hover:bg-ink-800"
+        >
+          <X className="h-5 w-5" />
+        </button>
+      </div>
 
-        {/* Grid de tipos — sem rolagem lateral, quebra em linhas */}
-        <div className="grid grid-cols-2 gap-2.5 px-5 pb-6 sm:grid-cols-3">
+      {/* Grid de tipos — telas grandes, fáceis de tocar, sem rolagem lateral */}
+      <div className="flex-1 overflow-x-hidden overflow-y-auto px-5 py-5 pb-safe">
+        <div className="mx-auto grid max-w-2xl grid-cols-2 gap-3 sm:grid-cols-3">
           {tipos.map(([tipo, meta]) => {
             const Icon = meta.icon;
             return (
               <button
                 key={tipo}
                 onClick={() => { onAdd(tipo); onClose(); }}
-                className="group flex flex-col items-center gap-2.5 rounded-2xl border border-ink-200 bg-white p-3 text-center transition-all hover:border-violet-300 hover:bg-violet-50/40 active:scale-95 dark:border-ink-700 dark:bg-ink-900/40 dark:hover:border-violet-700 dark:hover:bg-violet-950/20"
+                className="group flex flex-col items-center gap-3 rounded-2xl border border-ink-200 bg-white p-4 text-center transition-all hover:border-violet-300 hover:bg-violet-50/40 active:scale-95 dark:border-ink-700 dark:bg-ink-900/40 dark:hover:border-violet-700 dark:hover:bg-violet-950/20"
               >
                 {/* Mini preview do slide */}
-                <div className="h-16 w-full overflow-hidden rounded-xl bg-[#0c0c14]">
+                <div className="h-20 w-full overflow-hidden rounded-xl bg-[#0c0c14]">
                   <div className="h-full w-full scale-[0.28] origin-top-left transform">
                     <SlideRenderer slide={novoSlide(tipo)} />
                   </div>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <Icon className="h-3.5 w-3.5 text-ink-500 group-hover:text-violet-600 dark:text-ink-400 dark:group-hover:text-violet-400" />
-                  <span className="text-[12px] font-semibold text-ink-700 dark:text-ink-200">{meta.label}</span>
+                  <Icon className="h-4 w-4 text-ink-500 group-hover:text-violet-600 dark:text-ink-400 dark:group-hover:text-violet-400" />
+                  <span className="text-[13px] font-semibold text-ink-700 dark:text-ink-200">{meta.label}</span>
                 </div>
               </button>
             );
           })}
         </div>
-      </motion.div>
+      </div>
     </motion.div>
   );
 }
@@ -493,7 +492,7 @@ export function SlideEditor({ slides, onChange, onGerarSlides, podeRegenerar }: 
                e rola verticalmente junto com o resto da página ── */}
           <div
             ref={thumbnailRef}
-            className="grid grid-cols-3 gap-2 border-b border-ink-200/70 bg-ink-50/80 p-3 dark:border-ink-800 dark:bg-ink-900/50 sm:grid-cols-4"
+            className="grid grid-cols-2 gap-2.5 border-b border-ink-200/70 bg-ink-50/80 p-3 dark:border-ink-800 dark:bg-ink-900/50 sm:grid-cols-4"
           >
             {slides.map((slide, idx) => (
               <SlideThumbnail

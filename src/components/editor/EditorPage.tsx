@@ -234,7 +234,8 @@ export function EditorPage() {
       <div className="flex flex-1 overflow-hidden">
         {/* Coluna principal */}
         <div className="flex flex-1 flex-col overflow-hidden">
-          <div className="flex-1 overflow-y-auto pb-32 md:pb-12">
+          {/* overflow-x-hidden: só rolagem vertical — nenhum filho pode empurrar a página de lado */}
+          <div className="flex-1 overflow-x-hidden overflow-y-auto pb-32 md:pb-12">
             <div className="px-5 pt-4 md:px-8 md:pt-6">
               <div className="flex items-center gap-2">
                 <input

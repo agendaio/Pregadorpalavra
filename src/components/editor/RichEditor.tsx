@@ -119,9 +119,10 @@ export function RichEditor({ value, onChange, placeholder, className }: Props) {
   );
 
   return (
-    <div className={cn('rounded-xl border border-ink-200/80 bg-white dark:border-ink-700 dark:bg-ink-900', className)}>
-      {/* Toolbar */}
-      <div className="flex items-center gap-0.5 border-b border-ink-200/80 px-2 py-1.5 dark:border-ink-700">
+    <div className={cn('overflow-hidden rounded-xl border border-ink-200/80 bg-white dark:border-ink-700 dark:bg-ink-900', className)}>
+      {/* Toolbar — quebra em várias linhas em vez de rolar de lado (rolagem
+          lateral aqui vazava pro resto da página em telas estreitas) */}
+      <div className="flex flex-wrap items-center gap-0.5 border-b border-ink-200/80 px-2 py-1.5 dark:border-ink-700">
         {/* Negrito / Itálico */}
         <Btn
           onClick={() => editor.chain().focus().toggleBold().run()}
