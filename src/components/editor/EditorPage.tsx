@@ -421,15 +421,6 @@ export function EditorPage() {
               />
             </div>
 
-            <div className="mx-auto max-w-3xl px-5 pb-6 md:px-8">
-              <h2 className="mb-2 text-[13.5px] font-semibold tracking-tight text-ink-900 dark:text-white">Mensagem completa</h2>
-              <RichEditor
-                value={mensagem.conteudo}
-                onChange={(html) => patchComIndicador({ conteudo: html })}
-                placeholder="O sermão completo. Aplicações, ilustrações, conclusão."
-              />
-            </div>
-
             {/* Slides do púlpito */}
             <div className="mx-auto max-w-3xl px-5 pb-6 md:px-8">
               <SlideEditor
