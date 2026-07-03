@@ -76,13 +76,16 @@ function AnimatedRoutes() {
 
           {/* Demais rotas usam o AppShell (que decide mobile vs desktop) */}
           <Route element={<AppShell />}>
-            <Route path="/" element={<HomePage />} />
+            {/* Assistente é a tela principal (raiz). Início continua acessível
+                em /inicio para não quebrar deep-links antigos, mas sai do menu. */}
+            <Route path="/" element={<AssistantPage />} />
+            <Route path="/inicio" element={<HomePage />} />
             <Route path="/biblioteca" element={<LibraryPage />} />
             <Route path="/esbocos" element={<OutlinesPage />} />
-            <Route path="/assistente" element={<AssistantPage />} />
+            <Route path="/assistente" element={<Navigate to="/" replace />} />
             <Route path="/mais" element={<MorePage />} />
             <Route path="/editar/:id" element={<EditorPage />} />
-            <Route path="/estudo" element={<Navigate to="/" replace />} />
+            <Route path="/estudo" element={<Navigate to="/inicio" replace />} />
             <Route path="/analista" element={<AnalystPage />} />
             <Route path="/sobre" element={<AboutPage />} />
             <Route path="/configuracoes" element={<SettingsPage />} />

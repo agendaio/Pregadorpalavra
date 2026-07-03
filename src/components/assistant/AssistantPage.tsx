@@ -91,6 +91,9 @@ export function AssistantPage() {
   const [copiadoId, setCopiadoId] = useState<string | null>(null);
   const [improvingId, setImprovingId] = useState<string | null>(null);
   const [especialistaId, setEspecialistaId] = useState<string | null>(null);
+  // Pill flutuante de histórico/esboço: some ao rolar pra cima, aparece ao rolar pra baixo
+  const [pillVisivel, setPillVisivel] = useState(true);
+  const lastScrollTopRef = useRef(0);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -140,17 +143,9 @@ export function AssistantPage() {
     setShowSessoes(false);
   }, []);
 
-  // ── Restaura a última conversa automaticamente ao abrir a página ──
-  // Nunca começa "do zero" se já existe histórico — só limpa quando o
-  // usuário clica em "Nova conversa" ou "Limpar" explicitamente.
-  useEffect(() => {
-    if (sessionId) return;
-    (async () => {
-      const ultima = await aiDB.sessoes.orderBy('updatedAt').reverse().first() as ChatSession | undefined;
-      if (ultima) await carregarSessao(ultima);
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // A tela principal do Assistente é a grade de especialistas. O histórico
+  // fica preservado e acessível pelo menu (Histórico) — não auto-restauramos
+  // a última conversa por cima da grade ao abrir o app.
 
   const deletarSessao = async (id: string) => {
     await aiDB.sessoes.delete(id);
@@ -177,6 +172,21 @@ export function AssistantPage() {
     setEspecialistaId(null);
     setSessionId(null);
     setMessages([]);
+  }, []);
+
+  // ── Abre o painel (tela cheia) já na aba desejada ──
+  const openPainel = useCallback((tab: 'historico' | 'esboco') => {
+    setSessoesTab(tab);
+    setShowSessoes(true);
+  }, []);
+
+  // ── Direção do scroll controla a pill: baixo = mostra, cima = esconde ──
+  const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    const st = e.currentTarget.scrollTop;
+    const last = lastScrollTopRef.current;
+    if (Math.abs(st - last) < 6) return; // ignora micro-movimentos
+    setPillVisivel(st > last || st < 40);
+    lastScrollTopRef.current = st;
   }, []);
 
   // ── Enviar mensagem (streaming) ──
@@ -441,21 +451,24 @@ export function AssistantPage() {
           'h-14 min-h-[56px]',
         )}
       >
-        <button
-          onClick={() => setShowSessoes(true)}
-          aria-label="Conversas"
-          className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-ink-700 transition-colors hover:bg-ink-100 dark:text-ink-200 dark:hover:bg-ink-800/60"
-        >
-          <Menu className="h-5 w-5" />
-        </button>
-
-        {especialistaAtivo && (
+        {/* Esquerda: quando há especialista ativo, vira "Voltar" (seta + rótulo)
+            que retorna à grade de especialistas. Sem especialista, é o menu. */}
+        {especialistaAtivo ? (
           <button
             onClick={voltarTelaInicial}
             aria-label="Voltar para especialistas"
-            className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-ink-700 transition-colors hover:bg-ink-100 dark:text-ink-200 dark:hover:bg-ink-800/60"
+            className="flex h-10 flex-shrink-0 items-center gap-1 rounded-full pl-1.5 pr-3 text-ink-700 transition-colors hover:bg-ink-100 dark:text-ink-200 dark:hover:bg-ink-800/60"
           >
             <ChevronLeft className="h-5 w-5" />
+            <span className="text-[13px] font-semibold">Voltar</span>
+          </button>
+        ) : (
+          <button
+            onClick={() => openPainel('historico')}
+            aria-label="Conversas"
+            className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-ink-700 transition-colors hover:bg-ink-100 dark:text-ink-200 dark:hover:bg-ink-800/60"
+          >
+            <Menu className="h-5 w-5" />
           </button>
         )}
 
@@ -482,14 +495,26 @@ export function AssistantPage() {
           )}
         </div>
 
-        <button
-          onClick={() => void criarSessao(especialistaId)}
-          aria-label="Nova conversa"
-          className="flex h-10 flex-shrink-0 items-center gap-1.5 rounded-full bg-violet-600 px-3 text-white shadow-sm transition-colors hover:bg-violet-500 active:scale-95"
-        >
-          <Plus className="h-4 w-4" />
-          <span className="hidden text-[12.5px] font-semibold sm:inline">Novo</span>
-        </button>
+        {/* Direita: quando há especialista ativo, abre o menu (histórico/esboço);
+            senão, botão Nova conversa em destaque. */}
+        {especialistaAtivo ? (
+          <button
+            onClick={() => openPainel('historico')}
+            aria-label="Menu de histórico e esboço"
+            className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-ink-700 transition-colors hover:bg-ink-100 dark:text-ink-200 dark:hover:bg-ink-800/60"
+          >
+            <Menu className="h-5 w-5" />
+          </button>
+        ) : (
+          <button
+            onClick={() => void criarSessao(especialistaId)}
+            aria-label="Nova conversa"
+            className="flex h-10 flex-shrink-0 items-center gap-1.5 rounded-full bg-violet-600 px-3 text-white shadow-sm transition-colors hover:bg-violet-500 active:scale-95"
+          >
+            <Plus className="h-4 w-4" />
+            <span className="hidden text-[12.5px] font-semibold sm:inline">Novo</span>
+          </button>
+        )}
       </header>
 
       {/* ── Sidebar de sessões ── */}
@@ -500,25 +525,33 @@ export function AssistantPage() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
+              transition={{ duration: 0.12 }}
               className="fixed inset-0 z-40 bg-black/40"
               onClick={() => setShowSessoes(false)}
             />
+            {/* Painel em tela cheia (mobile) / centralizado (desktop) — fecha rápido no X */}
             <motion.aside
-              initial={{ x: '-100%' }}
-              animate={{ x: 0 }}
-              exit={{ x: '-100%' }}
-              transition={{ type: 'spring', damping: 26, stiffness: 220 }}
-              className="fixed inset-y-0 left-0 z-50 flex w-[300px] max-w-[85vw] flex-col border-r border-ink-200 bg-white shadow-xl dark:border-ink-800 dark:bg-paper-dark"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 12 }}
+              transition={{ duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
+              className="fixed inset-0 z-50 flex flex-col bg-white pt-safe dark:bg-paper-dark sm:inset-y-6 sm:left-1/2 sm:right-auto sm:w-[440px] sm:-translate-x-1/2 sm:rounded-2xl sm:border sm:border-ink-200 sm:shadow-2xl sm:dark:border-ink-800"
             >
-              <div className="flex items-center justify-between border-b border-ink-200 px-4 py-3 dark:border-ink-800">
-                <h3 className="text-[14px] font-semibold text-ink-900 dark:text-white">
-                  {sessoesTab === 'historico' ? 'Histórico' : 'Esboço'}
-                </h3>
+              <div className="flex flex-shrink-0 items-center justify-between border-b border-ink-200 px-4 py-3 dark:border-ink-800">
+                <div className="flex items-center gap-2">
+                  {sessoesTab === 'historico'
+                    ? <History className="h-4 w-4 text-violet-600 dark:text-violet-400" />
+                    : <ListChecks className="h-4 w-4 text-violet-600 dark:text-violet-400" />}
+                  <h3 className="text-[15px] font-semibold text-ink-900 dark:text-white">
+                    {sessoesTab === 'historico' ? 'Histórico' : 'Esboço'}
+                  </h3>
+                </div>
                 <button
                   onClick={() => setShowSessoes(false)}
+                  aria-label="Fechar"
                   className="flex h-9 w-9 items-center justify-center rounded-full text-ink-500 hover:bg-ink-100 dark:hover:bg-ink-800"
                 >
-                  <X className="h-4 w-4" />
+                  <X className="h-5 w-5" />
                 </button>
               </div>
 
@@ -652,39 +685,59 @@ export function AssistantPage() {
 
       {/* ── Conteúdo principal ── */}
       <div className="flex flex-1 flex-col overflow-hidden">
-        {/* Área rolável (empty state ou mensagens) — pill de histórico flutua só aqui, acima do input */}
+        {/* Área rolável (empty state ou mensagens) — pill flutua só aqui, acima do input */}
         <div className="relative flex flex-1 flex-col overflow-hidden">
-          <button
-            onClick={() => setShowSessoes(true)}
-            aria-label="Abrir histórico"
-            className="absolute bottom-2 left-1/2 z-20 flex -translate-x-1/2 items-center gap-1.5 rounded-full border border-ink-200 bg-white/95 px-3 py-1.5 text-[11.5px] font-medium text-ink-600 shadow-md backdrop-blur transition-colors hover:bg-ink-50 dark:border-ink-700 dark:bg-ink-900/95 dark:text-ink-300 dark:hover:bg-ink-800"
+          {/* Menu flutuante: Histórico | Esboço — some ao rolar pra cima, aparece ao rolar pra baixo */}
+          <motion.div
+            initial={false}
+            // x:'-50%' centraliza — o translate precisa vir pelo motion, senão
+            // a animação de transform do framer sobrescreve o -translate-x-1/2 do CSS
+            animate={pillVisivel ? { opacity: 1, y: 0, x: '-50%', pointerEvents: 'auto' } : { opacity: 0, y: 16, x: '-50%', pointerEvents: 'none' }}
+            transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+            className="absolute bottom-3 left-1/2 z-20 flex items-center gap-0.5 rounded-full border border-ink-200 bg-white/95 p-1 shadow-lg shadow-ink-900/10 backdrop-blur dark:border-ink-700 dark:bg-ink-900/95"
           >
-            <Menu className="h-3.5 w-3.5" />
-            Histórico
-          </button>
+            <button
+              onClick={() => openPainel('historico')}
+              aria-label="Abrir histórico"
+              className="flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[12.5px] font-semibold text-ink-600 transition-colors hover:bg-ink-100 dark:text-ink-300 dark:hover:bg-ink-800"
+            >
+              <History className="h-4 w-4" />
+              Histórico
+            </button>
+            <span className="h-4 w-px bg-ink-200 dark:bg-ink-700" />
+            <button
+              onClick={() => openPainel('esboco')}
+              aria-label="Abrir esboço"
+              className="flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[12.5px] font-semibold text-ink-600 transition-colors hover:bg-ink-100 dark:text-ink-300 dark:hover:bg-ink-800"
+            >
+              <ListChecks className="h-4 w-4" />
+              Esboço
+            </button>
+          </motion.div>
 
-        {/* ── Empty state: 9 cards de especialistas ── */}
+        {/* ── Empty state: cards de especialistas ── */}
         {mostrarEmptyState ? (
-          <div className="flex-1 overflow-y-auto">
-            <div className="mx-auto flex min-h-full max-w-3xl flex-col items-center justify-center px-4 py-8">
-              <div className="mb-2 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-100 to-purple-100 dark:from-violet-900/40 dark:to-purple-900/40">
-                <Sparkles className="h-7 w-7 text-violet-600 dark:text-violet-400" />
+          <div className="flex-1 overflow-y-auto" onScroll={handleScroll}>
+            <div className="mx-auto flex min-h-full max-w-3xl flex-col justify-start px-3 pb-24 pt-5">
+              <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-100 to-purple-100 dark:from-violet-900/40 dark:to-purple-900/40">
+                <Sparkles className="h-6 w-6 text-violet-600 dark:text-violet-400" />
               </div>
-              <h2 className="mb-1 text-center text-[22px] font-semibold tracking-[-0.01em] text-ink-900 dark:text-white">
+              <h2 className="mb-1 text-center text-[20px] font-semibold tracking-[-0.01em] text-ink-900 dark:text-white">
                 Como posso te ajudar hoje?
               </h2>
-              <p className="mb-8 text-center text-[13.5px] text-ink-500 dark:text-ink-400">
-                Escolha um especialista abaixo para começar.
+              <p className="mb-5 text-center text-[13px] text-ink-500 dark:text-ink-400">
+                Escolha um especialista para começar.
               </p>
 
-              <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-2">
+              {/* 2 colunas sempre — todos os agentes visíveis sem rolar muito */}
+              <div className="grid w-full grid-cols-2 gap-2">
                 {SPECIALISTS.map((esp) => (
                   <button
                     key={esp.id}
                     onClick={() => void ativarEspecialista(esp)}
                     className={cn(
-                      'group relative flex items-center gap-3 rounded-2xl border border-ink-200 bg-white px-3.5 py-2.5 text-left transition-all',
-                      'hover:-translate-y-0.5 hover:border-ink-300 hover:shadow-md',
+                      'group relative flex flex-col gap-2 rounded-2xl border border-ink-200 bg-white p-3 text-left transition-all',
+                      'hover:-translate-y-0.5 hover:border-ink-300 hover:shadow-md active:scale-[0.98]',
                       'dark:border-ink-800 dark:bg-ink-900/40 dark:hover:border-ink-700',
                     )}
                   >
@@ -696,11 +749,11 @@ export function AssistantPage() {
                     >
                       <SpecialistIcon id={esp.id} className="h-[18px] w-[18px]" />
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="text-[13px] font-semibold leading-tight text-ink-900 dark:text-white">
+                    <div className="min-w-0">
+                      <div className="text-[12.5px] font-semibold leading-tight text-ink-900 dark:text-white">
                         {esp.nome}
                       </div>
-                      <div className="truncate text-[11px] leading-snug text-ink-500 dark:text-ink-400">
+                      <div className="mt-0.5 line-clamp-2 text-[10.5px] leading-snug text-ink-500 dark:text-ink-400">
                         {esp.descricao}
                       </div>
                     </div>
@@ -715,8 +768,8 @@ export function AssistantPage() {
           </div>
         ) : (
           /* ── Mensagens ── */
-          <div className="flex-1 overflow-y-auto">
-            <div className="mx-auto max-w-3xl px-4 py-6">
+          <div className="flex-1 overflow-y-auto" onScroll={handleScroll}>
+            <div className="mx-auto max-w-3xl px-4 pb-24 pt-6">
               {/* Indicador discreto de especialista ativo acima da conversa */}
               {especialistaAtivo && (
                 <div className="mb-4 flex items-center justify-center">
@@ -766,8 +819,8 @@ export function AssistantPage() {
         )}
         </div>
 
-        {/* ── Input fixo no rodapé (estilo ChatGPT) ── */}
-        <div className="border-t border-ink-200/70 bg-white px-4 py-3 dark:border-ink-800 dark:bg-paper-dark">
+        {/* ── Input fixo no rodapé (estilo ChatGPT) — colado embaixo ── */}
+        <div className="border-t border-ink-200/70 bg-white px-3 pb-1.5 pt-2 dark:border-ink-800 dark:bg-paper-dark">
           <div className="mx-auto max-w-3xl">
             {/* Banner de gravação (estilo ChatGPT) */}
             <AnimatePresence>
@@ -887,7 +940,7 @@ export function AssistantPage() {
               </button>
             </div>
 
-            <p className="mt-1.5 text-center text-[10.5px] text-ink-400">
+            <p className="mt-1 text-center text-[10px] text-ink-400">
               IA pode cometer erros. Verifique sempre as referências bíblicas.
             </p>
           </div>

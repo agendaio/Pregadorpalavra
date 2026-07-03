@@ -10,7 +10,6 @@ import {
   Moon,
   Settings as SettingsIcon,
   Plus,
-  Home,
   MoreHorizontal,
 } from 'lucide-react';
 import { useUIStore } from '@/stores/ui';
@@ -23,9 +22,9 @@ import { useAuthStore } from '@/stores/authUser';
 import { LogIn, LogOut, User, Shield } from 'lucide-react';
 
 const NAV = [
-  { to: '/', label: 'Início', icon: Home, end: true },
+  // Assistente é a tela principal (raiz). Início saiu do menu.
+  { to: '/', label: 'Assistente', icon: Sparkles, end: true },
   { to: '/biblioteca', label: 'Biblioteca', icon: Library },
-  { to: '/assistente', label: 'Assistente', icon: Sparkles },
   { to: '/mais', label: 'Mais', icon: MoreHorizontal },
 ];
 

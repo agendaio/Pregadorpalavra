@@ -1,17 +1,17 @@
 import { NavLink, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Home, Library, Sparkles, MoreHorizontal } from 'lucide-react';
+import { Library, Sparkles, MoreHorizontal } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const TABS: ReadonlyArray<{
   to: string;
   label: string;
-  icon: typeof Home;
+  icon: typeof Library;
   end?: boolean;
 }> = [
-  { to: '/',           label: 'Início',      icon: Home,           end: true },
+  // Assistente é a tela principal (raiz). Início saiu do menu.
+  { to: '/',           label: 'Assistente',  icon: Sparkles,       end: true },
   { to: '/biblioteca', label: 'Biblioteca',  icon: Library },
-  { to: '/assistente', label: 'Assistente',  icon: Sparkles },
   { to: '/mais',       label: 'Mais',        icon: MoreHorizontal },
 ];
 
