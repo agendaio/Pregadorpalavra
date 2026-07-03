@@ -17,6 +17,7 @@ import { AuthPage } from '@/components/auth/AuthPage';
 import { Toast } from '@/components/ui/Toast';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { PWAUpdatePrompt } from '@/components/pwa/PWAUpdatePrompt';
+import { InstallPrompt } from '@/components/pwa/InstallPrompt';
 import { semearExemplos } from '@/db/seed';
 import { initTema } from '@/stores/ui';
 import { syncInit } from '@/lib/sync';
@@ -149,6 +150,7 @@ export function App() {
         <AnimatedRoutes />
         <Toast />
         <PWAUpdatePrompt />
+        <InstallPrompt />
       </div>
     </BrowserRouter>
   );
