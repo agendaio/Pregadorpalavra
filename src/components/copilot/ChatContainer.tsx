@@ -521,10 +521,10 @@ export function ChatContainer({ onTogglePanel, onEsboçoPending }: ChatContainer
     const improvePrompt = `Analise e melhore esta resposta bíblica/teológica. A resposta atual é:\n\n${msg.content}\n\nPor favor, melhore: corrija imprecisões teológicas, enriqueça com mais detalhes bíblicos (versículos, contexto histórico), melhore a clareza e organização, e adicione aplicações práticas relevantes. Responda em português brasileiro, com formatação clara usando markdown (## Títulos, **negrito**, listas).`;
 
     setImprovingId(msg.id);
-    setInput(improvePrompt);
-    inputRef.current?.focus();
-    // Feedback visual breve — não trava o botão permanentemente
-    setTimeout(() => setImprovingId((cur) => (cur === msg.id ? null : cur)), 1500);
+    // Envia direto — não precisa cair no campo de texto pra usuário apertar enviar
+    void enviarMensagem(improvePrompt).finally(() => {
+      setImprovingId((cur) => (cur === msg.id ? null : cur));
+    });
   };
 
   const handleSugestão = (sug: string) => {
