@@ -13,7 +13,7 @@ import {
   ChevronLeft,
 } from 'lucide-react';
 import { MobileHeader } from '@/components/layout/MobileHeader';
-import { APP_VERSION } from '@/v.config';
+import { APP_VERSION, VERSION_LABEL } from '@/v.config';
 
 export function AboutPage() {
   return (
@@ -153,7 +153,7 @@ export function AboutPage() {
           </div>
 
           <div className="pb-4 text-center text-[10.5px] text-ink-400">
-            Pregador OS · v{APP_VERSION} · Mobile-first PWA
+            Pregador OS · {VERSION_LABEL} · Mobile-first PWA
           </div>
         </div>
       </div>

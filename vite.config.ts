@@ -2,12 +2,63 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 import path from 'node:path';
+import { execSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
+
+// ── Identidade global da versão (gerada no build) ──────────────────────────
+// Cada deploy carimba version + build + hash + timestamp. O hash é a fonte de
+// verdade pra detectar "há uma versão nova?" no cliente, sem depender do SW.
+function coletarGitInfo(): { hash: string; build: number } {
+  const env = process.env;
+  let hash = env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) || '';
+  let build = 0;
+  try {
+    if (!hash) hash = execSync('git rev-parse --short HEAD').toString().trim();
+    build = Number(execSync('git rev-list --count HEAD').toString().trim()) || 0;
+  } catch {
+    /* git indisponível (build sem histórico) — cai no fallback abaixo */
+  }
+  if (!hash) hash = Date.now().toString(36);
+  return { hash, build };
+}
+
+const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf-8'));
+const { hash: APP_HASH, build: APP_BUILD } = coletarGitInfo();
+const BUILD_TIME = new Date().toISOString();
+const APP_VERSION: string = pkg.version;
+
+const VERSION_PAYLOAD = JSON.stringify({
+  version: APP_VERSION,
+  build: APP_BUILD,
+  hash: APP_HASH,
+  timestamp: BUILD_TIME,
+});
+
+/** Emite /version.json no dist — servido sem cache (ver vercel.json). */
+function versionManifestPlugin() {
+  return {
+    name: 'pregador-version-manifest',
+    generateBundle(this: { emitFile: (f: { type: 'asset'; fileName: string; source: string }) => void }) {
+      this.emitFile({ type: 'asset', fileName: 'version.json', source: VERSION_PAYLOAD });
+    },
+  };
+}
 
 export default defineConfig({
+  define: {
+    __APP_VERSION__: JSON.stringify(APP_VERSION),
+    __APP_BUILD__: JSON.stringify(APP_BUILD),
+    __APP_HASH__: JSON.stringify(APP_HASH),
+    __BUILD_TIME__: JSON.stringify(BUILD_TIME),
+  },
   plugins: [
     react(),
+    versionManifestPlugin(),
     VitePWA({
-      registerType: 'autoUpdate',
+      // 'prompt' (não 'autoUpdate'): o reload é controlado pelo updateManager,
+      // pra nunca recarregar no meio do uso e nunca dar tela branca. A ativação
+      // só acontece quando o novo precache está 100% íntegro (tudo-ou-nada).
+      registerType: 'prompt',
       injectRegister: 'auto',
       filename: 'sw.js',
       manifestFilename: 'manifest.webmanifest',
@@ -75,7 +126,10 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,svg,png,ico,webp,woff2}'],
         cleanupOutdatedCaches: true,
         clientsClaim: true,
-        skipWaiting: true, // Ativar novo SW imediatamente — corrige cache stale
+        // skipWaiting fica FALSE de propósito: o SW novo espera até o
+        // updateManager mandar SKIP_WAITING (via updateSW), garantindo reload
+        // único e controlado, sem interromper o usuário no meio de uma ação.
+        skipWaiting: false,
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         runtimeCaching: [
           {
@@ -126,7 +180,7 @@ export default defineConfig({
           },
         ],
         navigateFallback: '/index.html',
-        navigateFallbackDenylist: [/^\/api/, /^\/__/, /\.svg$/, /\.png$/],
+        navigateFallbackDenylist: [/^\/api/, /^\/__/, /\/version\.json$/, /\.svg$/, /\.png$/],
       },
       devOptions: { enabled: false },
     }),

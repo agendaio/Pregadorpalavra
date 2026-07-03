@@ -1,6 +1,12 @@
 /// <reference types="vite/client" />
 /// <reference types="vite-plugin-pwa/client" />
 
+// Injetados no build (vite.config.ts → define). Identidade global da versão.
+declare const __APP_VERSION__: string;
+declare const __APP_BUILD__: number;
+declare const __APP_HASH__: string;
+declare const __BUILD_TIME__: string;
+
 declare module 'virtual:pwa-register' {
   export interface RegisterSWOptions {
     immediate?: boolean;
