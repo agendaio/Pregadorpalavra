@@ -91,7 +91,7 @@ export function GlobalSearch({ value, onChange }: { value: string; onChange: (v:
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
                 placeholder="Buscar mensagem, tema, versículo, ilustracao…"
-                className="h-12 flex-1 bg-transparent text-[15px] outline-none placeholder:text-ink-400"
+                className="h-12 flex-1 bg-transparent text-[16px] outline-none placeholder:text-ink-400"
               />
               <kbd className="hidden font-mono text-[10px] text-ink-400 sm:inline">ESC</kbd>
               <button

@@ -182,7 +182,7 @@ export function SlideFullEditor({
               onChange={(e) => setInstrucaoIA(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter' && !gerandoIA) void handleGerarIA(); }}
               placeholder={`Ex: fale sobre perseverança na fé…`}
-              className="w-full rounded-xl border border-violet-200 bg-white px-3 py-2 text-[13px] text-ink-900 outline-none placeholder:text-ink-400 focus:border-violet-400 dark:border-violet-800 dark:bg-ink-900 dark:text-white"
+              className="w-full rounded-xl border border-violet-200 bg-white px-3 py-2 text-[16px] text-ink-900 outline-none placeholder:text-ink-400 focus:border-violet-400 dark:border-violet-800 dark:bg-ink-900 dark:text-white"
             />
             <button
               onClick={() => void handleGerarIA()}

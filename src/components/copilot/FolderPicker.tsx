@@ -261,7 +261,7 @@ export function FolderPicker({
                   value={busca}
                   onChange={(e) => setBusca(e.target.value)}
                   placeholder="Buscar pasta…"
-                  className="w-full rounded-xl border border-ink-200 bg-ink-50 py-2.5 pl-10 pr-4 text-[13px] text-ink-900 outline-none transition-colors focus:border-violet-400 focus:bg-white dark:border-ink-700 dark:bg-ink-800 dark:text-white dark:placeholder:text-ink-500"
+                  className="w-full rounded-xl border border-ink-200 bg-ink-50 py-2.5 pl-10 pr-4 text-[16px] text-ink-900 outline-none transition-colors focus:border-violet-400 focus:bg-white dark:border-ink-700 dark:bg-ink-800 dark:text-white dark:placeholder:text-ink-500"
                 />
               </div>
             </div>
@@ -342,7 +342,7 @@ export function FolderPicker({
                       if (e.key === 'Escape') setModoCriar(false);
                     }}
                     placeholder="Ex: Pregações de Julho, Estudos Romanos…"
-                    className="w-full rounded-xl border border-violet-200 bg-white px-3 py-2.5 text-[13px] text-ink-900 outline-none transition-colors focus:border-violet-400 dark:border-ink-700 dark:bg-ink-900 dark:text-white dark:placeholder:text-ink-500"
+                    className="w-full rounded-xl border border-violet-200 bg-white px-3 py-2.5 text-[16px] text-ink-900 outline-none transition-colors focus:border-violet-400 dark:border-ink-700 dark:bg-ink-900 dark:text-white dark:placeholder:text-ink-500"
                   />
                 </div>
                 <div className="mb-4">

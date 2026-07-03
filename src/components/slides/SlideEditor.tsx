@@ -20,6 +20,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { SlideRenderer } from './SlideRenderer';
 import { SlideFullEditor } from './SlideFullEditor';
+import { useMensagensStore } from '@/stores/mensagens';
 import { FormCapa, FormVerso, FormConteudo, FormCategorias, FormChamada, FormOracao } from './SlideForm';
 import type {
   Mensagem,
@@ -510,8 +511,16 @@ export function SlideEditor({ slides, onChange, mensagem, onGerarSlides, podeReg
               total={slides.length}
               mensagem={mensagem}
               onChange={(c) => updateContent(slide.id, c)}
-              onClose={() => setEditingId(null)}
-              onDelete={() => { removeSlide(slide.id); setEditingId(null); }}
+              onClose={() => {
+                setEditingId(null);
+                // Não espera o debounce de 4s — fecha e já garante que salvou
+                void useMensagensStore.getState().flushSalvar();
+              }}
+              onDelete={() => {
+                removeSlide(slide.id);
+                setEditingId(null);
+                void useMensagensStore.getState().flushSalvar();
+              }}
               onDuplicate={() => duplicateSlide(slide.id)}
               onPrev={() => { const p = slides[idx - 1]; if (p) { setSelectedId(p.id); setEditingId(p.id); } }}
               onNext={() => { const n = slides[idx + 1]; if (n) { setSelectedId(n.id); setEditingId(n.id); } }}

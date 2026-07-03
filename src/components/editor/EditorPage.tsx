@@ -99,7 +99,13 @@ export function EditorPage() {
 
   useEffect(() => {
     if (id) carregar(id);
-    return () => limpar();
+    return () => {
+      // Flush síncrono antes de limpar: se sair da página com uma edição
+      // recente (dentro da janela do debounce de 4s), `limpar()` zera o
+      // `atual` da store e o auto-save agendado acaba não salvando nada.
+      void useMensagensStore.getState().flushSalvar();
+      limpar();
+    };
   }, [id, carregar, limpar]);
 
   // Auto-gera slides quando o esboco muda e não há slides

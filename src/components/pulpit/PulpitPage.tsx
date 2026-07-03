@@ -1123,7 +1123,7 @@ return (
                 placeholder="Buscar no esboçoâ€¦"
                 value={termoBusca}
                 onChange={(e) => setTermoBusca(e.target.value)}
-                className="flex-1 bg-transparent text-[15px] text-white placeholder:text-white/40 focus:outline-none"
+                className="flex-1 bg-transparent text-[16px] text-white placeholder:text-white/40 focus:outline-none"
               />
               <button
                 type="button"

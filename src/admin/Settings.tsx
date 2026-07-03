@@ -63,7 +63,7 @@ export function AdminSettings() {
           <ServiceRow
             nome="Frontend Vercel"
             status="ok"
-            detalhe="pregador-os.vercel.app"
+            detalhe="pregadorpalavra.vercel.app"
           />
         </div>
 

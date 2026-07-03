@@ -1,8 +1,10 @@
 import { forwardRef, type InputHTMLAttributes, type TextareaHTMLAttributes } from 'react';
 import { cn } from '@/lib/utils';
 
+// text-[16px] (não 15px): abaixo de 16px o Safari iOS dá zoom automático
+// ao focar o campo — ficava incômodo em qualquer tela com esse input.
 const baseField =
-  'w-full rounded-xl bg-white px-3.5 text-[15px] placeholder:text-ink-400 ' +
+  'w-full rounded-xl bg-white px-3.5 text-[16px] placeholder:text-ink-400 ' +
   'border border-ink-200/90 focus:border-ink-400 ' +
   'focus:ring-0 focus:outline-none ' +
   'transition-colors duration-150 ' +

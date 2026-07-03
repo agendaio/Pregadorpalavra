@@ -835,7 +835,8 @@ export function AssistantPage() {
                 rows={1}
                 disabled={speech.isListening}
                 className={cn(
-                  'flex-1 resize-none bg-transparent px-1 text-[14px] leading-relaxed outline-none',
+                  // text-[16px]: abaixo disso o Safari iOS dá zoom ao focar
+                  'flex-1 resize-none bg-transparent px-1 text-[16px] leading-relaxed outline-none',
                   speech.isListening
                     ? 'cursor-default text-red-900 placeholder:text-[12.5px] placeholder:text-red-400/70 dark:text-red-100'
                     : 'text-ink-900 placeholder:text-[12.5px] placeholder:text-ink-400 dark:text-white dark:placeholder:text-ink-500',

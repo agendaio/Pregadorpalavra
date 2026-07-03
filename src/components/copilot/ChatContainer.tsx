@@ -833,7 +833,8 @@ export function ChatContainer({ onTogglePanel, onEsboçoPending }: ChatContainer
             }
             rows={1}
             disabled={speech.isListening}
-            className="flex-1 resize-none bg-transparent px-1 text-[14px] leading-relaxed text-ink-900 outline-none placeholder:text-[12.5px] placeholder:text-ink-400 disabled:opacity-60 dark:text-ink-900 dark:placeholder:text-ink-500"
+            // text-[16px]: abaixo disso o Safari iOS dá zoom ao focar o campo
+            className="flex-1 resize-none bg-transparent px-1 text-[16px] leading-relaxed text-ink-900 outline-none placeholder:text-[12.5px] placeholder:text-ink-400 disabled:opacity-60 dark:text-ink-900 dark:placeholder:text-ink-500"
             style={{ maxHeight: '160px' }}
           />
 
