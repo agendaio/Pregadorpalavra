@@ -16,6 +16,8 @@ interface MensagensState {
   salvar: () => Promise<void>;
   /** Auto-save com debounce de 4 segundos */
   salvarDebounced: () => void;
+  /** Cancela o debounce e salva imediatamente — usado antes de navegar pro Modo Púlpito */
+  flushSalvar: () => Promise<void>;
   /** Limpa a atual */
   limpar: () => void;
   /** Mensagens favoritas fixadas */
@@ -63,6 +65,14 @@ export const useMensagensStore = create<MensagensState>((set, get) => ({
       saveTimer = null;
       void get().salvar();
     }, 4000); // 4 segundos
+  },
+
+  flushSalvar: async () => {
+    if (saveTimer) {
+      clearTimeout(saveTimer);
+      saveTimer = null;
+    }
+    await get().salvar();
   },
 
   limpar: () => set({ atual: null }),
