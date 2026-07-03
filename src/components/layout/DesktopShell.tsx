@@ -24,7 +24,7 @@ import { LogIn, LogOut, User, Shield } from 'lucide-react';
 const NAV = [
   // Assistente é a tela principal (raiz). Início saiu do menu.
   { to: '/', label: 'Assistente', icon: Sparkles, end: true },
-  { to: '/biblioteca', label: 'Biblioteca', icon: Library },
+  { to: '/biblioteca', label: 'Esboço', icon: Library },
   { to: '/mais', label: 'Mais', icon: MoreHorizontal },
 ];
 

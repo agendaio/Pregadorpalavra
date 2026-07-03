@@ -38,7 +38,7 @@ export function MorePage() {
     {
       titulo: 'Acesso rápido',
       itens: [
-        { to: '/biblioteca', icon: Library, label: 'Biblioteca completa', description: 'Todas as mensagens com filtros' },
+        { to: '/biblioteca', icon: Library, label: 'Esboços', description: 'Todas as mensagens com filtros' },
       ],
     },
     {

@@ -93,7 +93,7 @@ export function LibraryPage() {
   return (
     <div className="flex h-full flex-col bg-paper text-ink-900 dark:bg-paper-dark dark:text-ink-100">
       <MobileHeader
-        title="Biblioteca"
+        title="Esboço"
         subtitle={`${contadores.todas} mensagens`}
         right={
           <button
