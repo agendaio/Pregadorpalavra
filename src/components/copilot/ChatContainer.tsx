@@ -640,10 +640,10 @@ export function ChatContainer({ onTogglePanel, onEsboçoPending }: ChatContainer
           <div key={msg.id} className="mb-4 flex animate-fade-in" data-message-id={msg.id}>
             <div
               className={cn(
-                'group relative max-w-[88%] rounded-2xl px-4 pt-3 pb-2 text-[13.5px] leading-relaxed',
+                'group relative rounded-2xl px-4 pt-3 pb-2 text-[13.5px] leading-relaxed',
                 msg.role === 'user'
-                  ? 'ml-auto bg-sky-100 text-sky-900 dark:bg-sky-200 dark:text-sky-900'
-                  : 'border border-ink-200 bg-white text-ink-900 dark:border-ink-700 dark:bg-sky-50 dark:text-ink-900',
+                  ? 'ml-auto max-w-[85%] bg-sky-100 text-sky-900 dark:bg-sky-200 dark:text-sky-900'
+                  : 'w-full max-w-[96%] border border-ink-200 bg-white text-ink-900 dark:border-ink-700 dark:bg-sky-50 dark:text-ink-900',
               )}
             >
               <div className="prose prose-sm dark:prose-invert max-w-none">
@@ -660,17 +660,14 @@ export function ChatContainer({ onTogglePanel, onEsboçoPending }: ChatContainer
                     }
                   }}
                   onAddSectionToOutline={(text, title) => {
-                    // Adiciona o conteúdo da seção como ponto/observação no esboço atual
-                    const store = useCopilotOutlineStore.getState();
-                    const novoPonto = {
-                      id: crypto.randomUUID(),
+                    // Abre o picker — pasta e ordem são opcionais, quem quiser
+                    // organiza, quem quiser só clica em Adicionar
+                    setFolderPickerState({
+                      ação: 'adicionar_esboco',
+                      açãoLabel: 'Adicionar ao Esboço',
+                      açãoIcon: '📋',
                       texto: `${title}\n\n${text}`.trim(),
-                      subpontos: [],
-                      aplicacoes: [],
-                    };
-                    store.importar({ pontos: [...store.pontos, novoPonto] });
-                    useUIStore.getState().mostrarToast('Adicionado ao esboço', 'sucesso');
-                    void autoGenerateSlides(store).catch(() => {});
+                    });
                   }}
                 />
               </div>
@@ -935,6 +932,7 @@ export function ChatContainer({ onTogglePanel, onEsboçoPending }: ChatContainer
             açãoIcon={folderPickerState.açãoIcon}
             onConfirm={async () => {
               setFolderPickerState(null);
+              useUIStore.getState().mostrarToast('Adicionado ao esboço', 'sucesso');
               try {
                 const store = useCopilotOutlineStore.getState();
                 await autoGenerateSlides(store);

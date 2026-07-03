@@ -23,7 +23,6 @@ import { db } from '@/db/schema';
 import { useMensagensStore } from '@/stores/mensagens';
 import { useUIStore } from '@/stores/ui';
 import { exportarMensagem, type FormatoExport } from '@/lib/exporters';
-import { RichEditor } from '@/components/editor/RichEditor';
 import { SlideEditor } from '@/components/slides/SlideEditor';
 import { AIPanel } from '@/components/ai/AIPanel';
 import { MobileHeader } from '@/components/layout/MobileHeader';
@@ -389,44 +388,12 @@ export function EditorPage() {
               </div>
             )}
 
-            <div className="mx-auto max-w-3xl px-5 pb-6 md:px-8">
-              <div className="mb-2 flex items-center justify-between">
-                <h2 className="text-[13.5px] font-semibold tracking-tight text-ink-900 dark:text-white">Esboço</h2>
-                <div className="flex items-center gap-2">
-                  <span className="text-[11px] text-ink-500 dark:text-ink-400">dica: peça ao assistente →</span>
-                  {micSupported && (
-                    <button
-                      type="button"
-                      onClick={() => activateMicrophone('esboco')}
-                      className={`flex h-7 w-7 items-center justify-center rounded-full transition-all ${
-                        microphoneTarget === 'esboco' && isListening
-                          ? 'bg-red-100 text-red-500 animate-pulse dark:bg-red-900/30'
-                          : 'text-ink-400 hover:bg-ink-100 dark:hover:bg-ink-800'
-                      }`}
-                      title="Ditar esboço"
-                    >
-                      <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
-                        <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-                        <line x1="12" y1="19" x2="12" y2="23" />
-                        <line x1="8" y1="23" x2="16" y2="23" />
-                      </svg>
-                    </button>
-                  )}
-                </div>
-              </div>
-              <RichEditor
-                value={mensagem.esboco}
-                onChange={(html) => patchComIndicador({ esboco: html })}
-                placeholder="Estrutura da mensagem. Comece pelos pontos principais."
-              />
-            </div>
-
             {/* Slides do púlpito */}
             <div className="mx-auto max-w-3xl px-5 pb-6 md:px-8">
               <SlideEditor
                 slides={mensagem.slides}
                 onChange={(slides) => patchComIndicador({ slides })}
+                mensagem={mensagem}
                 onGerarSlides={handleGerarSlides}
                 podeRegenerar
               />

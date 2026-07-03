@@ -18,6 +18,9 @@ import { construirContextoMemoria } from '@/lib/ai/memory';
 import { useUIStore } from '@/stores/ui';
 import { autoGenerateSlides } from '@/lib/autoGenerateSlides';
 import { MarkdownRenderer } from '@/components/copilot/MarkdownRenderer';
+import { FolderPicker } from '@/components/copilot/FolderPicker';
+import { useNavigate } from 'react-router-dom';
+import type { SeleçãoAção } from '@/types/copilotOutline';
 
 // ─── Ícones profissionais por especialista (substitui os emojis) ───────────
 
@@ -81,16 +84,22 @@ interface ChatSession {
 // ─── Componente principal ───────────────────────────────────────────────────
 
 export function AssistantPage() {
+  const navigate = useNavigate();
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showSessoes, setShowSessoes] = useState(false);
-  const [sessoesTab, setSessoesTab] = useState<'historico' | 'esboco'>('historico');
   const [copiadoId, setCopiadoId] = useState<string | null>(null);
   const [improvingId, setImprovingId] = useState<string | null>(null);
   const [especialistaId, setEspecialistaId] = useState<string | null>(null);
+  const [folderPickerState, setFolderPickerState] = useState<{
+    ação: SeleçãoAção;
+    açãoLabel: string;
+    açãoIcon: string;
+    texto: string;
+  } | null>(null);
   // Pill flutuante de histórico/esboço: some ao rolar pra cima, aparece ao rolar pra baixo
   const [pillVisivel, setPillVisivel] = useState(true);
   const lastScrollTopRef = useRef(0);
@@ -174,9 +183,8 @@ export function AssistantPage() {
     setMessages([]);
   }, []);
 
-  // ── Abre o painel (tela cheia) já na aba desejada ──
-  const openPainel = useCallback((tab: 'historico' | 'esboco') => {
-    setSessoesTab(tab);
+  // ── Abre o painel de histórico (tela cheia) ──
+  const openPainel = useCallback(() => {
     setShowSessoes(true);
   }, []);
 
@@ -402,19 +410,15 @@ export function AssistantPage() {
     });
   };
 
-  const adicionarAoEsboco = async (msg: ChatMessage) => {
-    const store = useCopilotOutlineStore.getState();
-    const novoPonto = {
-      id: crypto.randomUUID(),
+  // Abre o picker — pasta e ordem são opcionais, quem quiser organiza,
+  // quem quiser só clica em Adicionar
+  const adicionarAoEsboco = (msg: ChatMessage) => {
+    setFolderPickerState({
+      ação: 'adicionar_esboco',
+      açãoLabel: 'Adicionar ao Esboço',
+      açãoIcon: '📋',
       texto: msg.content,
-      subpontos: [],
-      aplicacoes: [],
-    };
-    store.importar({ pontos: [...store.pontos, novoPonto] });
-    useUIStore.getState().mostrarToast('Adicionado ao esboço', 'sucesso');
-    try {
-      await autoGenerateSlides(store);
-    } catch { /* ignore */ }
+    });
   };
 
   // ── Microfone: iniciar / parar ──
@@ -464,7 +468,7 @@ export function AssistantPage() {
           </button>
         ) : (
           <button
-            onClick={() => openPainel('historico')}
+            onClick={() => openPainel()}
             aria-label="Conversas"
             className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-ink-700 transition-colors hover:bg-ink-100 dark:text-ink-200 dark:hover:bg-ink-800/60"
           >
@@ -499,7 +503,7 @@ export function AssistantPage() {
             senão, botão Nova conversa em destaque. */}
         {especialistaAtivo ? (
           <button
-            onClick={() => openPainel('historico')}
+            onClick={() => openPainel()}
             aria-label="Menu de histórico e esboço"
             className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-ink-700 transition-colors hover:bg-ink-100 dark:text-ink-200 dark:hover:bg-ink-800/60"
           >
@@ -539,11 +543,9 @@ export function AssistantPage() {
             >
               <div className="flex flex-shrink-0 items-center justify-between border-b border-ink-200 px-4 py-3 dark:border-ink-800">
                 <div className="flex items-center gap-2">
-                  {sessoesTab === 'historico'
-                    ? <History className="h-4 w-4 text-violet-600 dark:text-violet-400" />
-                    : <ListChecks className="h-4 w-4 text-violet-600 dark:text-violet-400" />}
+                  <History className="h-4 w-4 text-violet-600 dark:text-violet-400" />
                   <h3 className="text-[15px] font-semibold text-ink-900 dark:text-white">
-                    {sessoesTab === 'historico' ? 'Histórico' : 'Esboço'}
+                    Histórico
                   </h3>
                 </div>
                 <button
@@ -555,129 +557,66 @@ export function AssistantPage() {
                 </button>
               </div>
 
-              {/* Tabs: Histórico / Esboço (igual ChatGPT) */}
-              <div className="flex gap-1 border-b border-ink-200 px-3 py-2 dark:border-ink-800">
-                <button
-                  onClick={() => setSessoesTab('historico')}
-                  className={cn(
-                    'flex flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-[12px] font-medium transition-colors',
-                    sessoesTab === 'historico'
-                      ? 'bg-ink-900 text-white dark:bg-white dark:text-ink-900'
-                      : 'text-ink-500 hover:bg-ink-100 dark:text-ink-400 dark:hover:bg-ink-800',
-                  )}
-                >
-                  <History className="h-3.5 w-3.5" /> Histórico
-                </button>
-                <button
-                  onClick={() => setSessoesTab('esboco')}
-                  className={cn(
-                    'flex flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-[12px] font-medium transition-colors',
-                    sessoesTab === 'esboco'
-                      ? 'bg-ink-900 text-white dark:bg-white dark:text-ink-900'
-                      : 'text-ink-500 hover:bg-ink-100 dark:text-ink-400 dark:hover:bg-ink-800',
-                  )}
-                >
-                  <ListChecks className="h-3.5 w-3.5" /> Esboço
-                </button>
-              </div>
+              {/* Atalho pro esboço organizado — vive na Biblioteca, não aqui */}
+              <button
+                onClick={() => { setShowSessoes(false); navigate('/biblioteca'); }}
+                className="mx-3 mt-3 flex items-center gap-2 rounded-xl bg-emerald-50 px-3 py-2.5 text-[13px] font-medium text-emerald-700 transition-colors hover:bg-emerald-100 dark:bg-emerald-950/30 dark:text-emerald-300 dark:hover:bg-emerald-900/40"
+              >
+                <ListChecks className="h-4 w-4" /> Ver esboço na Biblioteca
+              </button>
 
-              {sessoesTab === 'historico' ? (
-                <>
-                  <button
-                    onClick={() => void criarSessao(especialistaId)}
-                    className="mx-3 mt-3 flex items-center gap-2 rounded-xl border border-dashed border-ink-300 px-3 py-2.5 text-[13px] text-ink-600 transition-colors hover:border-ink-400 hover:bg-ink-50 dark:border-ink-700 dark:text-ink-300"
-                  >
-                    <Plus className="h-4 w-4" /> Nova conversa
-                  </button>
-                  <div className="flex-1 overflow-y-auto px-3 py-2">
-                    {(sessoes ?? []).length === 0 && (
-                      <p className="px-2 py-6 text-center text-[12px] text-ink-400">
-                        Nenhuma conversa ainda
-                      </p>
-                    )}
-                    {(sessoes ?? []).map((s) => {
-                      const esp = getSpecialist(s.especialistaId ?? null);
-                      return (
-                        <div
-                          key={s.id}
-                          role="button"
-                          tabIndex={0}
-                          onClick={() => void carregarSessao(s)}
-                          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); void carregarSessao(s); } }}
-                          className={cn(
-                            'group mb-1 flex w-full cursor-pointer items-center gap-2 rounded-xl px-3 py-2.5 text-left text-[13px] transition-colors',
-                            sessionId === s.id
-                              ? 'bg-ink-100 text-ink-900 dark:bg-ink-800/60 dark:text-white'
-                              : 'text-ink-600 hover:bg-ink-50 dark:text-ink-300 dark:hover:bg-ink-800/40',
-                          )}
-                        >
-                          {esp ? (
-                            <SpecialistIcon id={esp.id} className="h-3.5 w-3.5 flex-shrink-0 text-violet-500" />
-                          ) : (
-                            <MessageSquare className="h-3.5 w-3.5 flex-shrink-0" />
-                          )}
-                          <div className="min-w-0 flex-1">
-                            <div className="truncate">{s.titulo}</div>
-                            {esp && (
-                              <div className="text-[10.5px] text-ink-400">
-                                {esp.nome}
-                              </div>
-                            )}
+              <button
+                onClick={() => void criarSessao(especialistaId)}
+                className="mx-3 mt-2 flex items-center gap-2 rounded-xl border border-dashed border-ink-300 px-3 py-2.5 text-[13px] text-ink-600 transition-colors hover:border-ink-400 hover:bg-ink-50 dark:border-ink-700 dark:text-ink-300"
+              >
+                <Plus className="h-4 w-4" /> Nova conversa
+              </button>
+              <div className="flex-1 overflow-y-auto px-3 py-2">
+                {(sessoes ?? []).length === 0 && (
+                  <p className="px-2 py-6 text-center text-[12px] text-ink-400">
+                    Nenhuma conversa ainda
+                  </p>
+                )}
+                {(sessoes ?? []).map((s) => {
+                  const esp = getSpecialist(s.especialistaId ?? null);
+                  return (
+                    <div
+                      key={s.id}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => void carregarSessao(s)}
+                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); void carregarSessao(s); } }}
+                      className={cn(
+                        'group mb-1 flex w-full cursor-pointer items-center gap-2 rounded-xl px-3 py-2.5 text-left text-[13px] transition-colors',
+                        sessionId === s.id
+                          ? 'bg-ink-100 text-ink-900 dark:bg-ink-800/60 dark:text-white'
+                          : 'text-ink-600 hover:bg-ink-50 dark:text-ink-300 dark:hover:bg-ink-800/40',
+                      )}
+                    >
+                      {esp ? (
+                        <SpecialistIcon id={esp.id} className="h-3.5 w-3.5 flex-shrink-0 text-violet-500" />
+                      ) : (
+                        <MessageSquare className="h-3.5 w-3.5 flex-shrink-0" />
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate">{s.titulo}</div>
+                        {esp && (
+                          <div className="text-[10.5px] text-ink-400">
+                            {esp.nome}
                           </div>
-                          <button
-                            type="button"
-                            onClick={(e) => { e.stopPropagation(); void deletarSessao(s.id); }}
-                            className="opacity-0 transition-opacity group-hover:opacity-100"
-                          >
-                            <Trash2 className="h-3.5 w-3.5 text-ink-400 hover:text-red-500" />
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </>
-              ) : (
-                <div className="flex-1 overflow-y-auto px-4 py-3">
-                  {ctxOutline.titulo || ctxOutline.tema || ctxOutline.pontos.length > 0 ? (
-                    <div className="space-y-3 text-[13px] text-ink-700 dark:text-ink-200">
-                      {ctxOutline.titulo && (
-                        <div>
-                          <div className="text-[10.5px] font-semibold uppercase tracking-wide text-ink-400">Título</div>
-                          <div>{ctxOutline.titulo}</div>
-                        </div>
-                      )}
-                      {ctxOutline.tema && (
-                        <div>
-                          <div className="text-[10.5px] font-semibold uppercase tracking-wide text-ink-400">Tema</div>
-                          <div>{ctxOutline.tema}</div>
-                        </div>
-                      )}
-                      {ctxOutline.textoBase && (
-                        <div>
-                          <div className="text-[10.5px] font-semibold uppercase tracking-wide text-ink-400">Texto Base</div>
-                          <div>{ctxOutline.textoBase}</div>
-                        </div>
-                      )}
-                      {ctxOutline.pontos.length > 0 && (
-                        <div>
-                          <div className="mb-1 text-[10.5px] font-semibold uppercase tracking-wide text-ink-400">
-                            Pontos ({ctxOutline.pontos.length})
-                          </div>
-                          <ol className="list-decimal space-y-1 pl-4">
-                            {ctxOutline.pontos.map((p) => (
-                              <li key={p.id}>{p.texto}</li>
-                            ))}
-                          </ol>
-                        </div>
-                      )}
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); void deletarSessao(s.id); }}
+                        className="opacity-0 transition-opacity group-hover:opacity-100"
+                      >
+                        <Trash2 className="h-3.5 w-3.5 text-ink-400 hover:text-red-500" />
+                      </button>
                     </div>
-                  ) : (
-                    <p className="px-2 py-6 text-center text-[12px] text-ink-400">
-                      Nenhum esboço em construção ainda. Peça pra criar uma pregação, estudo ou esboço na conversa.
-                    </p>
-                  )}
-                </div>
-              )}
+                  );
+                })}
+              </div>
             </motion.aside>
           </>
         )}
@@ -697,16 +636,18 @@ export function AssistantPage() {
             className="absolute bottom-3 left-1/2 z-20 flex items-center gap-1.5 rounded-2xl border border-ink-200/80 bg-white/95 p-1.5 shadow-xl shadow-ink-900/15 backdrop-blur-md dark:border-ink-700 dark:bg-ink-900/95"
           >
             <button
-              onClick={() => openPainel('historico')}
+              onClick={() => openPainel()}
               aria-label="Abrir histórico"
               className="flex items-center gap-2 rounded-xl bg-blue-50 px-4 py-2 text-[13px] font-semibold text-blue-700 transition-all hover:bg-blue-100 active:scale-95 dark:bg-blue-950/40 dark:text-blue-300 dark:hover:bg-blue-900/50"
             >
               <History className="h-4 w-4" />
               Histórico
             </button>
+            {/* Esboço leva direto pra Biblioteca — é lá que o esboço fica
+                organizado e separado, pronto pra pregação */}
             <button
-              onClick={() => openPainel('esboco')}
-              aria-label="Abrir esboço"
+              onClick={() => navigate('/biblioteca')}
+              aria-label="Ir para o esboço na Biblioteca"
               className="flex items-center gap-2 rounded-xl bg-emerald-50 px-4 py-2 text-[13px] font-semibold text-emerald-700 transition-all hover:bg-emerald-100 active:scale-95 dark:bg-emerald-950/40 dark:text-emerald-300 dark:hover:bg-emerald-900/50"
             >
               <ListChecks className="h-4 w-4" />
@@ -788,8 +729,16 @@ export function AssistantPage() {
                   loading={loading}
                   onCopiar={() => copiarMensagem(msg.id, msg.content)}
                   onCompartilhar={() => compartilharMensagem(msg.content)}
-                  onEsboco={() => void adicionarAoEsboco(msg)}
+                  onEsboco={() => adicionarAoEsboco(msg)}
                   onMelhorar={() => melhorarResposta(msg)}
+                  onEsbocoSection={(text, title) => {
+                    setFolderPickerState({
+                      ação: 'adicionar_esboco',
+                      açãoLabel: 'Adicionar ao Esboço',
+                      açãoIcon: '📋',
+                      texto: `${title}\n\n${text}`.trim(),
+                    });
+                  }}
                 />
               ))}
 
@@ -945,6 +894,26 @@ export function AssistantPage() {
           </div>
         </div>
       </div>
+
+      {/* Picker de pasta/ordem ao adicionar ao esboço — ambos opcionais */}
+      <AnimatePresence>
+        {folderPickerState && (
+          <FolderPicker
+            textoSelecionado={folderPickerState.texto}
+            açãoLabel={folderPickerState.açãoLabel}
+            açãoIcon={folderPickerState.açãoIcon}
+            onConfirm={async () => {
+              setFolderPickerState(null);
+              useUIStore.getState().mostrarToast('Adicionado ao esboço', 'sucesso');
+              try {
+                const store = useCopilotOutlineStore.getState();
+                await autoGenerateSlides(store);
+              } catch { /* ignore */ }
+            }}
+            onClose={() => setFolderPickerState(null)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -960,6 +929,7 @@ function MessageBubble({
   onCompartilhar,
   onEsboco,
   onMelhorar,
+  onEsbocoSection,
 }: {
   msg: ChatMessage;
   copiado: boolean;
@@ -969,6 +939,7 @@ function MessageBubble({
   onCompartilhar: () => void;
   onEsboco: () => void;
   onMelhorar: () => void;
+  onEsbocoSection: (text: string, title: string) => void;
 }) {
   const isUser = msg.role === 'user';
 
@@ -978,7 +949,8 @@ function MessageBubble({
       animate={{ opacity: 1, y: 0 }}
       className={cn('mb-5 flex w-full', isUser ? 'justify-end' : 'justify-start')}
     >
-      <div className={cn('flex max-w-[88%] flex-col gap-1', isUser && 'items-end')}>
+      {/* Respostas do assistente ocupam quase toda a largura — mais fácil de ler */}
+      <div className={cn('flex flex-col gap-1', isUser ? 'max-w-[85%] items-end' : 'w-full max-w-[96%]')}>
         <div
           className={cn(
             'rounded-2xl px-4 py-2.5 text-[14.5px] leading-relaxed',
@@ -997,13 +969,7 @@ function MessageBubble({
                 if (navigator.share) navigator.share({ text }).catch(() => {});
                 else navigator.clipboard.writeText(text).catch(() => {});
               }}
-              onAddSectionToOutline={(text, title) => {
-                const store = useCopilotOutlineStore.getState();
-                const novoPonto = { id: crypto.randomUUID(), texto: `${title}\n\n${text}`.trim(), subpontos: [], aplicacoes: [] };
-                store.importar({ pontos: [...store.pontos, novoPonto] });
-                useUIStore.getState().mostrarToast('Adicionado ao esboço', 'sucesso');
-                void autoGenerateSlides(store).catch(() => {});
-              }}
+              onAddSectionToOutline={onEsbocoSection}
             />
           )}
         </div>

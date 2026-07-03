@@ -63,7 +63,12 @@ export const useUIStore = create<UIState>((set, get) => ({
   toggleSidebar: () => set((s) => ({ sidebarAberta: !s.sidebarAberta })),
   setSidebar: (aberta) => set({ sidebarAberta: aberta }),
 
-  iaAberta: true,
+  // No desktop o painel de IA é uma sidebar fixa — abrir por padrão é bom UX.
+  // No mobile ele vira um BottomSheet quase em tela cheia: abrir sozinho
+  // toda vez que a página carrega parecia "a tela ficando em branco" ao
+  // voltar pro editor. Detecta o tamanho da tela uma única vez na criação
+  // da store (não persiste — cada load reavalia).
+  iaAberta: typeof window !== 'undefined' ? window.innerWidth >= 768 : true,
   toggleIA: () => set((s) => ({ iaAberta: !s.iaAberta })),
   setIA: (aberta) => set({ iaAberta: aberta }),
 

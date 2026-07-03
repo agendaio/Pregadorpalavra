@@ -20,13 +20,14 @@ interface BottomSheetProps {
  * - Safe-area bottom respeitada
  */
 export function BottomSheet({ open, onClose, title, subtitle, children, height = 'auto' }: BottomSheetProps) {
-  // Lock body scroll enquanto aberto
+  // Lock body scroll enquanto aberto. Sempre restaura pro vazio (não "o
+  // valor anterior") — capturar/restaurar um valor arriscava deixar
+  // overflow:hidden preso no body se outro lock (ex: /pulpit) se sobrepusesse.
   useEffect(() => {
     if (!open) return;
-    const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     return () => {
-      document.body.style.overflow = prev;
+      document.body.style.overflow = '';
     };
   }, [open]);
 

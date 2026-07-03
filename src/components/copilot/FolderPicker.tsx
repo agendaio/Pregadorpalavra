@@ -37,10 +37,13 @@ interface FolderPickerProps {
   /** Texto/razão da ação que disparou o picker */
   açãoLabel: string;
   açãoIcon: string;
-  /** Callback quando o usuário confirma (pasta selecionada/criada) */
-  onConfirm: (pastaId: string, pastaNome: string) => void;
+  /** Callback quando o usuário confirma (pasta é opcional — pode vir null) */
+  onConfirm: (pastaId: string | null, pastaNome: string | null) => void;
   onClose: () => void;
 }
+
+/** Onde inserir na lista de pontos — 'inicio' | 'fim' | id de um ponto existente (insere depois dele) */
+type Ordem = 'inicio' | 'fim' | string;
 
 export function FolderPicker({
   textoSelecionado,
@@ -60,6 +63,7 @@ export function FolderPicker({
   const [pastaSelecionada, setPastaSelecionada] = useState<string | null>(
     store.pastaId ?? null,
   );
+  const [ordem, setOrdem] = useState<Ordem>('fim');
   const backdropRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -96,22 +100,36 @@ export function FolderPicker({
     }
   };
 
-  const handleConfirmar = () => {
-    const pasta = pastas.find((p) => p.id === pastaSelecionada);
-    if (!pastaSelecionada || !pasta) return;
+  /** Insere um novo ponto na posição escolhida (início / fim / depois de um ponto específico) */
+  const inserirPontoNaPosição = (texto: string) => {
+    const novoPonto = { id: crypto.randomUUID(), texto: texto.trim(), subpontos: [], aplicacoes: [] };
+    const pontos = [...store.pontos];
+    if (ordem === 'inicio') {
+      pontos.unshift(novoPonto);
+    } else if (ordem === 'fim') {
+      pontos.push(novoPonto);
+    } else {
+      const idx = pontos.findIndex((p) => p.id === ordem);
+      if (idx === -1) pontos.push(novoPonto);
+      else pontos.splice(idx + 1, 0, novoPonto);
+    }
+    store.importar({ pontos });
+  };
 
-    // Define pasta no store
-    store.setPasta(pasta.id, pasta.nome, pasta.cor);
+  const handleConfirmar = () => {
+    // Pasta é opcional — só aplica se o usuário escolheu uma
+    const pasta = pastaSelecionada ? pastas.find((p) => p.id === pastaSelecionada) : null;
+    if (pasta) {
+      store.setPasta(pasta.id, pasta.nome, pasta.cor);
+    }
 
     // Adiciona o item selecionado ao outline (conforme ação)
-    if (açãoLabel.includes('Ponto')) {
-      store.addPonto(textoSelecionado.trim());
-    } else if (açãoLabel.includes('Subponto')) {
+    if (açãoLabel.includes('Subponto')) {
       const pontos = store.pontos;
       if (pontos.length > 0) {
         store.addSubponto(pontos[pontos.length - 1].id, textoSelecionado.trim());
       } else {
-        store.addPonto(textoSelecionado.trim());
+        inserirPontoNaPosição(textoSelecionado);
       }
     } else if (açãoLabel.includes('Introdução')) {
       store.patchIntroducao(
@@ -126,14 +144,14 @@ export function FolderPicker({
       if (pontos.length > 0) {
         store.addAplicacao(pontos[pontos.length - 1].id, textoSelecionado.trim());
       } else {
-        store.addPonto(textoSelecionado.trim());
+        inserirPontoNaPosição(textoSelecionado);
       }
-    } else if (açãoLabel.includes('Esboço')) {
-      // Padrão: adiciona como ponto
-      store.addPonto(textoSelecionado.trim());
+    } else {
+      // Ponto / Esboço / padrão: respeita a ordem escolhida
+      inserirPontoNaPosição(textoSelecionado);
     }
 
-    onConfirm(pastaSelecionada, pasta.nome);
+    onConfirm(pasta?.id ?? null, pasta?.nome ?? null);
   };
 
   return (
@@ -167,7 +185,7 @@ export function FolderPicker({
                   {açãoLabel}
                 </h2>
                 <p className="text-[11px] text-ink-400 dark:text-ink-500">
-                  Selecione ou crie uma pasta
+                  Pasta e ordem são opcionais
                 </p>
               </div>
             </div>
@@ -188,7 +206,53 @@ export function FolderPicker({
             </p>
           </div>
 
-          {/* ── Buscar pasta ── */}
+          {/* ── Ordem no esboço (opcional) ── */}
+          <div className="mx-5 mt-4">
+            <label className="mb-1.5 block text-[11px] font-medium text-ink-600 dark:text-ink-400">
+              Onde adicionar no esboço
+            </label>
+            <div className="flex flex-wrap gap-1.5">
+              <button
+                onClick={() => setOrdem('inicio')}
+                className={cn(
+                  'rounded-lg px-3 py-1.5 text-[12px] font-medium transition-colors',
+                  ordem === 'inicio'
+                    ? 'bg-violet-600 text-white'
+                    : 'border border-ink-200 text-ink-600 hover:bg-ink-50 dark:border-ink-700 dark:text-ink-300 dark:hover:bg-ink-800',
+                )}
+              >
+                No início
+              </button>
+              <button
+                onClick={() => setOrdem('fim')}
+                className={cn(
+                  'rounded-lg px-3 py-1.5 text-[12px] font-medium transition-colors',
+                  ordem === 'fim'
+                    ? 'bg-violet-600 text-white'
+                    : 'border border-ink-200 text-ink-600 hover:bg-ink-50 dark:border-ink-700 dark:text-ink-300 dark:hover:bg-ink-800',
+                )}
+              >
+                No final
+              </button>
+              {store.pontos.map((p, i) => (
+                <button
+                  key={p.id}
+                  onClick={() => setOrdem(p.id)}
+                  title={p.texto}
+                  className={cn(
+                    'max-w-[160px] truncate rounded-lg px-3 py-1.5 text-[12px] font-medium transition-colors',
+                    ordem === p.id
+                      ? 'bg-violet-600 text-white'
+                      : 'border border-ink-200 text-ink-600 hover:bg-ink-50 dark:border-ink-700 dark:text-ink-300 dark:hover:bg-ink-800',
+                  )}
+                >
+                  Depois do {i + 1}º
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* ── Buscar pasta (opcional) ── */}
           {!modoCriar && (
             <div className="mx-5 mt-4">
               <div className="relative">
@@ -336,17 +400,11 @@ export function FolderPicker({
 
           {/* ── Footer: ações ── */}
           <div className="border-t border-ink-100 px-5 py-4 dark:border-ink-800">
-            <div className="flex items-center justify-between">
-              {pastaSelecionada ? (
-                <span className="text-[11.5px] text-ink-400">
-                  Pasta selecionada
-                </span>
-              ) : (
-                <span className="text-[11.5px] text-ink-400">
-                  Selecione uma pasta ou crie uma nova
-                </span>
-              )}
-              <div className="flex gap-2">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[11.5px] text-ink-400">
+                {pastaSelecionada ? 'Pasta selecionada' : 'Sem pasta — só adiciona ao esboço'}
+              </span>
+              <div className="flex flex-shrink-0 gap-2">
                 <button
                   onClick={onClose}
                   className="rounded-xl border border-ink-200 px-4 py-2 text-[12.5px] font-medium text-ink-600 transition-colors hover:bg-ink-50 dark:border-ink-700 dark:text-ink-400 dark:hover:bg-ink-800"
@@ -355,11 +413,10 @@ export function FolderPicker({
                 </button>
                 <button
                   onClick={() => void handleConfirmar()}
-                  disabled={!pastaSelecionada}
-                  className="flex items-center gap-2 rounded-xl bg-violet-600 px-5 py-2 text-[12.5px] font-semibold text-white transition-colors hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-40"
+                  className="flex items-center gap-2 rounded-xl bg-violet-600 px-5 py-2 text-[12.5px] font-semibold text-white transition-colors hover:bg-violet-500"
                 >
                   <Sparkles className="h-3.5 w-3.5" />
-                  Adicionar à pasta
+                  Adicionar
                 </button>
               </div>
             </div>

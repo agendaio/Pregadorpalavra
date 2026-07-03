@@ -809,14 +809,16 @@ export function PulpitPage() {
     : 0;
 
   // â”€â”€â”€ Lock body scroll enquanto /pulpit está ativo â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // Sempre restaura pro vazio (não "o valor anterior") — /pulpit é uma rota
+  // fullscreen standalone, nunca aninhada; capturar e restaurar um valor
+  // "anterior" arriscava deixar overflow:hidden preso no body ao voltar pro
+  // editor (tela parecia travada/em branco até recarregar a página).
   useLayoutEffect(() => {
-    const prevOverflow = document.body.style.overflow;
-    const prevHeight = document.body.style.height;
     document.body.style.overflow = 'hidden';
     document.body.style.height = '100dvh';
     return () => {
-      document.body.style.overflow = prevOverflow;
-      document.body.style.height = prevHeight;
+      document.body.style.overflow = '';
+      document.body.style.height = '';
     };
   }, []);
 

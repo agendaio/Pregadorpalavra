@@ -13,14 +13,16 @@ import { useState, useCallback, useRef } from 'react';
 import {
   Plus, Trash2, Copy, ChevronUp, ChevronDown,
   Layers, Sparkles, X,
-  Eye, Share2, Download, ExternalLink,
+  Share2, Download, ExternalLink,
   LayoutTemplate, BookOpen, ListOrdered, LayoutGrid, Megaphone, Heart,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { SlideRenderer } from './SlideRenderer';
+import { SlideFullEditor } from './SlideFullEditor';
 import { FormCapa, FormVerso, FormConteudo, FormCategorias, FormChamada, FormOracao } from './SlideForm';
 import type {
+  Mensagem,
   Slide,
   SlideType,
 } from '@/types/mensagem';
@@ -227,39 +229,22 @@ function AddSlideModal({ onAdd, onClose }: { onAdd: (tipo: SlideType) => void; o
   );
 }
 
-// ─── EditContent — renderiza o form conforme tipo ────────────────────────────
-
-function EditContent({
-  slide,
-  onChange,
-}: {
-  slide: Slide;
-  onChange: (c: Slide['content']) => void;
-}) {
-  const c = slide.content;
-  switch (c.tipo) {
-    case 'capa':       return <FormCapa content={c} onChange={onChange as (c: any) => void} />;
-    case 'verso':      return <FormVerso content={c} onChange={onChange as (c: any) => void} />;
-    case 'conteudo':   return <FormConteudo content={c} onChange={onChange as (c: any) => void} />;
-    case 'categorias': return <FormCategorias content={c} onChange={onChange as (c: any) => void} />;
-    case 'chamada':    return <FormChamada content={c} onChange={onChange as (c: any) => void} />;
-    case 'oracao':      return <FormOracao content={c} onChange={onChange as (c: any) => void} />;
-  }
-}
-
 // ─── Componente principal ─────────────────────────────────────────────────────
 
 interface SlideEditorProps {
   slides: Slide[];
   onChange: (slides: Slide[]) => void;
+  /** Mensagem em edição — dá contexto (tema, texto-base…) pra IA por slide */
+  mensagem: Mensagem;
   /** Callback para gerar slides automaticamente a partir do esboço */
   onGerarSlides?: () => void;
   /** Se true, mostra botão de regenerar */
   podeRegenerar?: boolean;
 }
 
-export function SlideEditor({ slides, onChange, onGerarSlides, podeRegenerar }: SlideEditorProps) {
+export function SlideEditor({ slides, onChange, mensagem, onGerarSlides, podeRegenerar }: SlideEditorProps) {
   const [selectedId, setSelectedId] = useState<string | null>(slides[0]?.id ?? null);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showShareMenu, setShowShareMenu] = useState(false);
   const thumbnailRef = useRef<HTMLDivElement>(null);
@@ -304,7 +289,6 @@ export function SlideEditor({ slides, onChange, onGerarSlides, podeRegenerar }: 
     }
   };
 
-  const selected = slides.find((s) => s.id === selectedId) ?? null;
   const selectedIdx = slides.findIndex((s) => s.id === selectedId);
 
   const updateContent = useCallback(
@@ -469,114 +453,36 @@ export function SlideEditor({ slides, onChange, onGerarSlides, podeRegenerar }: 
         </div>
       )}
 
-      {/* Editor com slides */}
+      {/* Grade de slides — toque num slide abre a edição em tela cheia */}
       {slides.length > 0 && (
-        <div className="flex flex-col">
-          {/* ── Preview grande do slide ─────────────────────────────── */}
-          {selected && (
-            <div className="relative bg-[#0c0c14] pb-4">
-              <div className="mx-auto max-h-[260px] w-full max-w-lg overflow-hidden pt-2 sm:max-h-[320px]">
-                <SlideRenderer slide={selected} />
-              </div>
-              {/* Badge do tipo no preview */}
-              <div className="absolute top-2 right-2">
-                <span className="flex items-center gap-1 rounded-full border border-white/15 bg-black/40 px-2 py-0.5 text-[10px] font-semibold text-white/90 backdrop-blur-sm">
-                  <Eye className="h-3 w-3" />
-                  {TIPO_META[selected.content.tipo].label}
-                </span>
-              </div>
-            </div>
-          )}
+        <div
+          ref={thumbnailRef}
+          className="grid grid-cols-2 gap-2.5 p-3 sm:grid-cols-4"
+        >
+          {slides.map((slide, idx) => (
+            <SlideThumbnail
+              key={slide.id}
+              slide={slide}
+              ativo={slide.id === selectedId}
+              onClick={() => { setSelectedId(slide.id); setEditingId(slide.id); }}
+              onDelete={() => removeSlide(slide.id)}
+              onDuplicate={() => duplicateSlide(slide.id)}
+              onMoveUp={() => moveSlide(idx, idx - 1)}
+              onMoveDown={() => moveSlide(idx, idx + 1)}
+              isFirst={idx === 0}
+              isLast={idx === slides.length - 1}
+              indice={idx}
+            />
+          ))}
 
-          {/* ── Grade de thumbnails — sem rolagem lateral, quebra em linhas
-               e rola verticalmente junto com o resto da página ── */}
-          <div
-            ref={thumbnailRef}
-            className="grid grid-cols-2 gap-2.5 border-b border-ink-200/70 bg-ink-50/80 p-3 dark:border-ink-800 dark:bg-ink-900/50 sm:grid-cols-4"
+          {/* Botão adicionar no final da grade */}
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="flex min-h-[74px] flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-ink-300 text-ink-400 transition-colors hover:border-violet-400 hover:text-violet-500 dark:border-ink-700 dark:text-ink-500 dark:hover:border-violet-600 dark:hover:text-violet-400"
           >
-            {slides.map((slide, idx) => (
-              <SlideThumbnail
-                key={slide.id}
-                slide={slide}
-                ativo={slide.id === selectedId}
-                onClick={() => setSelectedId(slide.id)}
-                onDelete={() => removeSlide(slide.id)}
-                onDuplicate={() => duplicateSlide(slide.id)}
-                onMoveUp={() => moveSlide(idx, idx - 1)}
-                onMoveDown={() => moveSlide(idx, idx + 1)}
-                isFirst={idx === 0}
-                isLast={idx === slides.length - 1}
-                indice={idx}
-              />
-            ))}
-
-            {/* Botão adicionar no final da grade */}
-            <button
-              onClick={() => setShowAddModal(true)}
-              className="flex min-h-[74px] flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-ink-300 text-ink-400 transition-colors hover:border-violet-400 hover:text-violet-500 dark:border-ink-700 dark:text-ink-500 dark:hover:border-violet-600 dark:hover:text-violet-400"
-            >
-              <Plus className="h-5 w-5" />
-              <span className="text-[9px] font-medium">Adicionar</span>
-            </button>
-          </div>
-
-          {/* ── Formulário de edição ────────────────────────────── */}
-          {selected ? (
-            <div className="px-4 py-4">
-              {/* Header do editor */}
-              <div className="mb-4 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="flex items-center gap-1.5 rounded-lg border border-violet-200 bg-violet-50 px-2.5 py-1 text-[11px] font-bold text-violet-700 dark:border-violet-800 dark:bg-violet-950/40 dark:text-violet-300">
-                    {(() => {
-                      const Icon = TIPO_META[selected.content.tipo].icon;
-                      return <Icon className="h-3 w-3" />;
-                    })()}
-                    {TIPO_META[selected.content.tipo].label}
-                  </span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => moveSlide(selectedIdx, selectedIdx - 1)}
-                    disabled={selectedIdx === 0}
-                    title="Mover acima"
-                    className="flex h-8 w-8 items-center justify-center rounded-lg text-ink-400 transition hover:bg-ink-100 disabled:opacity-30 dark:hover:bg-ink-800"
-                  >
-                    <ChevronUp className="h-4 w-4" />
-                  </button>
-                  <button
-                    onClick={() => moveSlide(selectedIdx, selectedIdx + 1)}
-                    disabled={selectedIdx === slides.length - 1}
-                    title="Mover abaixo"
-                    className="flex h-8 w-8 items-center justify-center rounded-lg text-ink-400 transition hover:bg-ink-100 disabled:opacity-30 dark:hover:bg-ink-800"
-                  >
-                    <ChevronDown className="h-4 w-4" />
-                  </button>
-                  <button
-                    onClick={() => duplicateSlide(selected.id)}
-                    title="Duplicar"
-                    className="flex h-8 w-8 items-center justify-center rounded-lg text-ink-400 transition hover:bg-ink-100 dark:hover:bg-ink-800"
-                  >
-                    <Copy className="h-4 w-4" />
-                  </button>
-                  <button
-                    onClick={() => removeSlide(selected.id)}
-                    title="Excluir"
-                    className="flex h-8 w-8 items-center justify-center rounded-lg text-ink-400 transition hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-500/10"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
-              <EditContent
-                slide={selected}
-                onChange={(c) => updateContent(selected.id, c)}
-              />
-            </div>
-          ) : (
-            <div className="flex items-center justify-center py-12 text-[13px] text-ink-400">
-              Selecione um slide para editar
-            </div>
-          )}
+            <Plus className="h-5 w-5" />
+            <span className="text-[9px] font-medium">Adicionar</span>
+          </button>
         </div>
       )}
 
@@ -588,6 +494,32 @@ export function SlideEditor({ slides, onChange, onGerarSlides, podeRegenerar }: 
             onClose={() => setShowAddModal(false)}
           />
         )}
+      </AnimatePresence>
+
+      {/* Edição do slide em tela cheia */}
+      <AnimatePresence>
+        {editingId && (() => {
+          const idx = slides.findIndex((s) => s.id === editingId);
+          const slide = slides[idx];
+          if (!slide) return null;
+          return (
+            <SlideFullEditor
+              key={slide.id}
+              slide={slide}
+              indice={idx}
+              total={slides.length}
+              mensagem={mensagem}
+              onChange={(c) => updateContent(slide.id, c)}
+              onClose={() => setEditingId(null)}
+              onDelete={() => { removeSlide(slide.id); setEditingId(null); }}
+              onDuplicate={() => duplicateSlide(slide.id)}
+              onPrev={() => { const p = slides[idx - 1]; if (p) { setSelectedId(p.id); setEditingId(p.id); } }}
+              onNext={() => { const n = slides[idx + 1]; if (n) { setSelectedId(n.id); setEditingId(n.id); } }}
+              onMoveUp={() => moveSlide(idx, idx - 1)}
+              onMoveDown={() => moveSlide(idx, idx + 1)}
+            />
+          );
+        })()}
       </AnimatePresence>
     </div>
   );
