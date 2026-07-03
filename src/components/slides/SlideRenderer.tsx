@@ -65,38 +65,41 @@ function SlideCapaView({ content }: { content: SlideCapa }) {
           <div className="h-px w-16 bg-gradient-to-l from-transparent to-amber-400/50" />
         </div>
 
-        <motion.h1
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="text-4xl font-bold leading-tight tracking-tight text-white"
-          style={{ fontFamily: 'Georgia, serif' }}
-        >
-          {content.titulo || 'Sem título'}
-        </motion.h1>
-
-        {content.referencia && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.3, duration: 0.5 }}
-            className="flex items-center gap-2 rounded-full border border-amber-400/30 bg-amber-400/10 px-5 py-2"
+        {/* Animated wrapper — framer-motion fica DENTRO do scale do thumbnail */}
+        <div className="contents">
+          <motion.h1
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="text-4xl font-bold leading-tight tracking-tight text-white"
+            style={{ fontFamily: 'Georgia, serif' }}
           >
-            <div className="h-1.5 w-1.5 rounded-full bg-amber-400" />
-            <span className="text-[13px] font-medium tracking-wide text-amber-300">{content.referencia}</span>
-          </motion.div>
-        )}
+            {content.titulo || 'Sem título'}
+          </motion.h1>
 
-        {content.subtitulo && (
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.5, duration: 0.5 }}
-            className="max-w-sm text-[14px] leading-relaxed text-ink-300"
-          >
-            {content.subtitulo}
-          </motion.p>
-        )}
+          {content.referencia && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.3, duration: 0.5 }}
+              className="flex items-center gap-2 rounded-full border border-amber-400/30 bg-amber-400/10 px-5 py-2"
+            >
+              <div className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+              <span className="text-[13px] font-medium tracking-wide text-amber-300">{content.referencia}</span>
+            </motion.div>
+          )}
+
+          {content.subtitulo && (
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.5, duration: 0.5 }}
+              className="max-w-sm text-[14px] leading-relaxed text-ink-300"
+            >
+              {content.subtitulo}
+            </motion.p>
+          )}
+        </div>
       </div>
     </SlideBase>
   );
@@ -111,37 +114,39 @@ function SlideVersoView({ content }: { content: SlideVerso }) {
         {/* Opening quote mark */}
         <div className="text-8xl font-serif leading-none text-amber-400/30">"</div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7 }}
-          className="relative max-w-xl text-center"
-        >
-          {/* Left quote line */}
-          <div className="absolute -left-8 top-0 bottom-0 w-0.5 bg-gradient-to-b from-transparent via-amber-400/40 to-transparent" />
-          {/* Right quote line */}
-          <div className="absolute -right-8 top-0 bottom-0 w-0.5 bg-gradient-to-b from-transparent via-amber-400/40 to-transparent" />
-
-          <p
-            className="text-xl leading-relaxed text-white"
-            style={{ fontFamily: 'Georgia, serif', fontStyle: 'italic' }}
+        <div className="contents">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7 }}
+            className="relative max-w-xl text-center"
           >
-            {content.citacao || 'Sem citação'}
-          </p>
-        </motion.div>
+            {/* Left quote line */}
+            <div className="absolute -left-8 top-0 bottom-0 w-0.5 bg-gradient-to-b from-transparent via-amber-400/40 to-transparent" />
+            {/* Right quote line */}
+            <div className="absolute -right-8 top-0 bottom-0 w-0.5 bg-gradient-to-b from-transparent via-amber-400/40 to-transparent" />
 
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.4, duration: 0.5 }}
-          className="flex items-center gap-3"
-        >
-          <div className="h-px w-10 bg-amber-400/40" />
-          <span className="text-[12px] font-bold tracking-widest text-amber-400 uppercase">
-            {content.referencia || '—'}
-          </span>
-          <div className="h-px w-10 bg-amber-400/40" />
-        </motion.div>
+            <p
+              className="text-xl leading-relaxed text-white"
+              style={{ fontFamily: 'Georgia, serif', fontStyle: 'italic' }}
+            >
+              {content.citacao || 'Sem citação'}
+            </p>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.4, duration: 0.5 }}
+            className="flex items-center gap-3"
+          >
+            <div className="h-px w-10 bg-amber-400/40" />
+            <span className="text-[12px] font-bold tracking-widest text-amber-400 uppercase">
+              {content.referencia || '—'}
+            </span>
+            <div className="h-px w-10 bg-amber-400/40" />
+          </motion.div>
+        </div>
       </div>
     </SlideBase>
   );
@@ -178,11 +183,8 @@ function SlideConteudoView({ content }: { content: SlideConteudo }) {
           {content.pontos.map((ponto, i) => {
             const cor = cores[i % cores.length];
             return (
-              <motion.div
+              <div
                 key={i}
-                initial={{ opacity: 0, y: 15 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 * i, duration: 0.4 }}
                 className={cn('relative flex flex-col gap-3 rounded-2xl border p-5 backdrop-blur-sm', `bg-gradient-to-br ${cor}`)}
               >
                 {/* Number badge */}
@@ -194,7 +196,7 @@ function SlideConteudoView({ content }: { content: SlideConteudo }) {
                 {ponto.descricao && (
                   <p className="text-[13px] leading-relaxed text-ink-300">{ponto.descricao}</p>
                 )}
-              </motion.div>
+              </div>
             );
           })}
         </div>
@@ -223,11 +225,8 @@ function SlideCategoriasView({ content }: { content: SlideCategorias }) {
 
         <div className={cn('flex-1 grid gap-4', cols === 1 ? 'grid-cols-1' : cols === 3 ? 'grid-cols-3' : 'grid-cols-2')}>
           {content.cards.map((card, i) => (
-            <motion.div
+            <div
               key={i}
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.1 * i, duration: 0.4 }}
               className="flex flex-col gap-2 rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-emerald-600/15 to-emerald-800/10 p-5 backdrop-blur-sm"
             >
               <h3 className="text-[15px] font-bold text-emerald-200">{card.titulo || `Card ${i + 1}`}</h3>
@@ -240,7 +239,7 @@ function SlideCategoriasView({ content }: { content: SlideCategorias }) {
                   <span className="text-[11px] text-emerald-400/80">{card.referencia}</span>
                 </div>
               )}
-            </motion.div>
+            </div>
           ))}
         </div>
       </div>
@@ -254,39 +253,41 @@ function SlideChamadaView({ content }: { content: SlideChamada }) {
   return (
     <SlideBase>
       <div className="flex h-full w-full flex-col items-center justify-center gap-8 text-center">
-        <motion.h2
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.6 }}
-          className="text-3xl font-bold leading-tight tracking-tight text-white"
-          style={{ fontFamily: 'Georgia, serif' }}
-        >
-          {content.titulo || 'Chamada'}
-        </motion.h2>
+        <div className="contents">
+          <motion.h2
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.6 }}
+            className="text-3xl font-bold leading-tight tracking-tight text-white"
+            style={{ fontFamily: 'Georgia, serif' }}
+          >
+            {content.titulo || 'Chamada'}
+          </motion.h2>
 
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2, duration: 0.5 }}
-          className="max-w-md space-y-4"
-        >
-          {content.texto.split('\n').map((linha, i) => (
-            <p key={i} className="text-[15px] leading-relaxed text-ink-200">{linha}</p>
-          ))}
-        </motion.div>
-
-        {content.cta && (
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4, duration: 0.5 }}
-            className="mt-2 flex flex-col items-center gap-3"
+            transition={{ delay: 0.2, duration: 0.5 }}
+            className="max-w-md space-y-4"
           >
-            <div className="rounded-full border border-amber-400/40 bg-amber-400/10 px-8 py-3">
-              <span className="text-[15px] font-bold text-amber-300">{content.cta}</span>
-            </div>
+            {content.texto.split('\n').map((linha, i) => (
+              <p key={i} className="text-[15px] leading-relaxed text-ink-200">{linha}</p>
+            ))}
           </motion.div>
-        )}
+
+          {content.cta && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4, duration: 0.5 }}
+              className="mt-2 flex flex-col items-center gap-3"
+            >
+              <div className="rounded-full border border-amber-400/40 bg-amber-400/10 px-8 py-3">
+                <span className="text-[15px] font-bold text-amber-300">{content.cta}</span>
+              </div>
+            </motion.div>
+          )}
+        </div>
       </div>
     </SlideBase>
   );
@@ -304,44 +305,46 @@ function SlideOracaoView({ content }: { content: SlideOracao }) {
       </div>
 
       <div className="flex h-full w-full flex-col items-center justify-center gap-6 text-center">
-        {content.titulo && (
-          <motion.h2
+        <div className="contents">
+          {content.titulo && (
+            <motion.h2
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5 }}
+              className="text-[14px] font-bold tracking-widest text-rose-300 uppercase"
+            >
+              {content.titulo}
+            </motion.h2>
+          )}
+
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7 }}
+            className="max-w-lg space-y-3"
+          >
+            {content.texto.split('\n').map((linha, i) => (
+              <p
+                key={i}
+                className="text-[15px] leading-relaxed text-white"
+                style={{ fontFamily: 'Georgia, serif', fontStyle: 'italic' }}
+              >
+                {linha}
+              </p>
+            ))}
+          </motion.div>
+
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ duration: 0.5 }}
-            className="text-[14px] font-bold tracking-widest text-rose-300 uppercase"
+            transition={{ delay: 0.5, duration: 0.5 }}
+            className="flex items-center gap-4 pt-2"
           >
-            {content.titulo}
-          </motion.h2>
-        )}
-
-        <motion.div
-          initial={{ opacity: 0, y: 15 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7 }}
-          className="max-w-lg space-y-3"
-        >
-          {content.texto.split('\n').map((linha, i) => (
-            <p
-              key={i}
-              className="text-[15px] leading-relaxed text-white"
-              style={{ fontFamily: 'Georgia, serif', fontStyle: 'italic' }}
-            >
-              {linha}
-            </p>
-          ))}
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.5, duration: 0.5 }}
-          className="flex items-center gap-4 pt-2"
-        >
-          <div className="h-px w-12 bg-gradient-to-r from-transparent to-rose-400/40" />
-          <span className="text-[11px] text-rose-400/60">Em nome de Jesus</span>
-          <div className="h-px w-12 bg-gradient-to-l from-transparent to-rose-400/40" />
-        </motion.div>
+            <div className="h-px w-12 bg-gradient-to-r from-transparent to-rose-400/40" />
+            <span className="text-[11px] text-rose-400/60">Em nome de Jesus</span>
+            <div className="h-px w-12 bg-gradient-to-l from-transparent to-rose-400/40" />
+          </motion.div>
+        </div>
       </div>
     </SlideBase>
   );

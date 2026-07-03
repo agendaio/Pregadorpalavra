@@ -126,10 +126,11 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,svg,png,ico,webp,woff2}'],
         cleanupOutdatedCaches: true,
         clientsClaim: true,
-        // skipWaiting fica FALSE de propósito: o SW novo espera até o
-        // updateManager mandar SKIP_WAITING (via updateSW), garantindo reload
-        // único e controlado, sem interromper o usuário no meio de uma ação.
-        skipWaiting: false,
+        // skipWaiting TRUE: SW novo ativa imediatamente quando termina de instalar.
+        // Como o precache do Workbox é atômico (tudo-ou-nada), nunca sobra
+        // uma versão quebrada. O updateManager já garante reload único e seguro
+        // via guarda em sessionStorage — não tem risco de reload em loop.
+        skipWaiting: true,
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         runtimeCaching: [
           {

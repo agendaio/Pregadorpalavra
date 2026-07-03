@@ -1190,7 +1190,7 @@ return (
               </button>
             </div>
 
-            {/* Área de slides */}
+            {/* Área de slides — fullscreen 100%, não corta */}
             {mensagem.slides && mensagem.slides.length > 0 ? (
               <>
                 {/* Botão anterior */}
@@ -1209,25 +1209,27 @@ return (
                   <ChevronRight className="h-6 w-6 rotate-180" />
                 </button>
 
-                {/* Slide atual */}
+                {/* Slide atual — tela cheia real */}
                 <div
-                  className="flex h-full w-full items-center justify-center px-4 py-16 sm:px-20"
+                  className="absolute inset-0 flex flex-col"
                   onClick={() => {
                     if (slideIndex < mensagem.slides.length - 1) {
                       setSlideIndex((i) => i + 1);
                     }
                   }}
                 >
-                  <div className="h-full w-full max-w-5xl overflow-hidden rounded-2xl sm:max-h-[85vh]">
-                    <AnimatePresence mode="wait">
-                      <SlideRenderer
-                        key={slideIndex}
-                        slide={mensagem.slides[slideIndex] as Slide}
-                        indice={slideIndex}
-                        total={mensagem.slides.length}
-                        className="rounded-2xl"
-                      />
-                    </AnimatePresence>
+                  <div className="flex flex-1 items-center justify-center p-4 sm:p-8">
+                    <div className="relative h-full w-full max-w-7xl" style={{ aspectRatio: '16/9', maxHeight: '100%' }}>
+                      <AnimatePresence mode="wait">
+                        <SlideRenderer
+                          key={slideIndex}
+                          slide={mensagem.slides[slideIndex] as Slide}
+                          indice={slideIndex}
+                          total={mensagem.slides.length}
+                          className="rounded-2xl shadow-2xl"
+                        />
+                      </AnimatePresence>
+                    </div>
                   </div>
                 </div>
 

@@ -18,7 +18,7 @@ import {
  * automaticamente. O usuário nunca é obrigado a interagir; login, sessão,
  * tema e dados locais são preservados no reload.
  */
-const RESPIRO_ANTES_DE_APLICAR = 4000;
+const RESPIRO_ANTES_DE_APLICAR = 1200;
 
 export function PWAUpdatePrompt() {
   const [estado, setEstado] = useState<UpdateState>({ updateAvailable: false, applying: false });

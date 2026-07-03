@@ -136,10 +136,12 @@ export function SlideFullEditor({
 
       {/* Corpo — rola só verticalmente */}
       <div className="flex-1 overflow-x-hidden overflow-y-auto pb-safe">
-        {/* Preview ao vivo */}
+        {/* Preview ao vivo — 100% responsivo, não corta */}
         <div className="relative bg-[#0c0c14] px-4 pb-4 pt-3">
-          <div className="mx-auto max-h-[220px] w-full max-w-lg overflow-hidden rounded-xl">
-            <SlideRenderer slide={slide} />
+          <div className="mx-auto w-full max-w-lg">
+            <div className="relative w-full overflow-hidden rounded-xl" style={{ aspectRatio: '16/9' }}>
+              <SlideRenderer slide={slide} />
+            </div>
           </div>
           {/* Navegação entre slides */}
           <div className="mt-3 flex items-center justify-center gap-3">
