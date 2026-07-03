@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Search, BookOpen, Tag as TagIcon, Hash, Calendar, Sparkles } from 'lucide-react';
+import { Search, BookOpen, Tag as TagIcon, Hash, Calendar, Sparkles, X } from 'lucide-react';
 import { db } from '@/db/schema';
 import { useUIStore } from '@/stores/ui';
 import { buscar, type ResultadoBusca } from '@/lib/search';
@@ -71,20 +71,21 @@ export function GlobalSearch({ value, onChange }: { value: string; onChange: (v:
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.15 }}
-          className="fixed inset-0 z-50 flex items-start justify-center bg-ink-950/30 backdrop-blur-sm p-4 pt-[10vh]"
+          className="fixed inset-0 z-50 flex items-start justify-center bg-ink-950/30 backdrop-blur-sm sm:p-4 sm:pt-[10vh]"
           onClick={() => setBusca(false)}
         >
+          {/* Mobile: tela cheia de verdade. Desktop (sm+): modal centralizado compacto. */}
           <motion.div
             initial={{ y: -8, opacity: 0, scale: 0.98 }}
             animate={{ y: 0, opacity: 1, scale: 1 }}
             exit={{ y: -4, opacity: 0, scale: 0.98 }}
             transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-[640px] overflow-hidden rounded-2xl border border-ink-200 bg-white shadow-ring"
+            className="flex h-full w-full flex-col overflow-hidden bg-white pt-safe sm:h-auto sm:max-w-[640px] sm:flex-none sm:rounded-2xl sm:border sm:border-ink-200 sm:shadow-ring"
           >
             {/* Input */}
-            <div className="flex items-center gap-3 border-b border-ink-200/80 px-4">
-              <Search className="h-4 w-4 text-ink-500" />
+            <div className="flex flex-shrink-0 items-center gap-3 border-b border-ink-200/80 px-4">
+              <Search className="h-4 w-4 flex-shrink-0 text-ink-500" />
               <input
                 ref={inputRef}
                 value={value}
@@ -92,11 +93,18 @@ export function GlobalSearch({ value, onChange }: { value: string; onChange: (v:
                 placeholder="Buscar mensagem, tema, versículo, ilustracao…"
                 className="h-12 flex-1 bg-transparent text-[15px] outline-none placeholder:text-ink-400"
               />
-              <kbd className="font-mono text-[10px] text-ink-400">ESC</kbd>
+              <kbd className="hidden font-mono text-[10px] text-ink-400 sm:inline">ESC</kbd>
+              <button
+                onClick={() => setBusca(false)}
+                aria-label="Fechar busca"
+                className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-ink-500 transition-colors hover:bg-ink-100 sm:hidden"
+              >
+                <X className="h-5 w-5" />
+              </button>
             </div>
 
             {/* Resultados */}
-            <div className="max-h-[60vh] overflow-y-auto">
+            <div className="flex-1 overflow-y-auto sm:max-h-[60vh] sm:flex-none">
               {!value.trim() && (
                 <div className="px-4 py-10 text-center text-sm text-ink-500">
                   <Search className="mx-auto mb-3 h-5 w-5 text-ink-400" />
@@ -169,13 +177,13 @@ export function GlobalSearch({ value, onChange }: { value: string; onChange: (v:
               ))}
             </div>
 
-            {/* Footer */}
-            <div className="flex items-center justify-between border-t border-ink-200/80 bg-ink-50/40 px-4 py-2 text-[11px] text-ink-500">
-              <div className="flex items-center gap-3">
+            {/* Footer — atalhos de teclado só fazem sentido no desktop */}
+            <div className="flex flex-shrink-0 items-center justify-between border-t border-ink-200/80 bg-ink-50/40 px-4 py-2 pb-safe text-[11px] text-ink-500">
+              <div className="hidden items-center gap-3 sm:flex">
                 <span><kbd className="font-mono">↑</kbd> <kbd className="font-mono">↓</kbd> navegar</span>
                 <span><kbd className="font-mono">↵</kbd> abrir</span>
               </div>
-              <span>{resultados.length} resultados</span>
+              <span className="ml-auto">{resultados.length} resultados</span>
             </div>
           </motion.div>
         </motion.div>

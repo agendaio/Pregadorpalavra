@@ -4,10 +4,15 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 
-    <!-- Viewport iOS-friendly (viewport-fit=cover + safe-area) -->
+    <!-- Viewport iOS-friendly (viewport-fit=cover + safe-area).
+         interactive-widget=resizes-content: quando o teclado do celular abre,
+         o navegador encolhe a área de conteúdo (combinado com 100dvh no CSS)
+         em vez de sobrepor o teclado por cima do input. Suportado em
+         navegadores modernos (Chrome/Edge Android, Safari iOS 17+); nos
+         demais, o fallback via 100dvh (index.css) já cobre o mesmo caso. -->
     <meta
       name="viewport"
-      content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover, user-scalable=no"
+      content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover, user-scalable=no, interactive-widget=resizes-content"
     />
 
     <!-- SEO básico -->

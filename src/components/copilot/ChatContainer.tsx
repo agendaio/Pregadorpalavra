@@ -26,6 +26,7 @@ import { SYSTEM_PROMPT, SYSTEM_PROMPT_CHAT, SERMON_PARSING_INSTRUCTION } from '@
 import { construirContextoMemoria } from '@/lib/ai/memory';
 import { detectarIntencao } from '@/lib/ai/intent';
 import { useCopilotOutlineStore } from '@/stores/copilotOutline';
+import { useUIStore } from '@/stores/ui';
 import {
   aiDB, listarSessoesRecentes, adicionarMensagem,
   obterOuCriarSessao, atualizarSessao, excluirSessao,
@@ -668,6 +669,7 @@ export function ChatContainer({ onTogglePanel, onEsboçoPending }: ChatContainer
                       aplicacoes: [],
                     };
                     store.importar({ pontos: [...store.pontos, novoPonto] });
+                    useUIStore.getState().mostrarToast('Adicionado ao esboço', 'sucesso');
                     void autoGenerateSlides(store).catch(() => {});
                   }}
                 />

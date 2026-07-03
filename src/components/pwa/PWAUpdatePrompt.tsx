@@ -17,6 +17,14 @@ export function PWAUpdatePrompt() {
   useEffect(() => {
     const update = registerSW({
       immediate: true,
+      // Verifica atualização a cada 60s — pega o deploy novo rápido,
+      // sem esperar o usuário fechar e reabrir o app.
+      onRegisteredSW(_url, registration) {
+        if (!registration) return;
+        setInterval(() => {
+          registration.update().catch(() => {});
+        }, 60_000);
+      },
       onNeedRefresh() {
         setPrecisaAtualizar(true);
         setMostrando(true);
@@ -37,6 +45,18 @@ export function PWAUpdatePrompt() {
     }
   };
 
+  // Força a atualização automaticamente após um respiro curto — não trava
+  // esperando o usuário notar o aviso e clicar. Só dá um tempo pra não
+  // interromper no meio de uma digitação. Independe de `mostrando`: mesmo
+  // se o usuário fechar o aviso (botão X = "depois, mas ainda vai atualizar
+  // sozinho"), a atualização forçada acontece do mesmo jeito.
+  useEffect(() => {
+    if (!precisaAtualizar) return;
+    const t = setTimeout(() => { void handleAtualizar(); }, 6000);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [precisaAtualizar]);
+
   return (
     <>
       <AnimatePresence>
@@ -53,8 +73,8 @@ export function PWAUpdatePrompt() {
                 <RefreshCw className="h-4 w-4" />
               </div>
               <div className="min-w-0 flex-1">
-                <div className="text-[13px] font-semibold text-ink-900">Atualização disponível</div>
-                <div className="truncate text-[11.5px] text-ink-500">Toque em atualizar pra carregar a versão mais recente.</div>
+                <div className="text-[13px] font-semibold text-ink-900">Nova versão disponível</div>
+                <div className="truncate text-[11.5px] text-ink-500">Atualizando automaticamente em instantes…</div>
               </div>
               <Button variant="primary" onClick={handleAtualizar} className="h-8 px-3 text-[12px]">
                 Atualizar

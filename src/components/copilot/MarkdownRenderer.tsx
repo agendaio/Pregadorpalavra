@@ -213,8 +213,8 @@ function SectionBlock({
           </HeaderTag>
         </button>
 
-        {/* Ações inline — aparecem no hover da seção */}
-        <div className="flex flex-shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover/section:opacity-100 focus-within:opacity-100">
+        {/* Ações inline — sempre visíveis (hover não é confiável em telas de toque) */}
+        <div className="flex flex-shrink-0 items-center gap-0.5">
           <InlineAction
             icon={copied ? <CheckCheck className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
             label={copied ? 'Copiado!' : 'Copiar'}
