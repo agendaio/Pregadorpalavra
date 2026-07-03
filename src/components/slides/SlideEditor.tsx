@@ -103,11 +103,9 @@ function SlideThumbnail({
       )}
     >
       <button type="button" onClick={onClick} className="flex flex-col gap-1.5 p-1.5 text-left">
-        {/* Mini preview escuro */}
+        {/* Mini preview — compact mode, sem motion, sem scale */}
         <div className="aspect-video w-full overflow-hidden rounded-lg bg-[#0c0c14]">
-          <div className="h-full w-full scale-[0.25] origin-top-left transform">
-            <SlideRenderer slide={slide} />
-          </div>
+          <SlideRenderer slide={slide} compact />
         </div>
 
         {/* Índice + tipo */}
@@ -213,9 +211,7 @@ function AddSlideModal({ onAdd, onClose }: { onAdd: (tipo: SlideType) => void; o
               >
                 {/* Mini preview do slide */}
                 <div className="h-20 w-full overflow-hidden rounded-xl bg-[#0c0c14]">
-                  <div className="h-full w-full scale-[0.28] origin-top-left transform">
-                    <SlideRenderer slide={novoSlide(tipo)} />
-                  </div>
+                  <SlideRenderer slide={novoSlide(tipo)} compact />
                 </div>
                 <div className="flex items-center gap-1.5">
                   <Icon className="h-4 w-4 text-ink-500 group-hover:text-violet-600 dark:text-ink-400 dark:group-hover:text-violet-400" />
