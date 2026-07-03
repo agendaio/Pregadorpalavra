@@ -6,7 +6,7 @@ import {
   MessageSquare, Trash2, Menu, Square, Mic, MicOff,
   Sparkles, Share2, Wand2, BookOpen, Megaphone, ClipboardList,
   Globe, Users, HelpCircle, GraduationCap, Drama, Scroll,
-  History, ListChecks,
+  History, ListChecks, ChevronLeft,
 } from 'lucide-react';
 import { supabase, SUPABASE_ANON_KEY } from '@/lib/supabase';
 import { aiDB } from '@/lib/ai';
@@ -170,6 +170,14 @@ export function AssistantPage() {
     // (a memória da pregação segue mantida via outline store)
     await criarSessao(esp.id);
   }, [criarSessao]);
+
+  // ── Voltar para a tela principal (grade de especialistas) ──
+  // Não mexe no histórico salvo — só limpa a conversa/especialista ativos.
+  const voltarTelaInicial = useCallback(() => {
+    setEspecialistaId(null);
+    setSessionId(null);
+    setMessages([]);
+  }, []);
 
   // ── Enviar mensagem (streaming) ──
 
@@ -441,6 +449,16 @@ export function AssistantPage() {
           <Menu className="h-5 w-5" />
         </button>
 
+        {especialistaAtivo && (
+          <button
+            onClick={voltarTelaInicial}
+            aria-label="Voltar para especialistas"
+            className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-ink-700 transition-colors hover:bg-ink-100 dark:text-ink-200 dark:hover:bg-ink-800/60"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </button>
+        )}
+
         <div className="min-w-0 flex-1 text-center">
           {especialistaAtivo ? (
             <div className="flex items-center justify-center gap-1.5">
@@ -467,9 +485,10 @@ export function AssistantPage() {
         <button
           onClick={() => void criarSessao(especialistaId)}
           aria-label="Nova conversa"
-          className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-ink-700 transition-colors hover:bg-ink-100 dark:text-ink-200 dark:hover:bg-ink-800/60"
+          className="flex h-10 flex-shrink-0 items-center gap-1.5 rounded-full bg-violet-600 px-3 text-white shadow-sm transition-colors hover:bg-violet-500 active:scale-95"
         >
-          <Plus className="h-5 w-5" />
+          <Plus className="h-4 w-4" />
+          <span className="hidden text-[12.5px] font-semibold sm:inline">Novo</span>
         </button>
       </header>
 
@@ -633,6 +652,17 @@ export function AssistantPage() {
 
       {/* ── Conteúdo principal ── */}
       <div className="flex flex-1 flex-col overflow-hidden">
+        {/* Área rolável (empty state ou mensagens) — pill de histórico flutua só aqui, acima do input */}
+        <div className="relative flex flex-1 flex-col overflow-hidden">
+          <button
+            onClick={() => setShowSessoes(true)}
+            aria-label="Abrir histórico"
+            className="absolute bottom-2 left-1/2 z-20 flex -translate-x-1/2 items-center gap-1.5 rounded-full border border-ink-200 bg-white/95 px-3 py-1.5 text-[11.5px] font-medium text-ink-600 shadow-md backdrop-blur transition-colors hover:bg-ink-50 dark:border-ink-700 dark:bg-ink-900/95 dark:text-ink-300 dark:hover:bg-ink-800"
+          >
+            <Menu className="h-3.5 w-3.5" />
+            Histórico
+          </button>
+
         {/* ── Empty state: 9 cards de especialistas ── */}
         {mostrarEmptyState ? (
           <div className="flex-1 overflow-y-auto">
@@ -734,6 +764,7 @@ export function AssistantPage() {
             </div>
           </div>
         )}
+        </div>
 
         {/* ── Input fixo no rodapé (estilo ChatGPT) ── */}
         <div className="border-t border-ink-200/70 bg-white px-4 py-3 dark:border-ink-800 dark:bg-paper-dark">
