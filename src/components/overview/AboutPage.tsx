@@ -7,10 +7,6 @@ import {
   Wifi,
   Smartphone,
   Shield,
-  Github,
-  Heart,
-  ExternalLink,
-  ChevronLeft,
 } from 'lucide-react';
 import { MobileHeader } from '@/components/layout/MobileHeader';
 import { APP_VERSION, VERSION_LABEL } from '@/v.config';
@@ -83,64 +79,6 @@ export function AboutPage() {
                 title="Dados Privados"
                 desc="Tudo fica no seu navegador. Nuvem opcional via backup manual. Você controla seus dados."
               />
-            </div>
-          </section>
-
-          {/* Stack técnica */}
-          <section>
-            <h2 className="mb-3 px-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-ink-500">
-              Stack Técnica
-            </h2>
-            <div className="rounded-2xl border border-ink-200/80 bg-white p-4 shadow-soft">
-              <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-[12px]">
-                {[
-                  ['Frontend', 'React 19 + TypeScript'],
-                  ['Bundler', 'Vite 6'],
-                  ['Estilização', 'Tailwind CSS 3.4'],
-                  ['Estado', 'Zustand 5'],
-                  ['Offline', 'IndexedDB + Dexie 4'],
-                  ['IA', 'OpenAI API (GPT-4o)'],
-                  ['PWA', 'vite-plugin-pwa + Workbox'],
-                  ['Animações', 'Framer Motion 11'],
-                  ['Deploy', 'Vercel'],
-                  ['Fontend', 'React Router 7'],
-                ].map(([k, v]) => (
-                  <div key={k} className="flex flex-col gap-0.5">
-                    <span className="text-[10.5px] font-medium uppercase tracking-wide text-ink-400">{k}</span>
-                    <span className="text-[12px] font-medium text-ink-800">{v}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </section>
-
-          {/* Créditos */}
-          <section>
-            <h2 className="mb-3 px-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-ink-500">
-              Créditos
-            </h2>
-            <div className="rounded-2xl border border-ink-200/80 bg-white p-4 shadow-soft">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Heart className="h-5 w-5 text-accent" />
-                  <div>
-                    <p className="text-[13px] font-medium text-ink-900">Desenvolvido com dedicação</p>
-                    <p className="text-[11.5px] text-ink-500">Para pregadores que levam a Palavra a sério</p>
-                  </div>
-                </div>
-              </div>
-              <div className="mt-3 border-t border-ink-100 pt-3">
-                <a
-                  href="https://github.com/agendaio/Pregadorpalavra"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex items-center gap-2 text-[13px] text-ink-700 hover:text-ink-900"
-                >
-                  <Github className="h-4 w-4" />
-                  github.com/agendaio/Pregadorpalavra
-                  <ExternalLink className="h-3 w-3 text-ink-400" />
-                </a>
-              </div>
             </div>
           </section>
 
