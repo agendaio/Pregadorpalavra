@@ -1223,6 +1223,8 @@ return (
                       <SlideRenderer
                         key={slideIndex}
                         slide={mensagem.slides[slideIndex] as Slide}
+                        indice={slideIndex}
+                        total={mensagem.slides.length}
                       />
                     </AnimatePresence>
                   </div>

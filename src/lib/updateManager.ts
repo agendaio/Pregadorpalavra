@@ -5,20 +5,18 @@
  *
  * Como funciona
  * ─────────────
- *  1. Registra o service worker em modo controlado (registerType: 'prompt').
+ *  1. Registra o service worker em modo não-bloqueante.
  *     O Workbox faz o precache incremental (baixa só o que mudou) e a ativação
  *     é atômica: só vira a versão nova quando TODOS os arquivos estão íntegros.
  *
  *  2. Detecção de deploy independente do SW: consulta `/version.json` (servido
  *     sem cache) e compara o `hash` com o hash embutido neste bundle. A
  *     verificação é barata e disparada nos momentos certos — ao abrir, voltar
- *     pro app, focar a aba, reconectar à rede — com debounce e um intervalo
- *     suave de 5 min. Nunca faz polling agressivo.
+ *     pro app, focar a aba, reconectar à rede — com debounce.
+ *     Não faz polling de rede no intervalo (isso é feito pelo SW internamente).
  *
- *  3. Quando há versão nova, pede `registration.update()`. Assim que o SW novo
- *     termina de instalar (precache completo), `onNeedRefresh` dispara e a UI
- *     é avisada. O reload é único e controlado (via updateSW → SKIP_WAITING),
- *     preservando login, sessão, tema, idioma e dados locais (nada é limpo).
+ *  3. Quando há versão nova, o SW notifica via `onNeedRefresh`. O reload é
+ *     único e controlado, preservando login, sessão, tema e dados locais.
  */
 import { registerSW } from 'virtual:pwa-register';
 import { APP_HASH } from '@/v.config';
@@ -33,7 +31,6 @@ export interface UpdateState {
 type Listener = (state: UpdateState) => void;
 
 const VERSION_URL = '/version.json';
-const INTERVALO_OCIOSO = 5 * 60_000; // verificação suave a cada 5 min (só com aba visível)
 const DEBOUNCE_MS = 20_000; // no mínimo 20s entre checagens disparadas por foco/visibilidade
 const RELOAD_GUARD = 'pregador.sw.reloaded'; // evita loop de reload
 
@@ -122,21 +119,33 @@ export function checkForUpdateNow(): void {
   void verificarVersao(true);
 }
 
-/** Inicializa o gerenciador. Idempotente — pode ser chamado mais de uma vez. */
+/**
+ * Inicializa o gerenciador. Idempotente — pode ser chamado mais de uma vez.
+ * O SW é registrado de forma NÃO-bloqueante (setTimeout) pra nunca congelar
+ * a UI no momento do clique/navegação.
+ */
 export function startUpdateManager(): void {
   if (iniciado || typeof window === 'undefined') return;
   iniciado = true;
 
-  updateSWFn = registerSW({
-    immediate: true,
-    onRegisteredSW(_url, reg) {
-      registro = reg;
-    },
-    onNeedRefresh() {
-      // SW novo instalado e pronto (precache íntegro). Sinal 100% confiável.
-      definir({ updateAvailable: true });
-    },
-  });
+  // Regista SW em background — não bloqueia thread, não congela cliques.
+  // O SW faz o polling de updates internamente via workbox. Aqui só precisamos
+  // detectar a sinalização de refresh via onNeedRefresh.
+  setTimeout(() => {
+    if (typeof window === 'undefined') return;
+    updateSWFn = registerSW({
+      // immediate: false → registro não-bloqueante; SW ativa quando puder.
+      // Corrigia freeze ao clicar menu/navegar na PWA.
+      immediate: false,
+      onRegisteredSW(_url, reg) {
+        registro = reg;
+      },
+      onNeedRefresh() {
+        // SW novo instalado e pronto (precache íntegro). Sinal 100% confiável.
+        definir({ updateAvailable: true });
+      },
+    });
+  }, 0);
 
   // Após uma carga bem-sucedida da versão nova, libera a guarda de reload
   // pra permitir futuras atualizações no mesmo ciclo de vida da aba.
@@ -150,14 +159,8 @@ export function startUpdateManager(): void {
   // desbloquear o celular / restaurar do bfcache (pageshow).
   document.addEventListener('visibilitychange', aoVoltarPraFrente);
   window.addEventListener('focus', aoVoltarPraFrente);
-  window.addEventListener('pageshow', aoVoltarPraFrente);
+  document.addEventListener('pageshow', aoVoltarPraFrente);
   window.addEventListener('online', () => void verificarVersao(true));
-
-  // Intervalo suave — só verifica quando a aba está visível (economia de
-  // bateria/rede/CPU). Sem polling agressivo.
-  setInterval(() => {
-    if (document.visibilityState === 'visible') void verificarVersao();
-  }, INTERVALO_OCIOSO);
 
   // Checagem inicial na abertura.
   void verificarVersao(true);
