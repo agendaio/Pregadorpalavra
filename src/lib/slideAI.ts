@@ -90,5 +90,5 @@ Regras: nunca invente versículos ou referências. Seja fiel às Escrituras, cla
 }
 
 export function slideTipoLabel(tipo: SlideType): string {
-  return NOME_TIPO[tipo];
+  return NOME_TIPO[tipo] ?? 'Slide';
 }

@@ -120,9 +120,14 @@ export function EditorPage() {
     }
     if (!esbocoAtual.trim()) return; // esboco vazio, não gera
     ultimoEsbocoRef.current = esbocoAtual;
-    const { slides } = gerarSlides({ mensagem });
-    if (slides.length > 0) {
-      patch({ slides });
+    try {
+      const { slides } = gerarSlides({ mensagem });
+      if (slides.length > 0) {
+        patch({ slides });
+      }
+    } catch {
+      // Falha ao gerar slides — o editor continua funcionando, só não tem preview.
+      // Nunca crasha a página inteira.
     }
   }, [mensagem?.esboco, mensagem?.slides?.length]);
 

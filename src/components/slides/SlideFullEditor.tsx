@@ -79,7 +79,7 @@ export function SlideFullEditor({
   const [erroIA, setErroIA] = useState<string | null>(null);
   const mostrarToast = useUIStore((s) => s.mostrarToast);
 
-  const Icon = TIPO_ICON[slide.tipo];
+  const Icon = getTipoIcon(slide.tipo);
 
   const handleGerarIA = async () => {
     setGerandoIA(true);
