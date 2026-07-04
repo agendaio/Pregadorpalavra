@@ -5,24 +5,22 @@
  *
  * Como funciona
  * ─────────────
- *  1. Registra o service worker em modo não-bloqueante.
- *     O Workbox faz o precache incremental (baixa só o que mudou) e a ativação
- *     é atômica: só vira a versão nova quando TODOS os arquivos estão íntegros.
+ *  1. O service worker é registrado via `registerType: 'autoUpdate'`.
+ *     Quando um novo deploy acontece, o SW baixa o precache atômico (só o que
+ *     mudou) e ativa automaticamente com skipWaiting=true.
  *
- *  2. Detecção de deploy independente do SW: consulta `/version.json` (servido
- *     sem cache) e compara o `hash` com o hash embutido neste bundle. A
- *     verificação é barata e disparada nos momentos certos — ao abrir, voltar
- *     pro app, focar a aba, reconectar à rede — com debounce.
- *     Não faz polling de rede no intervalo (isso é feito pelo SW internamente).
+ *  2. Detectamos a troca de SW pelo evento `controllerchange` no `navigator`.
+ *     Isso acontece logo que o novo SW ativa — sem precisar comparar hashes
+ *     do bundle (que ficam obsoletos no browser缓存ado).
  *
- *  3. Quando há versão nova, o SW notifica via `onNeedRefresh`. O reload é
- *     único e controlado, preservando login, sessão, tema e dados locais.
+ *  3. O reload é único e seguro: guarda em sessionStorage impede loop.
+ *     Login, sessão, tema e dados locais sobrevivem ao reload porque o SW
+ *     já tem a nova versão do bundle e tudo carrega corretamente.
  */
 import { registerSW } from 'virtual:pwa-register';
-import { APP_HASH } from '@/v.config';
 
 export interface UpdateState {
-  /** Há uma versão nova disponível (detectada por hash ou pelo SW). */
+  /** Há uma versão nova disponível e o SW já ativou. */
   updateAvailable: boolean;
   /** O reload já foi disparado — mostra "Atualizando…". */
   applying: boolean;
@@ -30,14 +28,10 @@ export interface UpdateState {
 
 type Listener = (state: UpdateState) => void;
 
-const VERSION_URL = '/version.json';
-const DEBOUNCE_MS = 20_000; // no mínimo 20s entre checagens disparadas por foco/visibilidade
 const RELOAD_GUARD = 'pregador.sw.reloaded'; // evita loop de reload
 
-let updateSWFn: ((reload?: boolean) => Promise<void>) | null = null;
 let registro: ServiceWorkerRegistration | undefined;
 let estado: UpdateState = { updateAvailable: false, applying: false };
-let ultimaChecagem = 0;
 let iniciado = false;
 
 const ouvintes = new Set<Listener>();
@@ -63,105 +57,78 @@ export function getUpdateState(): UpdateState {
 }
 
 /**
- * Aplica a atualização: manda SKIP_WAITING e recarrega uma única vez.
- * O `updateSW(true)` do vite-plugin-pwa já recarrega no `controllerchange`
- * (com guarda interna contra reload duplo).
+ * Aplica a atualização: recarrega a página uma única vez.
+ * O novo SW já ativou (skipWaiting=true), então o reload carrega o bundle novo.
  */
 export async function applyUpdate(): Promise<void> {
   if (estado.applying) return;
   definir({ applying: true });
   try {
-    if (updateSWFn) {
-      await updateSWFn(true);
-    } else {
-      recarregarUmaVez();
-    }
+    if (sessionStorage.getItem(RELOAD_GUARD) === '1') return;
+    sessionStorage.setItem(RELOAD_GUARD, '1');
+    window.location.reload();
   } catch {
-    // Falhou ao aplicar — mantém a versão anterior funcionando (seguro).
+    // Falhou — mantém a versão anterior funcionando.
     definir({ applying: false });
   }
 }
 
-function recarregarUmaVez() {
-  if (sessionStorage.getItem(RELOAD_GUARD) === '1') return;
-  sessionStorage.setItem(RELOAD_GUARD, '1');
-  window.location.reload();
-}
-
-/**
- * Consulta /version.json (sem cache) e compara o hash com o do bundle atual.
- * Se diferirem, marca atualização disponível e cutuca o SW pra baixar/instalar
- * o novo precache de forma atômica.
- */
-async function verificarVersao(forcar = false): Promise<void> {
-  const agora = Date.now();
-  if (!forcar && agora - ultimaChecagem < DEBOUNCE_MS) return;
-  ultimaChecagem = agora;
-
-  try {
-    const res = await fetch(`${VERSION_URL}?_=${agora}`, {
-      cache: 'no-store',
-      headers: { 'cache-control': 'no-cache' },
-    });
-    if (!res.ok) return;
-    const data = (await res.json()) as { hash?: string };
-    if (data.hash && APP_HASH && data.hash !== APP_HASH) {
-      definir({ updateAvailable: true });
-      await registro?.update().catch(() => {});
-    }
-  } catch {
-    // Offline ou rede instável — ignora e tenta na próxima. Baixo custo.
-  }
-}
-
-/** Dispara uma verificação imediata (usada por eventos externos, ex.: navegação). */
+/** Dispara uma verificação imediata: cutuca o SW pra baixar/atualizar. */
 export function checkForUpdateNow(): void {
-  void verificarVersao(true);
+  void registro?.update().catch(() => {});
 }
 
 /**
  * Inicializa o gerenciador. Idempotente — pode ser chamado mais de uma vez.
- * O SW é registrado de forma NÃO-bloqueante (setTimeout) pra nunca congelar
- * a UI no momento do clique/navegação.
+ *
+ * Fluxo de atualização:
+ *  1. SW novo termina de instalar com precache íntegro.
+ *  2. SW ativa imediatamente (skipWaiting=true).
+ *  3. `controllerchange` dispara — navigator.serviceWorker.controller muda.
+ *  4. Detectamos a troca e mostramos "Nova versão disponível".
+ *  5. Após respiro curto (1.2s), reload automático.
  */
 export function startUpdateManager(): void {
   if (iniciado || typeof window === 'undefined') return;
   iniciado = true;
 
-  // Regista SW em background — não bloqueia thread, não congela cliques.
-  // O SW faz o polling de updates internamente via workbox. Aqui só precisamos
-  // detectar a sinalização de refresh via onNeedRefresh.
+  // Limpa a guarda de reload quando uma versão nova carrega com sucesso.
+  window.addEventListener('load', () => sessionStorage.removeItem(RELOAD_GUARD));
+
+  // Corta reload em loop: se a página está sendo restaurada do bfcache,
+  // sessionStorage ainda tem '1' da tentativa anterior.
+  if (window.performance?.navigation?.type === 2) {
+    sessionStorage.removeItem(RELOAD_GUARD);
+  }
+
+  // ── Registra SW não-bloqueante ──────────────────────────────────────────
   setTimeout(() => {
     if (typeof window === 'undefined') return;
-    updateSWFn = registerSW({
-      // immediate: false → registro não-bloqueante; SW ativa quando puder.
-      // Corrigia freeze ao clicar menu/navegar na PWA.
+
+    registerSW({
       immediate: false,
       onRegisteredSW(_url, reg) {
         registro = reg;
+
+        // Escuta a troca de SW: quando o novo ativa, recarrega.
+        // Isso é mais confiável que comparar hashes do bundle (que podem
+        // estar缓存ados no browser).
+        if (reg?.active) {
+          navigator.serviceWorker.addEventListener('controllerchange', () => {
+            // navigator.serviceWorker.controller mudou → novo SW ativou.
+            if (estado.updateAvailable || estado.applying) return;
+            definir({ updateAvailable: true });
+          });
+        }
       },
       onNeedRefresh() {
-        // SW novo instalado e pronto (precache íntegro). Sinal 100% confiável.
-        definir({ updateAvailable: true });
+        // SW novo instalado e pronto para ativar.
+        // Com autoUpdate + skipWaiting, isso já vai pro controllerchange acima.
+        // Mas como backup, já marca a atualização.
+        if (!estado.updateAvailable) {
+          definir({ updateAvailable: true });
+        }
       },
     });
   }, 0);
-
-  // Após uma carga bem-sucedida da versão nova, libera a guarda de reload
-  // pra permitir futuras atualizações no mesmo ciclo de vida da aba.
-  window.addEventListener('load', () => sessionStorage.removeItem(RELOAD_GUARD));
-
-  const aoVoltarPraFrente = () => {
-    if (document.visibilityState === 'visible') void verificarVersao();
-  };
-
-  // Momentos de verificação: abrir, voltar pro app, focar a aba, reconectar,
-  // desbloquear o celular / restaurar do bfcache (pageshow).
-  document.addEventListener('visibilitychange', aoVoltarPraFrente);
-  window.addEventListener('focus', aoVoltarPraFrente);
-  document.addEventListener('pageshow', aoVoltarPraFrente);
-  window.addEventListener('online', () => void verificarVersao(true));
-
-  // Checagem inicial na abertura.
-  void verificarVersao(true);
 }

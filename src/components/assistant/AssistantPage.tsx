@@ -6,7 +6,7 @@ import {
   MessageSquare, Trash2, Menu, Square, Mic, MicOff,
   Sparkles, Share2, Wand2, BookOpen, Megaphone, ClipboardList,
   Globe, Users, HelpCircle, GraduationCap, Drama, Scroll,
-  History, ListChecks, ChevronLeft,
+  History, ListChecks, ChevronLeft, Sun, Moon, User, Settings,
 } from 'lucide-react';
 import { supabase, SUPABASE_ANON_KEY } from '@/lib/supabase';
 import { aiDB } from '@/lib/ai';
@@ -16,6 +16,7 @@ import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 import { useCopilotOutlineStore } from '@/stores/copilotOutline';
 import { construirContextoMemoria } from '@/lib/ai/memory';
 import { useUIStore } from '@/stores/ui';
+import { useAuthStore } from '@/stores/authUser';
 import { autoGenerateSlides } from '@/lib/autoGenerateSlides';
 import { MarkdownRenderer } from '@/components/copilot/MarkdownRenderer';
 import { FolderPicker } from '@/components/copilot/FolderPicker';
@@ -113,6 +114,11 @@ export function AssistantPage() {
 
   // ── Hook de transcrição de voz (Web Speech API) ──
   const speech = useSpeechRecognition('pt-BR');
+
+  // ── Tema e perfil ──
+  const tema = useUIStore((s) => s.tema);
+  const alternarTema = useUIStore((s) => s.alternarTema);
+  const user = useAuthStore((s) => s.user);
 
   // Carregar sessões do IndexedDB
   const sessoes = useLiveQuery(() =>

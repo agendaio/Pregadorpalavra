@@ -55,10 +55,11 @@ export default defineConfig({
     react(),
     versionManifestPlugin(),
     VitePWA({
-      // 'prompt' (não 'autoUpdate'): o reload é controlado pelo updateManager,
-      // pra nunca recarregar no meio do uso e nunca dar tela branca. A ativação
-      // só acontece quando o novo precache está 100% íntegro (tudo-ou-nada).
-      registerType: 'prompt',
+      // 'autoUpdate': SW ativa automaticamente quando novo precache está pronto.
+      // O updateManager detecta via `controllerchange` (mais confiável que hash
+      // comparison, que não funciona quando o bundle está缓存ado no browser).
+      // skipWaiting=true garante ativação imediata sem pedir confirmação.
+      registerType: 'autoUpdate',
       injectRegister: 'auto',
       filename: 'sw.js',
       manifestFilename: 'manifest.webmanifest',
