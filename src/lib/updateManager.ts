@@ -9,11 +9,14 @@
  *     Quando um novo deploy acontece, o SW baixa o precache atômico (só o que
  *     mudou) e ativa automaticamente com skipWaiting=true.
  *
- *  2. Detectamos a troca de SW pelo evento `controllerchange` no `navigator`.
+ *  2. Polling a cada 30s (registration.update()) garante que o SW sempre
+ *     verifique se há nova versão — mesmo sem navegação do usuário.
+ *
+ *  3. Detectamos a troca de SW pelo evento `controllerchange` no `navigator`.
  *     Isso acontece logo que o novo SW ativa — sem precisar comparar hashes
  *     do bundle (que ficam obsoletos no browser缓存ado).
  *
- *  3. O reload é único e seguro: guarda em sessionStorage impede loop.
+ *  3. O reload é automático e seguro: guarda em sessionStorage impede loop.
  *     Login, sessão, tema e dados locais sobrevivem ao reload porque o SW
  *     já tem a nova versão do bundle e tudo carrega corretamente.
  */
@@ -73,9 +76,18 @@ export async function applyUpdate(): Promise<void> {
   }
 }
 
-/** Dispara uma verificação imediata: cutuca o SW pra baixar/atualizar. */
+/** Dispara uma verificação imediata: força SW a baixar/atualizar. */
 export function checkForUpdateNow(): void {
+  // Força SW a recarregar — baixa nova versão se disponível
+  if (registro?.active) {
+    navigator.serviceWorker.controller?.postMessage({ type: 'SKIP_WAITING' });
+  }
+  // Fallback: cutuca update via API
   void registro?.update().catch(() => {});
+  // Se já detectou update, dispara reload automaticamente
+  if (estado.updateAvailable) {
+    void applyUpdate();
+  }
 }
 
 /**
@@ -85,8 +97,7 @@ export function checkForUpdateNow(): void {
  *  1. SW novo termina de instalar com precache íntegro.
  *  2. SW ativa imediatamente (skipWaiting=true).
  *  3. `controllerchange` dispara — navigator.serviceWorker.controller muda.
- *  4. Detectamos a troca e mostramos "Nova versão disponível".
- *  5. Após respiro curto (1.2s), reload automático.
+ *  4. Detectamos a troca e mostramos "Atualizando…" + reload automático.
  */
 export function startUpdateManager(): void {
   if (iniciado || typeof window === 'undefined') return;
@@ -107,26 +118,37 @@ export function startUpdateManager(): void {
 
     registerSW({
       immediate: false,
-      onRegisteredSW(_url, reg) {
-        registro = reg;
+      onRegisteredSW(_url, registration) {
+        // Sempre atualiza o registro, mesmo se active for null
+        registro = registration ?? undefined;
 
         // Escuta a troca de SW: quando o novo ativa, recarrega.
-        // Isso é mais confiável que comparar hashes do bundle (que podem
-        // estar缓存ados no browser).
-        if (reg?.active) {
+        if (registration?.active) {
           navigator.serviceWorker.addEventListener('controllerchange', () => {
             // navigator.serviceWorker.controller mudou → novo SW ativou.
             if (estado.updateAvailable || estado.applying) return;
             definir({ updateAvailable: true });
+            // Auto-reload imediato quando SW novo ativa
+            void applyUpdate();
           });
         }
+
+        // ── Polling agressivo: cutuca SW a cada 30s ─────────────────────────
+        // Garante que todo deploy chegue ao cliente, mesmo que ele não navegue
+        // ou fique com a aba aberta por horas sem interação.
+        const INTERVALO = 30_000; // 30 segundos
+        const poll = () => {
+          registration?.update().catch(() => {});
+        };
+        poll();                     // primeira verificação imediata
+        setInterval(poll, INTERVALO);
       },
       onNeedRefresh() {
         // SW novo instalado e pronto para ativar.
-        // Com autoUpdate + skipWaiting, isso já vai pro controllerchange acima.
-        // Mas como backup, já marca a atualização.
         if (!estado.updateAvailable) {
           definir({ updateAvailable: true });
+          // Auto-reload após respiro curto
+          setTimeout(() => { void applyUpdate(); }, 1200);
         }
       },
     });

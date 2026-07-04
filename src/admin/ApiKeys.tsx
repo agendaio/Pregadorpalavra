@@ -1286,10 +1286,10 @@ function LimitesSection() {
       sb!.from('subscriptions').select('plans(limite_ia_mes, nome)').eq('user_id', userId).in('status', ['active', 'trialing']).order('criado_em', { ascending: false }).limit(1).maybeSingle(),
     ]);
 
-    // @ts-ignore
-    const limite = sub?.plans?.limite_ia_mes ?? 30;
-    // @ts-ignore
-    const plano = sub?.plans?.nome ?? 'Free (sem assinatura)';
+    // Tipo explícito para relação aninhada do Supabase
+    const planoData = sub as { plans: { limite_ia_mes: number; nome: string } | null } | null;
+    const limite = planoData?.plans?.limite_ia_mes ?? 30;
+    const plano = planoData?.plans?.nome ?? 'Free (sem assinatura)';
     setStats({ usado: count ?? 0, limite, plano });
     setLoading(false);
   }

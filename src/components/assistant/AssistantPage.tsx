@@ -714,7 +714,7 @@ export function AssistantPage() {
               </p>
 
               {/* Grade de especialistas — cada um com sua cor de destaque */}
-              <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-2.5">
+              <div className="grid w-full grid-cols-2 gap-2.5">
                 {SPECIALISTS.map((esp) => (
                   <button
                     key={esp.id}

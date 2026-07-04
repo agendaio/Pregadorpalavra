@@ -55,11 +55,10 @@ export default defineConfig({
     react(),
     versionManifestPlugin(),
     VitePWA({
-      // 'autoUpdate': SW ativa automaticamente quando novo precache está pronto.
-      // O updateManager detecta via `controllerchange` (mais confiável que hash
-      // comparison, que não funciona quando o bundle está缓存ado no browser).
-      // skipWaiting=true garante ativação imediata sem pedir confirmação.
-      registerType: 'autoUpdate',
+      // 'prompt' (não 'autoUpdate'): o reload é controlado pelo updateManager,
+      // pra nunca recarregar no meio do uso e nunca dar tela branca. A ativação
+      // só acontece quando o novo precache está 100% íntegro (tudo-ou-nada).
+      registerType: 'prompt',
       injectRegister: 'auto',
       filename: 'sw.js',
       manifestFilename: 'manifest.webmanifest',
@@ -127,11 +126,10 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,svg,png,ico,webp,woff2}'],
         cleanupOutdatedCaches: true,
         clientsClaim: true,
-        // skipWaiting TRUE: SW novo ativa imediatamente quando termina de instalar.
-        // Como o precache do Workbox é atômico (tudo-ou-nada), nunca sobra
-        // uma versão quebrada. O updateManager já garante reload único e seguro
-        // via guarda em sessionStorage — não tem risco de reload em loop.
-        skipWaiting: true,
+        // skipWaiting fica FALSE de propósito: o SW novo espera até o
+        // updateManager mandar SKIP_WAITING (via updateSW), garantindo reload
+        // único e controlado, sem interromper o usuário no meio de uma ação.
+        skipWaiting: false,
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         runtimeCaching: [
           {
@@ -160,7 +158,6 @@ export default defineConfig({
             handler: 'NetworkOnly',
           },
           {
-            // Outras APIs do Supabase (dados, auth) — cache normal
             urlPattern: /^https:\/\/.*\.supabase\.co\/rest\/.*/i,
             handler: 'NetworkFirst',
             options: {
@@ -190,10 +187,18 @@ export default defineConfig({
   resolve: {
     alias: { '@': path.resolve(__dirname, './src') },
   },
+  optimizeDeps: {
+    // @tiptap/pm não tem export raiz "." — Vite 6 é rígido com isso.
+    exclude: ['@tiptap/pm'],
+  },
   build: {
     target: 'es2020',
     cssCodeSplit: true,
+    chunkSizeWarningLimit: 600,
     rollupOptions: {
+      // @tiptap/pm é um meta-pacote só com subpaths (./state, ./model, etc).
+      // Rollup falha se algo tentar resolver o pacote raiz. Marcar como external.
+      external: ['@tiptap/pm'],
       output: {
         manualChunks: {
           // vendor
@@ -216,6 +221,10 @@ export default defineConfig({
           'db': ['dexie', 'dexie-react-hooks'],
           // supabase
           'supabase': ['@supabase/supabase-js'],
+          // html2canvas (export PDF/imagem)
+          'html2canvas': ['html2canvas'],
+          // markdown
+          'markdown': ['react-markdown', 'rehype-raw', 'remark-gfm'],
         },
       },
     },

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 
 const MOBILE_QUERY = '(max-width: 767px)';
+const LANDSCAPE_QUERY = '(orientation: landscape)';
 
 /**
  * Hook que retorna true quando a viewport é mobile (< 768px).
@@ -52,4 +53,24 @@ export function useIsDesktop(): boolean {
   }, []);
 
   return isDesktop;
+}
+
+/**
+ * Hook que retorna true quando a viewport está em landscape.
+ * Funciona em mobile E desktop (monitores rotacionados).
+ */
+export function useIsLandscape(): boolean {
+  const [isLandscape, setIsLandscape] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return window.matchMedia(LANDSCAPE_QUERY).matches;
+  });
+
+  useEffect(() => {
+    const mq = window.matchMedia(LANDSCAPE_QUERY);
+    const fn = (e: MediaQueryListEvent) => setIsLandscape(e.matches);
+    mq.addEventListener('change', fn);
+    return () => mq.removeEventListener('change', fn);
+  }, []);
+
+  return isLandscape;
 }
