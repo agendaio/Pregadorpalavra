@@ -61,6 +61,10 @@ const TIPO_META: Record<SlideType, { label: string; icon: typeof LayoutTemplate 
   oracao:     { label: 'Oração',     icon: Heart },
 };
 
+function getTipoMeta(tipo: string): { label: string; icon: typeof LayoutTemplate } {
+  return TIPO_META[tipo as SlideType] ?? { label: 'Slide', icon: LayoutTemplate };
+}
+
 // ─── SlideForm — exports dos forms existentes ────────────────────────────────
 
 export { FormCapa, FormVerso, FormConteudo, FormCategorias, FormChamada, FormOracao };
@@ -90,7 +94,7 @@ function SlideThumbnail({
   isLast: boolean;
   indice: number;
 }) {
-  const meta = TIPO_META[slide.tipo];
+  const meta = getTipoMeta(slide.tipo);
   const Icon = meta.icon;
 
   return (

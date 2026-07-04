@@ -29,6 +29,10 @@ const TIPO_ICON: Record<SlideType, typeof LayoutTemplate> = {
   oracao: Heart,
 };
 
+function getTipoIcon(tipo: string): typeof LayoutTemplate {
+  return TIPO_ICON[tipo as SlideType] ?? LayoutTemplate;
+}
+
 function EditContent({ slide, onChange }: { slide: Slide; onChange: (c: Slide['content']) => void }) {
   const c = slide.content;
   switch (c.tipo) {

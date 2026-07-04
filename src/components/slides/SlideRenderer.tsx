@@ -500,12 +500,32 @@ function SlideOracaoView({ content, compact }: { content: SlideOracao; compact?:
 
 export function SlideRenderer({ slide, compact = false }: { slide: Slide; compact?: boolean }) {
   const c = slide.content;
-  switch (c.tipo) {
+  // Fallback para slides com tipo inválido (dados legados, migração, etc.)
+  // — nunca retorna undefined, que causaria tela branca silenciosa.
+  switch (c?.tipo) {
     case 'capa':       return <SlideCapaView      content={c} compact={compact} />;
     case 'verso':       return <SlideVersoView     content={c} compact={compact} />;
     case 'conteudo':   return <SlideConteudoView  content={c} compact={compact} />;
     case 'categorias': return <SlideCategoriasView content={c} compact={compact} />;
     case 'chamada':    return <SlideChamadaView   content={c} compact={compact} />;
     case 'oracao':     return <SlideOracaoView    content={c} compact={compact} />;
+    default:            return <SlideDesconhecido compact={compact} />;
   }
+}
+
+function SlideDesconhecido({ compact }: { compact?: boolean }) {
+  return (
+    <div className="flex h-full w-full items-center justify-center bg-[#090910]">
+      <div className="text-center px-4">
+        <p className={`font-semibold text-ink-400 ${compact ? 'text-[10px]' : 'text-sm'}`}>
+          Slide com formato desconhecido
+        </p>
+        {!compact && (
+          <p className="mt-1 text-xs text-ink-600">
+            Este slide não pôde ser exibido.
+          </p>
+        )}
+      </div>
+    </div>
+  );
 }
