@@ -188,17 +188,15 @@ export default defineConfig({
     alias: { '@': path.resolve(__dirname, './src') },
   },
   optimizeDeps: {
-    // @tiptap/pm não tem export raiz "." — Vite 6 é rígido com isso.
-    exclude: ['@tiptap/pm'],
+    // @tiptap/pm 2.10.x tem export raiz — 2.27.x não tem.
+    // Garantir que a versão pinned (2.10.3) seja usada.
+    exclude: [],
   },
   build: {
     target: 'es2020',
     cssCodeSplit: true,
     chunkSizeWarningLimit: 600,
     rollupOptions: {
-      // @tiptap/pm é um meta-pacote só com subpaths (./state, ./model, etc).
-      // Rollup falha se algo tentar resolver o pacote raiz. Marcar como external.
-      external: ['@tiptap/pm'],
       output: {
         manualChunks: {
           // vendor
