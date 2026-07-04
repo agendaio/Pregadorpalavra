@@ -23,7 +23,7 @@ import { FolderPicker } from '@/components/copilot/FolderPicker';
 import { useNavigate } from 'react-router-dom';
 import type { SeleçãoAção } from '@/types/copilotOutline';
 
-// ─── Ícones profissionais por especialista (substitui os emojis) ───────────
+// ─── Ícones profissionais por especialista ────────────────────────────────────
 
 const SPECIALIST_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   'estudos-biblicos': BookOpen,
@@ -40,6 +40,25 @@ const SPECIALIST_ICONS: Record<string, React.ComponentType<{ className?: string 
 function SpecialistIcon({ id, className }: { id: string; className?: string }) {
   const Icon = SPECIALIST_ICONS[id] ?? Sparkles;
   return <Icon className={className} />;
+}
+
+/** Retorna a cor do especialista (do gradiente) como cor sólida para badge/indicador */
+function SpecialistColorDot({ id }: { id: string }) {
+  const esp = getSpecialist(id);
+  if (!esp) return null;
+  // Pega a cor final do gradiente (degradê sempre termina com a cor mais forte)
+  const cores: Record<string, string> = {
+    'from-amber-500 to-orange-500': 'bg-amber-500',
+    'from-rose-500 to-pink-600': 'bg-rose-500',
+    'from-blue-500 to-cyan-500': 'bg-blue-500',
+    'from-emerald-500 to-teal-500': 'bg-emerald-500',
+    'from-violet-500 to-purple-500': 'bg-violet-500',
+    'from-sky-500 to-blue-500': 'bg-sky-500',
+    'from-indigo-500 to-blue-700': 'bg-indigo-500',
+    'from-orange-500 to-red-500': 'bg-orange-500',
+    'from-fuchsia-500 to-purple-600': 'bg-fuchsia-500',
+  };
+  return <div className={cn('h-2 w-2 rounded-full', cores[esp.cor] ?? 'bg-violet-500')} />;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -136,7 +155,7 @@ export function AssistantPage() {
     const esp = getSpecialist(espId);
     const sessao: ChatSession = {
       id: crypto.randomUUID(),
-      titulo: esp ? `${esp.icon} ${esp.nome}` : 'Nova conversa',
+      titulo: esp ? esp.nome : 'Nova conversa',
       especialistaId: espId,
       createdAt: Date.now(),
       updatedAt: Date.now(),
@@ -482,10 +501,12 @@ export function AssistantPage() {
           </button>
         )}
 
-        <div className="min-w-0 flex-1 text-center">
+          <div className="min-w-0 flex-1 text-center">
           {especialistaAtivo ? (
             <div className="flex items-center justify-center gap-1.5">
-              <SpecialistIcon id={especialistaAtivo.id} className="h-4 w-4 text-violet-600 dark:text-violet-400" />
+              <div className={cn('flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br', especialistaAtivo.cor)}>
+                <SpecialistIcon id={especialistaAtivo.id} className="h-[15px] w-[15px] text-white" />
+              </div>
               <h1 className="truncate text-[14.5px] font-semibold tracking-[-0.01em] text-ink-900 dark:text-white">
                 {especialistaAtivo.nome}
               </h1>
@@ -497,11 +518,6 @@ export function AssistantPage() {
                 Assistente Ministerial
               </h1>
             </div>
-          )}
-          {especialistaAtivo && (
-            <p className="-mt-0.5 text-[10.5px] font-medium uppercase tracking-[0.08em] text-violet-600 dark:text-violet-400">
-              Especialista Ativo
-            </p>
           )}
         </div>
 
@@ -595,9 +611,13 @@ export function AssistantPage() {
                       )}
                     >
                       {esp ? (
-                        <SpecialistIcon id={esp.id} className="h-3.5 w-3.5 flex-shrink-0 text-violet-500" />
+                        <div className={cn('flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-gradient-to-br', esp.cor)}>
+                          <SpecialistIcon id={esp.id} className="h-[14px] w-[14px] text-white" />
+                        </div>
                       ) : (
-                        <MessageSquare className="h-3.5 w-3.5 flex-shrink-0" />
+                        <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-ink-100 dark:bg-ink-800">
+                          <MessageSquare className="h-3.5 w-3.5 text-ink-500" />
+                        </div>
                       )}
                       <div className="min-w-0 flex-1">
                         <div className="truncate">{s.titulo}</div>
@@ -627,41 +647,64 @@ export function AssistantPage() {
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Área rolável (empty state ou mensagens) — pill flutua só aqui, acima do input */}
         <div className="relative flex flex-1 flex-col overflow-hidden">
-          {/* Menu flutuante: Histórico | Esboço — some ao rolar pra cima, aparece ao rolar pra baixo */}
-          {/* x:'-50%' centraliza — o translate precisa vir pelo motion, senão
-              a animação de transform do framer sobrescreve o -translate-x-1/2 do CSS */}
+          {/* Card flutuante profissional: Histórico | Ações rápidas */}
           <motion.div
             initial={false}
             animate={pillVisivel ? { opacity: 1, y: 0, x: '-50%', pointerEvents: 'auto' } : { opacity: 0, y: 18, x: '-50%', pointerEvents: 'none' }}
             transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-            className="absolute bottom-3 left-1/2 z-20 flex items-center gap-1.5 rounded-2xl border border-ink-200/80 bg-white/95 p-1.5 shadow-xl shadow-ink-900/15 backdrop-blur-md dark:border-ink-700 dark:bg-ink-900/95"
+            className="absolute bottom-3 left-1/2 z-20 -translate-x-1/2"
           >
-            <button
-              onClick={() => openPainel()}
-              aria-label="Abrir histórico"
-              className="flex items-center gap-2 rounded-xl bg-blue-50 px-4 py-2 text-[13px] font-semibold text-blue-700 transition-all hover:bg-blue-100 active:scale-95 dark:bg-blue-950/40 dark:text-blue-300 dark:hover:bg-blue-900/50"
-            >
-              <History className="h-4 w-4" />
-              Histórico
-            </button>
-            {/* Esboço leva direto pra Biblioteca — é lá que o esboço fica
-                organizado e separado, pronto pra pregação */}
-            <button
-              onClick={() => navigate('/biblioteca')}
-              aria-label="Ir para o esboço na Biblioteca"
-              className="flex items-center gap-2 rounded-xl bg-emerald-50 px-4 py-2 text-[13px] font-semibold text-emerald-700 transition-all hover:bg-emerald-100 active:scale-95 dark:bg-emerald-950/40 dark:text-emerald-300 dark:hover:bg-emerald-900/50"
-            >
-              <ListChecks className="h-4 w-4" />
-              Esboço
-            </button>
+            {/* Pill principal com fundo blur premium */}
+            <div className="flex items-center gap-1 rounded-2xl border border-ink-200/70 bg-white/90 px-1 py-1 shadow-xl shadow-ink-900/10 backdrop-blur-xl dark:border-ink-800/60 dark:bg-ink-900/85">
+              {/* Histórico */}
+              <button
+                onClick={() => openPainel()}
+                aria-label="Abrir histórico"
+                className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-[13px] font-semibold text-ink-700 transition-all hover:bg-ink-100 active:scale-95 dark:text-ink-200 dark:hover:bg-ink-800/60"
+              >
+                <History className="h-4 w-4 text-violet-500 dark:text-violet-400" />
+                Histórico
+              </button>
+
+              {/* Divisor */}
+              <div className="h-5 w-px bg-ink-200/60 dark:bg-ink-700/60" aria-hidden="true" />
+
+              {/* Toggle Tema */}
+              <button
+                onClick={alternarTema}
+                aria-label={tema === 'dark' ? 'Modo claro' : 'Modo escuro'}
+                className="flex h-9 w-9 items-center justify-center rounded-xl text-ink-500 transition-all hover:bg-ink-100 active:scale-95 dark:text-ink-300 dark:hover:bg-ink-800/60"
+              >
+                {tema === 'dark' ? (
+                  <Sun className="h-4 w-4 text-amber-400" />
+                ) : (
+                  <Moon className="h-4 w-4 text-violet-500" />
+                )}
+              </button>
+
+              {/* Perfil */}
+              <button
+                onClick={() => navigate('/config')}
+                aria-label="Perfil e configurações"
+                className="flex h-9 w-9 items-center justify-center rounded-xl text-ink-500 transition-all hover:bg-ink-100 active:scale-95 dark:text-ink-300 dark:hover:bg-ink-800/60"
+              >
+                {user ? (
+                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-violet-600 text-white shadow-sm">
+                    <User className="h-3.5 w-3.5" />
+                  </div>
+                ) : (
+                  <User className="h-4 w-4" />
+                )}
+              </button>
+            </div>
           </motion.div>
 
         {/* ── Empty state: cards de especialistas ── */}
         {mostrarEmptyState ? (
           <div className="flex-1 overflow-y-auto" onScroll={handleScroll}>
             <div className="mx-auto flex min-h-full max-w-3xl flex-col justify-start px-3 pb-24 pt-5">
-              <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-100 to-purple-100 dark:from-violet-900/40 dark:to-purple-900/40">
-                <Sparkles className="h-6 w-6 text-violet-600 dark:text-violet-400" />
+              <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-blue-600 to-violet-600 shadow-lg shadow-violet-500/25 dark:shadow-violet-500/10">
+                <Sparkles className="h-6 w-6 text-white" />
               </div>
               <h2 className="mb-1 text-center text-[20px] font-semibold tracking-[-0.01em] text-ink-900 dark:text-white">
                 Como posso te ajudar hoje?
@@ -670,33 +713,46 @@ export function AssistantPage() {
                 Escolha um especialista para começar.
               </p>
 
-              {/* 2 colunas sempre — todos os agentes visíveis sem rolar muito */}
-              <div className="grid w-full grid-cols-2 gap-2">
+              {/* Grade de especialistas — cada um com sua cor de destaque */}
+              <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-2.5">
                 {SPECIALISTS.map((esp) => (
                   <button
                     key={esp.id}
                     onClick={() => void ativarEspecialista(esp)}
                     className={cn(
-                      'group relative flex flex-col gap-2 rounded-2xl border border-ink-200 bg-white p-3 text-left transition-all',
-                      'hover:-translate-y-0.5 hover:border-ink-300 hover:shadow-md active:scale-[0.98]',
-                      'dark:border-ink-800 dark:bg-ink-900/40 dark:hover:border-ink-700',
+                      'group relative flex items-start gap-3 rounded-2xl border border-ink-200 bg-white p-4 text-left',
+                      'shadow-sm hover:shadow-md active:scale-[0.99]',
+                      'hover:-translate-y-0.5 hover:border-violet-200/60 hover:shadow-lg',
+                      'dark:border-ink-800 dark:bg-ink-900/50',
+                      'dark:hover:border-violet-800/40 dark:hover:shadow-violet-950/30',
                     )}
                   >
+                    {/* Ícone com cor única do especialista */}
                     <div
                       className={cn(
-                        'flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-white shadow-sm',
-                        esp.cor,
+                        'flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl',
+                        `bg-gradient-to-br ${esp.cor}`,
+                        'shadow-md',
                       )}
                     >
-                      <SpecialistIcon id={esp.id} className="h-[18px] w-[18px]" />
+                      <SpecialistIcon id={esp.id} className="h-[20px] w-[20px] text-white" />
                     </div>
-                    <div className="min-w-0">
-                      <div className="text-[12.5px] font-semibold leading-tight text-ink-900 dark:text-white">
+
+                    {/* Texto */}
+                    <div className="min-w-0 flex-1 pt-0.5">
+                      <div className="text-[13.5px] font-semibold leading-tight text-ink-900 dark:text-white">
                         {esp.nome}
                       </div>
-                      <div className="mt-0.5 line-clamp-2 text-[10.5px] leading-snug text-ink-500 dark:text-ink-400">
+                      <div className="mt-0.5 line-clamp-2 text-[11px] leading-snug text-ink-500 dark:text-ink-400">
                         {esp.descricao}
                       </div>
+                    </div>
+
+                    {/* Seta de entrada — aparece no hover */}
+                    <div className="flex items-center opacity-0 transition-opacity group-hover:opacity-100">
+                      <svg className="h-4 w-4 text-ink-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="9 18 15 12 9 6" />
+                      </svg>
                     </div>
                   </button>
                 ))}
@@ -711,12 +767,18 @@ export function AssistantPage() {
           /* ── Mensagens ── */
           <div className="flex-1 overflow-y-auto" onScroll={handleScroll}>
             <div className="mx-auto max-w-3xl px-4 pb-24 pt-6">
-              {/* Indicador discreto de especialista ativo acima da conversa */}
+              {/* Indicador de especialista ativo acima da conversa */}
               {especialistaAtivo && (
                 <div className="mb-4 flex items-center justify-center">
-                  <div className="inline-flex items-center gap-1.5 rounded-full border border-violet-200 bg-violet-50/80 px-3 py-1 text-[11px] font-medium text-violet-700 dark:border-violet-800/60 dark:bg-violet-900/20 dark:text-violet-300">
-                    <SpecialistIcon id={especialistaAtivo.id} className="h-3 w-3" />
-                    <span>Especialista ativo: {especialistaAtivo.nome}</span>
+                  <div className={cn(
+                    'inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[11px] font-medium',
+                    'border-ink-200 bg-white/80 backdrop-blur dark:border-ink-800 dark:bg-ink-900/80',
+                  )}>
+                    <div className={cn('flex h-5 w-5 items-center justify-center rounded-md bg-gradient-to-br', especialistaAtivo.cor)}>
+                      <SpecialistIcon id={especialistaAtivo.id} className="h-[12px] w-[12px] text-white" />
+                    </div>
+                    <span className="text-ink-600 dark:text-ink-300">{especialistaAtivo.nome}</span>
+                    <SpecialistColorDot id={especialistaAtivo.id} />
                   </div>
                 </div>
               )}
