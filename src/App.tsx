@@ -17,6 +17,7 @@ import { AuthPage } from '@/components/auth/AuthPage';
 import { ProfilePage } from '@/components/profile/ProfilePage';
 import { Toast } from '@/components/ui/Toast';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
+import { AlertCircle, RefreshCw } from 'lucide-react';
 import { PWAUpdatePrompt } from '@/components/pwa/PWAUpdatePrompt';
 import { InstallPrompt } from '@/components/pwa/InstallPrompt';
 import { semearExemplos } from '@/db/seed';
@@ -26,7 +27,9 @@ import { useAuthStore } from '@/stores/authUser';
 
 // ── Code splitting: Editor (Tiptap é pesado) só carrega sob demanda ──
 const EditorPage = lazy(() =>
-  import('@/components/editor/EditorPage').then((m) => ({ default: m.EditorPage })),
+  import('@/components/editor/EditorPage')
+    .then((m) => ({ default: m.EditorPage }))
+    .catch(() => ({ default: () => <EditorPageError /> })),
 );
 
 // ── Code splitting: Admin inteiro fica em chunk separado ──
@@ -113,6 +116,31 @@ function RouteFallback() {
   );
 }
 
+/** Fallback quando o chunk do EditorPage falha ao carregar (rede, CDN, etc). */
+function EditorPageError() {
+  return (
+    <div className="flex h-full min-h-screen-dvh flex-col items-center justify-center gap-4 bg-paper p-6 dark:bg-paper-dark">
+      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-red-50 dark:bg-red-500/10">
+        <AlertCircle className="h-7 w-7 text-red-500" />
+      </div>
+      <div className="text-center">
+        <p className="text-[15px] font-semibold text-ink-900 dark:text-white">
+          Não foi possível carregar o editor
+        </p>
+        <p className="mt-1 text-[12.5px] text-ink-500 dark:text-ink-400">
+          Verifique sua conexão e tente novamente.
+        </p>
+      </div>
+      <button
+        onClick={() => window.location.reload()}
+        className="flex items-center gap-2 rounded-xl bg-ink-900 px-5 py-2.5 text-[13px] font-semibold text-white dark:bg-white dark:text-ink-950"
+      >
+        <RefreshCw className="h-4 w-4" /> Recarregar
+      </button>
+    </div>
+  );
+}
+
 export function App() {
   const inicializarAuth = useAuthStore((s) => s.inicializar);
 
@@ -149,7 +177,11 @@ export function App() {
           corretamente quando o teclado do celular abre. h-screen (100vh)
           fica fixo e o teclado cobre o input por cima. */}
       <div className="flex h-full flex-col overflow-hidden">
-        <AnimatedRoutes />
+        {/* ErrorBoundary externo — qualquer crash de rota mostra fallback legível,
+            nunca tela branca. O fallback NÃO limpa o app — só a rota com problema. */}
+        <ErrorBoundary>
+          <AnimatedRoutes />
+        </ErrorBoundary>
         <Toast />
         <PWAUpdatePrompt />
         <InstallPrompt />

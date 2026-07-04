@@ -22,7 +22,7 @@ import { novaMensagem } from '@/types/mensagem';
 import type { Mensagem } from '@/types/mensagem';
 import { EASE_OUT } from '@/lib/motion';
 
-type Filtro = 'todas' | 'fixadas' | 'rascunhos' | 'prontas' | 'pregadas';
+type Filtro = 'rascunhos' | 'pregadas';
 
 export function LibraryPage() {
   const mensagens = useLiveQuery(() => db.mensagens.toArray(), []);
@@ -32,15 +32,13 @@ export function LibraryPage() {
   const navigate = useNavigate();
 
   const [busca, setBusca] = useState('');
-  const [filtro, setFiltro] = useState<Filtro>('todas');
+  const [filtro, setFiltro] = useState<Filtro>('rascunhos');
   const [showGallery, setShowGallery] = useState(false);
 
   const lista: Mensagem[] = useMemo(() => {
     if (!mensagens) return [];
     let xs = mensagens;
-    if (filtro === 'fixadas')   xs = xs.filter((m) => fixadas.has(m.id) || m.favorita);
     if (filtro === 'rascunhos') xs = xs.filter((m) => m.status === 'rascunho');
-    if (filtro === 'prontas')   xs = xs.filter((m) => m.status === 'pronta');
     if (filtro === 'pregadas')  xs = xs.filter((m) => m.status === 'pregada');
     if (busca.trim()) {
       const t = busca.toLowerCase();
@@ -59,13 +57,10 @@ export function LibraryPage() {
   const contadores = useMemo(() => {
     const xs = mensagens ?? [];
     return {
-      todas:     xs.length,
-      fixadas:   xs.filter((m) => fixadas.has(m.id) || m.favorita).length,
       rascunhos: xs.filter((m) => m.status === 'rascunho').length,
-      prontas:   xs.filter((m) => m.status === 'pronta').length,
       pregadas:  xs.filter((m) => m.status === 'pregada').length,
     };
-  }, [mensagens, fixadas]);
+  }, [mensagens]);
 
   const handleNova = () => setShowGallery(true);
 
@@ -83,10 +78,7 @@ export function LibraryPage() {
   };
 
   const filtros: { id: Filtro; rotulo: string }[] = [
-    { id: 'todas',     rotulo: 'Todas' },
-    { id: 'fixadas',   rotulo: 'Fixadas' },
     { id: 'rascunhos', rotulo: 'Rascunhos' },
-    { id: 'prontas',   rotulo: 'Prontas' },
     { id: 'pregadas',  rotulo: 'Pregadas' },
   ];
 
@@ -94,7 +86,7 @@ export function LibraryPage() {
     <div className="flex h-full flex-col bg-paper text-ink-900 dark:bg-paper-dark dark:text-ink-100">
       <MobileHeader
         title="Esboço"
-        subtitle={`${contadores.todas} mensagens`}
+        subtitle={`${contadores.rascunhos + contadores.pregadas} mensagens`}
         right={
           <button
             onClick={handleNova}
@@ -144,7 +136,7 @@ export function LibraryPage() {
           )}
 
           {mensagens !== undefined && lista.length === 0 && (
-            <EmptyState onNova={handleNova} />
+            <EmptyState onNova={handleNova} tab={filtro} />
           )}
 
           {mensagens !== undefined && lista.length > 0 && (
@@ -251,7 +243,8 @@ function StatusBadge({ status }: { status: Mensagem['status'] }) {
   );
 }
 
-function EmptyState({ onNova }: { onNova: () => void }) {
+function EmptyState({ onNova, tab }: { onNova: () => void; tab: Filtro }) {
+  const rascunhoVazio = tab === 'rascunhos';
   return (
     <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
       <motion.div
@@ -263,17 +256,21 @@ function EmptyState({ onNova }: { onNova: () => void }) {
         <BookOpen className="h-6 w-6" />
       </motion.div>
       <h3 className="text-[15px] font-semibold tracking-tight text-ink-900 dark:text-white">
-        Sua biblioteca está vazia
+        {rascunhoVazio ? 'Nenhum rascunho' : 'Nenhuma mensagem pregada'}
       </h3>
       <p className="mt-1 max-w-xs text-[13px] leading-relaxed text-ink-500 dark:text-ink-400">
-        Comece criando sua primeira mensagem. Tudo funciona offline.
+        {rascunhoVazio
+          ? 'Crie sua primeira mensagem. Tudo funciona offline.'
+          : 'Suas mensagens já pregadas aparecem aqui.'}
       </p>
-      <button
-        onClick={onNova}
-        className="mt-5 inline-flex h-11 items-center gap-2 rounded-xl bg-ink-900 px-5 text-[14px] font-semibold text-white shadow-soft transition-all hover:bg-ink-800 active:scale-[0.97] dark:bg-white dark:text-ink-950 dark:hover:bg-ink-100"
-      >
-        <Plus className="h-4 w-4" /> Criar primeira mensagem
-      </button>
+      {rascunhoVazio && (
+        <button
+          onClick={onNova}
+          className="mt-5 inline-flex h-11 items-center gap-2 rounded-xl bg-ink-900 px-5 text-[14px] font-semibold text-white shadow-soft transition-all hover:bg-ink-800 active:scale-[0.97] dark:bg-white dark:text-ink-950 dark:hover:bg-ink-100"
+        >
+          <Plus className="h-4 w-4" /> Criar mensagem
+        </button>
+      )}
     </div>
   );
 }

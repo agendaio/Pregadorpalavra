@@ -113,7 +113,8 @@ export function EditorPage() {
     if (!mensagem) return;
     const esbocoAtual = mensagem.esboco || '';
     if (esbocoAtual === ultimoEsbocoRef.current) return;
-    if (mensagem.slides.length > 0) {
+    const slidesAtuais = mensagem.slides ?? [];
+    if (slidesAtuais.length > 0) {
       ultimoEsbocoRef.current = esbocoAtual;
       return; // já tem slides, não sobrescreve
     }
@@ -129,7 +130,7 @@ export function EditorPage() {
     if (!mensagem) return;
     ultimoEsbocoRef.current = mensagem.esboco || '';
     const { slides } = gerarSlides({ mensagem });
-    patch({ slides });
+    patch({ slides: slides ?? [] });
   };
 
   // Auto-save com debounce de 4 segundos (já tratado pelo store via salvarDebounced)

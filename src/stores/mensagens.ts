@@ -48,7 +48,9 @@ export const useMensagensStore = create<MensagensState>((set, get) => ({
   patch: (parcial) => {
     const { atual } = get();
     if (!atual) return;
-    set({ atual: { ...atual, ...parcial, atualizadoEm: Date.now() } });
+    // Garante que `slides` nunca seja undefined — evita crash no editor
+    if (parcial.slides === undefined) delete parcial.slides;
+    set({ atual: { ...atual, ...parcial, slides: atual.slides ?? [], atualizadoEm: Date.now() } });
     // Auto-save após 4 segundos de inatividade
     get().salvarDebounced();
   },
