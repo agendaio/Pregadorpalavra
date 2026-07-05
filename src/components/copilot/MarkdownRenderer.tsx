@@ -396,6 +396,42 @@ function MarkdownBody({ content }: { content: string }) {
           </a>
         ),
         hr: () => <hr className="my-3 border-ink-200 dark:border-ink-700" />,
+        // ─── Tabelas (colunas) — escapáveis no mobile, com rolagem horizontal ───
+        table: ({ children, ...props }) => (
+          <div className="my-3 -mx-0.5 overflow-x-auto rounded-xl border border-ink-200 dark:border-ink-700">
+            <table className="w-full border-collapse text-[12.5px]" {...props}>
+              {children}
+            </table>
+          </div>
+        ),
+        thead: ({ children, ...props }) => (
+          <thead className="bg-ink-50 dark:bg-ink-800/60" {...props}>
+            {children}
+          </thead>
+        ),
+        tbody: ({ children, ...props }) => (
+          <tbody className="divide-y divide-ink-100 dark:divide-ink-800" {...props}>
+            {children}
+          </tbody>
+        ),
+        tr: ({ children, ...props }) => (
+          <tr className="align-top" {...props}>
+            {children}
+          </tr>
+        ),
+        th: ({ children, ...props }) => (
+          <th
+            className="whitespace-nowrap border-b border-ink-200 px-2.5 py-2 text-left text-[11.5px] font-semibold text-ink-900 dark:border-ink-700 dark:text-white"
+            {...props}
+          >
+            {children}
+          </th>
+        ),
+        td: ({ children, ...props }) => (
+          <td className="px-2.5 py-2 leading-relaxed text-ink-700 dark:text-ink-200" {...props}>
+            {children}
+          </td>
+        ),
       }}
     >
       {content}

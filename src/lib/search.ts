@@ -5,8 +5,16 @@ import { htmlParaTexto } from './utils';
  * Busca universal do Pregador OS.
  *
  * Roda 100% client-side sobre o IndexedDB. Resultados em milissegundos.
- * Quando o universo crescer (centenas de mensagens), pode ser complementada
- * por um índice Full-Text (Fuse.js) carregado sob demanda.
+ *
+ * Características:
+ *  - **Insensível a acento e maiúsculas** — "salvacao" acha "Salvação",
+ *    "espirito santo" acha "Espírito Santo". Essencial em português.
+ *  - **Ponderação por campo** — um match no título vale mais que no conteúdo.
+ *  - **Cobertura de termos** — documentos que contêm TODAS as palavras da
+ *    consulta sobem no ranking (busca estilo AND, sem excluir os parciais).
+ *  - **Frase exata** — se a consulta inteira aparece junto, ganha um bônus.
+ *  - **Trecho (snippet)** — devolve um pedaço do texto ao redor do match,
+ *    preservando os acentos originais.
  */
 
 export interface ResultadoBusca {
@@ -31,43 +39,93 @@ const CAMPOS_PESOS: { key: keyof Mensagem; peso: number }[] = [
   { key: 'oracao', peso: 2 },
 ];
 
+/**
+ * "Dobra" o texto removendo acentos e passando pra minúsculo, **preservando o
+ * comprimento** (cada caractere vira exatamente um caractere). Isso garante que
+ * um índice encontrado no texto dobrado aponte para a mesma posição no texto
+ * original — então o trecho exibido mantém os acentos.
+ */
+const MAPA_ACENTOS: Record<string, string> = {
+  á: 'a', à: 'a', â: 'a', ã: 'a', ä: 'a', å: 'a',
+  é: 'e', è: 'e', ê: 'e', ë: 'e',
+  í: 'i', ì: 'i', î: 'i', ï: 'i',
+  ó: 'o', ò: 'o', ô: 'o', õ: 'o', ö: 'o',
+  ú: 'u', ù: 'u', û: 'u', ü: 'u',
+  ç: 'c', ñ: 'n', ý: 'y', ÿ: 'y',
+};
+
+function dobrar(texto: string): string {
+  let out = '';
+  for (const ch of texto.toLowerCase()) out += MAPA_ACENTOS[ch] ?? ch;
+  return out;
+}
+
+function trechoEm(original: string, dobrado: string, idx: number, tamTermo: number): string {
+  const inicio = Math.max(0, idx - 30);
+  const fim = Math.min(original.length, idx + tamTermo + 60);
+  // usa o texto ORIGINAL (com acentos) para exibir, mas o índice veio do dobrado
+  return (
+    (inicio > 0 ? '…' : '') +
+    original.slice(inicio, fim).trim() +
+    (fim < original.length ? '…' : '')
+  );
+}
+
 export function buscar(mensagens: Mensagem[], termo: string): ResultadoBusca[] {
-  const t = termo.trim().toLowerCase();
-  if (!t) return [];
+  const consultaDobrada = dobrar(termo.trim());
+  if (!consultaDobrada) return [];
+
+  const tokens = consultaDobrada.split(/\s+/).filter(Boolean);
+  const ehFrase = tokens.length > 1;
 
   const resultados: ResultadoBusca[] = [];
-  const tokens = t.split(/\s+/).filter(Boolean);
 
   for (const m of mensagens) {
     let scoreTotal = 0;
     let melhorCampo = '';
     let melhorTrecho = '';
+    let melhorPesoTrecho = -1;
+    const tokensEncontrados = new Set<string>();
 
-    for (const { key, peso } of CAMPOS_PESOS) {
-      const valor = m[key];
-      const texto = typeof valor === 'string' ? valor : Array.isArray(valor) ? valor.join(' ') : '';
-      const lower = texto.toLowerCase();
+    const avaliar = (
+      original: string,
+      peso: number,
+      campo: string,
+      permiteTrecho: boolean,
+    ) => {
+      if (!original) return;
+      const dobrado = dobrar(original);
       let scoreCampo = 0;
 
       for (const tok of tokens) {
-        if (lower.includes(tok)) {
+        const idx = dobrado.indexOf(tok);
+        if (idx >= 0) {
+          tokensEncontrados.add(tok);
           scoreCampo += peso * (tok.length / 4);
+          if (permiteTrecho && peso > melhorPesoTrecho) {
+            melhorCampo = campo;
+            melhorTrecho = trechoEm(original, dobrado, idx, tok.length);
+            melhorPesoTrecho = peso;
+          }
         }
       }
 
-      if (scoreCampo > 0 && scoreCampo > scoreTotal) {
-        melhorCampo = key as string;
-        const idx = lower.indexOf(tokens[0]);
-        if (idx >= 0) {
-          const inicio = Math.max(0, idx - 30);
-          const fim = Math.min(texto.length, idx + 80);
-          melhorTrecho = (inicio > 0 ? '…' : '') + texto.slice(inicio, fim) + (fim < texto.length ? '…' : '');
-        }
+      // frase inteira aparece junta neste campo → forte sinal de relevância
+      if (ehFrase && dobrado.includes(consultaDobrada)) {
+        scoreCampo += peso * 2;
       }
+
       scoreTotal += scoreCampo;
+    };
+
+    // campos ponderados
+    for (const { key, peso } of CAMPOS_PESOS) {
+      const valor = m[key];
+      const texto = typeof valor === 'string' ? valor : Array.isArray(valor) ? valor.join(' ') : '';
+      avaliar(texto, peso, key as string, true);
     }
 
-    // busca também em tags, personagens e versículos
+    // tags, personagens, versículos, aplicações, ilustrações, frases marcantes
     const extras = [
       ...m.tags,
       ...m.personagens,
@@ -75,35 +133,26 @@ export function buscar(mensagens: Mensagem[], termo: string): ResultadoBusca[] {
       ...m.aplicacoes,
       ...m.ilustracoes,
       ...m.frasesMarcantes,
-    ].join(' ').toLowerCase();
+    ].join(' ');
+    avaliar(extras, 4, 'tags', false);
 
-    for (const tok of tokens) {
-      if (extras.includes(tok)) scoreTotal += 4;
-    }
+    // conteúdo (Tiptap HTML → texto)
+    avaliar(htmlParaTexto(m.conteudo), 2, 'conteudo', true);
 
-    // busca no conteúdo (Tiptap HTML)
-    const textoConteudo = htmlParaTexto(m.conteudo).toLowerCase();
-    for (const tok of tokens) {
-      if (textoConteudo.includes(tok)) {
-        scoreTotal += 2;
-        if (!melhorTrecho) {
-          const idx = textoConteudo.indexOf(tok);
-          const inicio = Math.max(0, idx - 30);
-          const fim = Math.min(textoConteudo.length, idx + 80);
-          melhorTrecho = (inicio > 0 ? '…' : '') + textoConteudo.slice(inicio, fim) + (fim < textoConteudo.length ? '…' : '');
-          melhorCampo = 'conteudo';
-        }
-      }
-    }
+    if (scoreTotal <= 0) continue;
 
-    if (scoreTotal > 0) {
-      resultados.push({
-        mensagem: m,
-        trecho: melhorTrecho || undefined,
-        campo: melhorCampo,
-        score: scoreTotal,
-      });
-    }
+    // Bônus de cobertura: quanto mais palavras da consulta o documento contém,
+    // mais relevante. Conter TODAS multiplica o score (busca estilo AND).
+    const cobertura = tokensEncontrados.size / tokens.length;
+    scoreTotal *= 0.5 + cobertura; // 0.5×..1.5× conforme a cobertura
+    if (tokens.length > 1 && cobertura === 1) scoreTotal += 6; // todas as palavras
+
+    resultados.push({
+      mensagem: m,
+      trecho: melhorTrecho || undefined,
+      campo: melhorCampo,
+      score: scoreTotal,
+    });
   }
 
   return resultados.sort((a, b) => b.score - a.score);

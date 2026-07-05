@@ -1,5 +1,6 @@
 import { Component, type ReactNode } from 'react';
-import { AlertCircle, RefreshCw } from 'lucide-react';
+import { AlertCircle, RefreshCw, Trash2 } from 'lucide-react';
+import { hardRecover, isChunkError, limparCacheManual } from '@/lib/recovery';
 
 interface Props {
   children: ReactNode;
@@ -11,8 +12,11 @@ interface State {
 }
 
 /**
- * ErrorBoundary — captura erros de renderização em qualquer subárvore
- * e exibe uma UI de fallback com botão "Tentar de novo".
+ * ErrorBoundary — captura erros de renderização em qualquer subárvore.
+ *
+ * Se for erro de carregamento de chunk (típico de deploy novo com SW antigo),
+ * auto-recupera limpando cache e recarregando — sem tela branca. Nos demais
+ * casos, mostra um fallback legível com opção de limpar cache manualmente.
  */
 export class ErrorBoundary extends Component<Props, State> {
   state: State = { hasError: false, error: null };
@@ -23,6 +27,11 @@ export class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, info: { componentStack?: string }) {
     console.error('[ErrorBoundary]', error, info?.componentStack);
+    // Chunk quebrado → resetar o React não adianta (vai re-explodir).
+    // Limpa cache + recarrega automaticamente.
+    if (isChunkError(error?.message)) {
+      void hardRecover('errorboundary:chunk');
+    }
   }
 
   reset = () => this.setState({ hasError: false, error: null });
@@ -48,12 +57,20 @@ export class ErrorBoundary extends Component<Props, State> {
               {this.state.error.message}
             </pre>
           )}
-          <button
-            onClick={this.reset}
-            className="inline-flex items-center gap-1.5 rounded-xl bg-ink-900 px-4 py-2 text-[12.5px] font-medium text-white hover:bg-ink-800 active:scale-95 dark:bg-white dark:text-ink-950 dark:hover:bg-ink-100"
-          >
-            <RefreshCw className="h-3.5 w-3.5" /> Tentar de novo
-          </button>
+          <div className="flex flex-col items-center justify-center gap-2 sm:flex-row">
+            <button
+              onClick={this.reset}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-ink-200 px-4 py-2 text-[12.5px] font-medium text-ink-700 hover:bg-ink-50 active:scale-95 dark:border-ink-700 dark:text-ink-200 dark:hover:bg-ink-800"
+            >
+              <RefreshCw className="h-3.5 w-3.5" /> Tentar de novo
+            </button>
+            <button
+              onClick={() => void limparCacheManual()}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-ink-900 px-4 py-2 text-[12.5px] font-medium text-white hover:bg-ink-800 active:scale-95 dark:bg-white dark:text-ink-950 dark:hover:bg-ink-100"
+            >
+              <Trash2 className="h-3.5 w-3.5" /> Limpar cache e recarregar
+            </button>
+          </div>
         </div>
       </div>
     );
