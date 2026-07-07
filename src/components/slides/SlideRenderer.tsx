@@ -43,7 +43,7 @@ function SlideBase({ children, className }: { children: React.ReactNode; classNa
   return (
     <div
       className={cn(
-        'relative flex w-full flex-col items-center justify-center overflow-hidden',
+        'relative flex h-full w-full flex-col items-center justify-center overflow-hidden',
         'bg-[#090910]', // fundo quase preto com leve tom azulado
         className,
       )}
@@ -83,7 +83,7 @@ function TipoBadge({ tipo, compact }: { tipo: keyof typeof COR; compact?: boolea
 
 // ─── Slide: Capa ─────────────────────────────────────────────────────────────
 
-function SlideCapaView({ content, compact }: { content: SlideCapa; compact?: boolean }) {
+function SlideCapaView({ content, compact, preview }: { content: SlideCapa; compact?: boolean; preview?: boolean }) {
   return (
     <SlideBase>
       {/* Top bar */}
@@ -91,13 +91,13 @@ function SlideCapaView({ content, compact }: { content: SlideCapa; compact?: boo
 
       <div className={cn(
         'flex flex-col items-center justify-center gap-3 text-center px-4',
-        compact ? 'gap-2 px-2' : 'gap-4 px-8'
+        compact ? 'gap-1.5 px-2' : 'gap-4 px-8'
       )}>
         {/* Ornament */}
-        <div className={cn('flex items-center gap-3', compact ? 'gap-2' : 'gap-4')}>
-          <GoldDivider className={cn('w-12', compact ? 'w-6' : 'w-16')} />
-          <BookOpen className={cn('text-amber-400/70', compact ? 'h-4 w-4' : 'h-5 w-5')} />
-          <GoldDivider className={cn('w-12', compact ? 'w-6' : 'w-16')} />
+        <div className={cn('flex items-center gap-2', compact ? 'gap-1.5' : 'gap-4')}>
+          <GoldDivider className={cn('', compact ? 'w-6' : 'w-16')} />
+          <BookOpen className={cn('text-amber-400/70', compact ? 'h-3 w-3' : 'h-5 w-5')} />
+          <GoldDivider className={cn('', compact ? 'w-6' : 'w-16')} />
         </div>
 
         {/* Title */}
@@ -105,7 +105,9 @@ function SlideCapaView({ content, compact }: { content: SlideCapa; compact?: boo
           className={cn(
             'font-bold leading-tight tracking-tight text-white',
             compact
-              ? 'text-[14px] sm:text-[16px]'
+              ? 'text-[9px] sm:text-[11px]'
+              : preview
+              ? 'text-[1.4rem] sm:text-[1.8rem]'
               : 'text-[2.5rem] sm:text-[3.5rem] md:text-[4rem]',
           )}
           style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}
@@ -117,12 +119,12 @@ function SlideCapaView({ content, compact }: { content: SlideCapa; compact?: boo
         {content.referencia && (
           <div className={cn(
             'flex items-center gap-2 rounded-full border border-amber-400/40 bg-amber-400/10',
-            compact ? 'px-3 py-1' : 'px-5 py-2'
+            compact ? 'px-2 py-0.5' : 'px-5 py-2'
           )}>
-            <div className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+            <div className="h-1 w-1 rounded-full bg-amber-400" />
             <span className={cn(
               'font-medium tracking-wide text-amber-300',
-              compact ? 'text-[10px]' : 'text-[13px]'
+              compact ? 'text-[7px]' : 'text-[13px]'
             )}>
               {content.referencia}
             </span>
@@ -130,7 +132,7 @@ function SlideCapaView({ content, compact }: { content: SlideCapa; compact?: boo
         )}
 
         {/* Subtitle */}
-        {content.subtitulo && !compact && (
+        {content.subtitulo && !compact && !preview && (
           <p className="max-w-sm text-[1rem] leading-relaxed text-white/50">
             {content.subtitulo}
           </p>
@@ -145,17 +147,17 @@ function SlideCapaView({ content, compact }: { content: SlideCapa; compact?: boo
 
 // ─── Slide: Verso bíblico ────────────────────────────────────────────────────
 
-function SlideVersoView({ content, compact }: { content: SlideVerso; compact?: boolean }) {
+function SlideVersoView({ content, compact, preview }: { content: SlideVerso; compact?: boolean; preview?: boolean }) {
   return (
     <SlideBase>
       <div className={cn(
-        'flex h-full w-full flex-col items-center justify-center gap-4 px-6',
-        compact ? 'gap-2 px-3' : 'px-10 gap-6'
+        'flex h-full w-full flex-col items-center justify-center',
+        compact ? 'gap-1.5 px-2' : 'px-8 gap-4'
       )}>
         {/* Opening quote mark */}
         <div className={cn(
           'font-serif font-bold leading-none text-amber-400/30',
-          compact ? 'text-5xl' : 'text-8xl md:text-9xl'
+          compact ? 'text-3xl' : preview ? 'text-5xl' : 'text-8xl md:text-9xl'
         )}>"</div>
 
         {/* Quote */}
@@ -163,7 +165,9 @@ function SlideVersoView({ content, compact }: { content: SlideVerso; compact?: b
           className={cn(
             'max-w-3xl text-center leading-snug text-white',
             compact
-              ? 'text-[11px] sm:text-[13px]'
+              ? 'text-[8px] sm:text-[10px]'
+              : preview
+              ? 'text-[13px] sm:text-[16px]'
               : 'text-[1.6rem] sm:text-[2rem] md:text-[2.4rem]',
           )}
           style={{ fontFamily: 'Georgia, "Times New Roman", serif', fontStyle: 'italic' }}
@@ -175,15 +179,15 @@ function SlideVersoView({ content, compact }: { content: SlideVerso; compact?: b
         <GoldDivider />
 
         {/* Reference */}
-        <div className="flex items-center gap-3">
-          <div className="h-px w-8 bg-amber-400/40" />
+        <div className="flex items-center gap-2">
+          <div className="h-px w-4 bg-amber-400/40" />
           <span className={cn(
             'font-bold uppercase tracking-[0.15em] text-amber-400',
-            compact ? 'text-[9px]' : 'text-[11px] md:text-[13px]'
+            compact ? 'text-[7px]' : 'text-[11px] md:text-[13px]'
           )}>
             {content.referencia || '—'}
           </span>
-          <div className="h-px w-8 bg-amber-400/40" />
+          <div className="h-px w-4 bg-amber-400/40" />
         </div>
       </div>
     </SlideBase>
@@ -196,7 +200,7 @@ function SlideVersoView({ content, compact }: { content: SlideVerso; compact?: b
  * Design: UM ponto por vez, máximo impacto visual.
  * Hierarquia: Badge → Título → Sub-conteúdo
  */
-function SlideConteudoView({ content, compact }: { content: SlideConteudo; compact?: boolean }) {
+function SlideConteudoView({ content, compact, preview }: { content: SlideConteudo; compact?: boolean; preview?: boolean }) {
   // Se tem múltiplos pontos, mostra o primeiro com destaque
   const ponto = content.pontos[0];
   const cor = COR.ponto;
@@ -205,7 +209,7 @@ function SlideConteudoView({ content, compact }: { content: SlideConteudo; compa
     return (
       <SlideBase>
         <div className="flex h-full w-full items-center justify-center">
-          <p className="text-white/40">Nenhum ponto</p>
+          <p className={cn('text-white/40', compact ? 'text-[9px]' : 'text-sm')}>Nenhum ponto</p>
         </div>
       </SlideBase>
     );
@@ -214,17 +218,17 @@ function SlideConteudoView({ content, compact }: { content: SlideConteudo; compa
   return (
     <SlideBase>
       <div className={cn(
-        'flex h-full w-full flex-col gap-3 overflow-hidden px-5',
-        compact ? 'gap-2 px-3' : 'gap-4 px-8'
+        'flex h-full w-full flex-col overflow-hidden',
+        compact ? 'gap-1 px-2' : 'gap-2 px-4'
       )}>
         {/* Header */}
-        <div className="flex flex-col items-center gap-2">
+        <div className="flex flex-col items-center gap-1">
           {content.titulo && (
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               <div className="h-px flex-1 bg-gradient-to-r from-transparent via-amber-400/40 to-transparent" />
               <span className={cn(
                 'font-bold uppercase tracking-widest text-amber-400/80',
-                compact ? 'text-[8px]' : 'text-[11px]'
+                compact ? 'text-[6px]' : 'text-[9px]'
               )}>
                 {content.titulo}
               </span>
@@ -234,9 +238,9 @@ function SlideConteudoView({ content, compact }: { content: SlideConteudo; compa
 
           {/* Point badge */}
           <div className={cn(
-            'flex items-center gap-2 rounded-full border',
+            'flex items-center gap-1 rounded-full border',
             cor.badge,
-            compact ? 'px-2 py-0.5 text-[8px]' : 'px-4 py-1.5 text-[11px]'
+            compact ? 'px-1.5 py-0.5 text-[7px]' : 'px-3 py-1 text-[9px]'
           )}>
             <span className="font-bold">{ponto.numero}°</span>
             <span>Ponto</span>
@@ -248,7 +252,9 @@ function SlideConteudoView({ content, compact }: { content: SlideConteudo; compa
           className={cn(
             'text-center font-bold leading-tight tracking-tight text-white',
             compact
-              ? 'text-[12px] sm:text-[14px]'
+              ? 'text-[9px] sm:text-[11px]'
+              : preview
+              ? 'text-[1.1rem] sm:text-[1.4rem]'
               : 'text-[1.8rem] sm:text-[2.2rem] md:text-[2.8rem]',
           )}
           style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}
@@ -257,45 +263,40 @@ function SlideConteudoView({ content, compact }: { content: SlideConteudo; compa
         </h2>
 
         {/* Description / sub-content */}
-        {ponto.descricao && !compact && (
+        {ponto.descricao && !compact && !preview && (
           <p className="max-w-2xl text-center text-[1.05rem] leading-relaxed text-white/70">
             {ponto.descricao}
           </p>
         )}
 
         {/* Se há mais pontos, mostra-os em mini cards */}
-        {content.pontos.length > 1 && (
-          <div className={cn(
-            'mt-1 grid flex-1 gap-2 overflow-hidden',
-            content.pontos.length === 2
-              ? compact ? 'grid-cols-1' : 'grid-cols-2'
-              : compact ? 'grid-cols-1' : 'grid-cols-1'
-          )}>
-            {content.pontos.slice(1).map((p, i) => (
+        {content.pontos.length > 1 && !compact && (
+          <div className="mt-1 grid flex-1 gap-1.5 overflow-hidden grid-cols-1">
+            {content.pontos.slice(1, 3).map((p, i) => (
               <div
                 key={i}
                 className={cn(
                   'flex items-start gap-2 rounded-xl border bg-white/[0.03] p-2',
                   cor.border,
-                  compact ? 'p-1.5' : 'p-3'
+                  preview ? 'p-1.5' : 'p-2'
                 )}
               >
                 <span className={cn(
-                  'mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border font-bold',
+                  'mt-0.5 flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full border font-bold',
                   cor.badge,
-                  compact ? 'h-4 w-4 text-[8px]' : 'text-[10px]'
+                  'text-[8px]'
                 )}>
                   {p.numero}
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className={cn(
                     'font-semibold leading-snug text-white truncate',
-                    compact ? 'text-[9px]' : 'text-[13px]'
+                    preview ? 'text-[10px]' : 'text-[11px]'
                   )}>
                     {p.titulo || `Ponto ${p.numero}`}
                   </p>
                   {!compact && p.descricao && (
-                    <p className="mt-0.5 text-[11px] leading-relaxed text-white/50 line-clamp-2">
+                    <p className="mt-0.5 text-[9px] leading-relaxed text-white/50 line-clamp-2">
                       {p.descricao}
                     </p>
                   )}
@@ -316,8 +317,10 @@ function SlideConteudoView({ content, compact }: { content: SlideConteudo; compa
 
 // ─── Slide: Categorias ───────────────────────────────────────────────────────
 
-function SlideCategoriasView({ content, compact }: { content: SlideCategorias; compact?: boolean }) {
+function SlideCategoriasView({ content, compact, preview }: { content: SlideCategorias; compact?: boolean; preview?: boolean }) {
   const cols = compact
+    ? 'grid-cols-1'
+    : preview
     ? 'grid-cols-1'
     : content.cards.length <= 2
     ? 'grid-cols-1'
@@ -328,16 +331,16 @@ function SlideCategoriasView({ content, compact }: { content: SlideCategorias; c
   return (
     <SlideBase>
       <div className={cn(
-        'flex h-full w-full flex-col gap-3 overflow-hidden px-5',
-        compact ? 'gap-2 px-3' : 'gap-4 px-8'
+        'flex h-full w-full flex-col overflow-hidden',
+        compact ? 'gap-1 px-2' : 'gap-2 px-4'
       )}>
         {/* Header */}
         {content.titulo && (
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <div className="h-px flex-1 bg-gradient-to-r from-transparent via-emerald-400/40 to-transparent" />
             <span className={cn(
               'font-bold uppercase tracking-widest text-emerald-400/80',
-              compact ? 'text-[8px]' : 'text-[11px]'
+              compact ? 'text-[6px]' : 'text-[9px]'
             )}>
               {content.titulo}
             </span>
@@ -346,33 +349,33 @@ function SlideCategoriasView({ content, compact }: { content: SlideCategorias; c
         )}
 
         {/* Cards grid */}
-        <div className={cn('grid gap-2 overflow-hidden', cols)}>
+        <div className={cn('grid gap-1 overflow-hidden', cols)}>
           {content.cards.map((card, i) => (
             <div
               key={i}
               className={cn(
-                'flex flex-col gap-1.5 rounded-2xl border border-emerald-400/30',
+                'flex flex-col gap-1 rounded-xl border border-emerald-400/30',
                 'bg-gradient-to-br from-emerald-600/20 to-emerald-900/10',
-                compact ? 'p-2' : 'p-4'
+                compact ? 'p-1.5' : preview ? 'p-2' : 'p-3'
               )}
             >
               <h3 className={cn(
                 'font-bold text-emerald-100',
-                compact ? 'text-[10px]' : 'text-[15px]'
+                compact ? 'text-[8px]' : preview ? 'text-[11px]' : 'text-[15px]'
               )}>
                 {card.titulo || `Card ${i + 1}`}
               </h3>
               {!compact && card.descricao && (
-                <p className="text-[12px] leading-relaxed text-white/60">
+                <p className={cn('leading-relaxed text-white/60', preview ? 'text-[9px]' : 'text-[11px]')}>
                   {card.descricao}
                 </p>
               )}
               {card.referencia && (
-                <div className="mt-auto flex items-center gap-1.5">
-                  <div className="h-1 w-1 rounded-full bg-emerald-400" />
+                <div className="mt-auto flex items-center gap-1">
+                  <div className="h-0.5 w-0.5 rounded-full bg-emerald-400" />
                   <span className={cn(
                     'text-emerald-400/70',
-                    compact ? 'text-[8px]' : 'text-[10px]'
+                    compact ? 'text-[6px]' : 'text-[8px]'
                   )}>
                     {card.referencia}
                   </span>
@@ -388,19 +391,21 @@ function SlideCategoriasView({ content, compact }: { content: SlideCategorias; c
 
 // ─── Slide: Chamada ─────────────────────────────────────────────────────────
 
-function SlideChamadaView({ content, compact }: { content: SlideChamada; compact?: boolean }) {
+function SlideChamadaView({ content, compact, preview }: { content: SlideChamada; compact?: boolean; preview?: boolean }) {
   return (
     <SlideBase>
       <div className={cn(
-        'flex h-full w-full flex-col items-center justify-center gap-4 text-center px-5',
-        compact ? 'gap-2 px-3' : 'gap-6 px-10'
+        'flex h-full w-full flex-col items-center justify-center text-center',
+        compact ? 'gap-1.5 px-2' : preview ? 'gap-3 px-6' : 'gap-4 px-8'
       )}>
         {/* Title */}
         <h2
           className={cn(
             'font-bold leading-tight tracking-tight text-white',
             compact
-              ? 'text-[13px]'
+              ? 'text-[9px] sm:text-[11px]'
+              : preview
+              ? 'text-[1.1rem] sm:text-[1.5rem]'
               : 'text-[2rem] sm:text-[2.5rem] md:text-[3rem]',
           )}
           style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}
@@ -409,7 +414,7 @@ function SlideChamadaView({ content, compact }: { content: SlideChamada; compact
         </h2>
 
         {/* Text */}
-        {content.texto && !compact && (
+        {content.texto && !compact && !preview && (
           <p className="max-w-xl text-[1.05rem] leading-relaxed text-white/70">
             {content.texto}
           </p>
@@ -419,11 +424,11 @@ function SlideChamadaView({ content, compact }: { content: SlideChamada; compact
         {content.cta && (
           <div className={cn(
             'rounded-full border-2 border-amber-400/60 bg-amber-400/10',
-            compact ? 'px-3 py-1.5' : 'px-8 py-3'
+            compact ? 'px-2 py-1' : 'px-6 py-2'
           )}>
             <span className={cn(
               'font-bold text-amber-300',
-              compact ? 'text-[10px]' : 'text-[15px]'
+              compact ? 'text-[8px]' : 'text-[13px]'
             )}>
               {content.cta}
             </span>
@@ -436,33 +441,33 @@ function SlideChamadaView({ content, compact }: { content: SlideChamada; compact
 
 // ─── Slide: Oração ─────────────────────────────────────────────────────────
 
-function SlideOracaoView({ content, compact }: { content: SlideOracao; compact?: boolean }) {
+function SlideOracaoView({ content, compact, preview }: { content: SlideOracao; compact?: boolean; preview?: boolean }) {
   return (
     <SlideBase>
       {/* Cross ornament */}
       <div className={cn(
         'absolute left-1/2 flex flex-col items-center gap-0.5',
-        compact ? 'top-3' : 'top-5'
+        compact ? 'top-2' : 'top-5'
       )}>
         <div className={cn(
           'w-px bg-gradient-to-b from-amber-400/70 to-transparent',
-          compact ? 'h-4' : 'h-6'
+          compact ? 'h-3' : 'h-6'
         )} />
         <div className={cn(
           'h-0.5 bg-amber-400/70',
-          compact ? 'w-5' : 'w-6'
+          compact ? 'w-4' : 'w-6'
         )} />
       </div>
 
       <div className={cn(
-        'flex h-full w-full flex-col items-center justify-center gap-4 text-center px-5',
-        compact ? 'gap-2 px-3' : 'gap-5 px-10'
+        'flex h-full w-full flex-col items-center justify-center text-center',
+        compact ? 'gap-1.5 px-2' : preview ? 'gap-2 px-4' : 'gap-4 px-8'
       )}>
         {/* Title */}
         {content.titulo && (
           <h2 className={cn(
             'font-bold uppercase tracking-widest text-rose-300',
-            compact ? 'text-[9px]' : 'text-[12px]'
+            compact ? 'text-[7px]' : 'text-[10px]'
           )}>
             {content.titulo}
           </h2>
@@ -474,7 +479,9 @@ function SlideOracaoView({ content, compact }: { content: SlideOracao; compact?:
             className={cn(
               'max-w-2xl leading-snug text-white',
               compact
-                ? 'text-[11px]'
+                ? 'text-[8px] sm:text-[10px]'
+                : preview
+                ? 'text-[12px] sm:text-[15px]'
                 : 'text-[1.2rem] sm:text-[1.5rem] md:text-[1.8rem]',
             )}
             style={{ fontFamily: 'Georgia, "Times New Roman", serif', fontStyle: 'italic' }}
@@ -487,7 +494,7 @@ function SlideOracaoView({ content, compact }: { content: SlideOracao; compact?:
         <GoldDivider className="mt-1" />
         <span className={cn(
           'text-rose-400/60',
-          compact ? 'text-[8px]' : 'text-[11px]'
+          compact ? 'text-[6px]' : 'text-[9px]'
         )}>
           Em nome de Jesus
         </span>
@@ -498,18 +505,18 @@ function SlideOracaoView({ content, compact }: { content: SlideOracao; compact?:
 
 // ─── Main export ──────────────────────────────────────────────────────────────
 
-export function SlideRenderer({ slide, compact = false }: { slide: Slide; compact?: boolean }) {
+export function SlideRenderer({ slide, compact = false, preview = false }: { slide: Slide; compact?: boolean; preview?: boolean }) {
   const c = slide.content;
   // Fallback para slides com tipo inválido (dados legados, migração, etc.)
   // — nunca retorna undefined, que causaria tela branca silenciosa.
   switch (c?.tipo) {
-    case 'capa':       return <SlideCapaView      content={c} compact={compact} />;
-    case 'verso':       return <SlideVersoView     content={c} compact={compact} />;
-    case 'conteudo':   return <SlideConteudoView  content={c} compact={compact} />;
-    case 'categorias': return <SlideCategoriasView content={c} compact={compact} />;
-    case 'chamada':    return <SlideChamadaView   content={c} compact={compact} />;
-    case 'oracao':     return <SlideOracaoView    content={c} compact={compact} />;
-    default:            return <SlideDesconhecido compact={compact} />;
+    case 'capa':       return <SlideCapaView      content={c} compact={compact} preview={preview} />;
+    case 'verso':       return <SlideVersoView     content={c} compact={compact} preview={preview} />;
+    case 'conteudo':   return <SlideConteudoView  content={c} compact={compact} preview={preview} />;
+    case 'categorias': return <SlideCategoriasView content={c} compact={compact} preview={preview} />;
+    case 'chamada':    return <SlideChamadaView   content={c} compact={compact} preview={preview} />;
+    case 'oracao':     return <SlideOracaoView    content={c} compact={compact} preview={preview} />;
+    default:            return <SlideDesconhecido compact={compact} preview={preview} />;
   }
 }
 
@@ -517,14 +524,9 @@ function SlideDesconhecido({ compact }: { compact?: boolean }) {
   return (
     <div className="flex h-full w-full items-center justify-center bg-[#090910]">
       <div className="text-center px-4">
-        <p className={`font-semibold text-ink-400 ${compact ? 'text-[10px]' : 'text-sm'}`}>
+        <p className={`font-semibold text-white/40 ${compact ? 'text-[9px]' : 'text-sm'}`}>
           Slide com formato desconhecido
         </p>
-        {!compact && (
-          <p className="mt-1 text-xs text-ink-600">
-            Este slide não pôde ser exibido.
-          </p>
-        )}
       </div>
     </div>
   );

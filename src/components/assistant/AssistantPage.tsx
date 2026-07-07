@@ -63,17 +63,17 @@ function SpecialistColorDot({ id }: { id: string }) {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-/** Converte erros técnicos (OpenAI/rede) em mensagem clara em português. */
+/** Converte erros técnicos (Groq/OpenAI/rede) em mensagem clara em português. */
 function traduzirErroIA(raw: string): string {
   const m = raw.toLowerCase();
   if (m.includes('insufficient_quota') || m.includes('exceeded your current quota') || m.includes('429')) {
-    return 'A chave da OpenAI está sem créditos. Adicione saldo em platform.openai.com (Billing) ou cadastre uma chave com créditos no painel admin → API Keys.';
+    return 'Limite de requisições atingido. Aguarde alguns minutos e tente novamente, ou cadastre outra chave no painel admin → API Keys.';
   }
   if (m.includes('invalid_api_key') || m.includes('incorrect api key') || m.includes('401')) {
-    return 'A chave da OpenAI é inválida ou foi revogada. Cadastre uma chave válida no painel admin → API Keys.';
+    return 'A chave de API está inválida ou foi revogada. Cadastre uma nova chave Groq no painel admin → API Keys.';
   }
   if (m.includes('no_api_key') || m.includes('nenhuma chave')) {
-    return 'Nenhuma chave de IA configurada. Cadastre uma chave da OpenAI no painel admin → API Keys.';
+    return 'Nenhuma chave de IA configurada. Cadastre uma chave Groq no painel admin → API Keys.';
   }
   if (m.includes('rate_limit') || m.includes('rate limit')) {
     return 'Muitas requisições em pouco tempo. Aguarde alguns segundos e tente de novo.';
@@ -307,6 +307,15 @@ export function AssistantPage() {
 
       let res: Response;
       try {
+        // Busca chave Groq do banco (via RPC)
+        let groqApiKey: string | undefined;
+        try {
+          const { data: chaveData } = await sb!.rpc('pegar_proxima_chave', { p_provider: 'groq' });
+          if (chaveData && chaveData[0]?.key_ciphertext) {
+            groqApiKey = chaveData[0].key_ciphertext;
+          }
+        } catch { /* usa rodízio se falhar */ }
+
         res = await fetch(
           `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-chat`,
           {
@@ -324,6 +333,9 @@ export function AssistantPage() {
               stream: true,
               temperature: 0.7,
               maxTokens: 2500,
+              provider: 'groq',
+              model: 'llama-3.3-70b-versatile',
+              ...(groqApiKey ? { apiKey: groqApiKey } : {}),
             }),
             signal: controller.signal,
           },

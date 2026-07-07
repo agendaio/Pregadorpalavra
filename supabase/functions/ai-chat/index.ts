@@ -125,11 +125,60 @@ async function fetchWithRetry(url: string, init: RequestInit, tentativas = 3): P
   return ultima!;
 }
 
+// Erro classificável de provedor — carrega o status HTTP e o corpo, pra que o
+// rodízio de chaves decida se a chave estourou limite por minuto (pausa curta),
+// cota diária/sem crédito (pausa longa) ou é inválida (desativa de vez).
+class ProviderError extends Error {
+  httpStatus: number;
+  errText: string;
+  errorCode: string;
+  constructor(message: string, httpStatus: number, errText: string, errorCode: string) {
+    super(message);
+    this.name = 'ProviderError';
+    this.httpStatus = httpStatus;
+    this.errText = errText;
+    this.errorCode = errorCode;
+  }
+}
+
+// ─── Truncamento de mensagens ─────────────────────────────────────────────────
+// Estima tokens pela contagem de palavras (≈4 chars por token em média).
+// Garante que a requisição nunca estoure o limite de entrada do modelo.
+const MAX_INPUT_TOKENS = 4500; // margem de segurança abaixo de 6000 TPM do Groq 8b-instant
+
+function truncateMessages(messages: Array<{ role: string; content: string }>, systemContent: string): Array<{ role: string; content: string }> {
+  const systemTokens = Math.ceil(systemContent.length / 4);
+  const budget = MAX_INPUT_TOKENS - systemTokens;
+  if (budget <= 0) return [];
+
+  const result: Array<{ role: string; content: string }> = [];
+  let used = 0;
+
+  // Começa pelas mensagens mais recentes (índice alto → mais relevantes)
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const msg = messages[i];
+    const tokens = Math.ceil(msg.content.length / 4);
+    if (used + tokens <= budget) {
+      result.unshift(msg);
+      used += tokens;
+    } else {
+      // Corta o conteúdo da mensagem mais antiga se necessário
+      const remaining = budget - used;
+      if (remaining > 100) {
+        const truncatedContent = msg.content.slice(0, remaining * 4);
+        result.unshift({ ...msg, content: truncatedContent });
+      }
+      break;
+    }
+  }
+  return result;
+}
+
 // callOpenAI e callGroq usam o mesmo formato de API (Groq é compatível com
 // o schema OpenAI) — só muda a URL base e o rótulo do erro.
 // `fallbackModel`: se o modelo principal estourar rate limit (429), tenta um
-// modelo mais leve. No Groq o limite é POR MODELO, então cair pro 8b-instant
-// (cota bem maior no free tier) resolve a maioria dos 429 do 70b.
+// modelo mais leve. No Groq o limite é POR MODELO, então cair pro 70b-versatile
+// (cota bem maior no free tier) resolve a maioria dos 429.
 async function callOpenAICompatible(
   opts: ChatOptions,
   baseUrl: string,
@@ -139,6 +188,9 @@ async function callOpenAICompatible(
 ) {
   const { apiKey, model, messages, systemContent, maxTokens, temperature, streaming } = opts;
 
+  // Trunca histórico de chat pra nunca estourar limite de input tokens
+  const truncated = truncateMessages(messages, systemContent);
+
   const doFetch = (modelToUse: string, useStream: boolean) => fetchWithRetry(baseUrl, {
     method: 'POST',
     headers: {
@@ -147,42 +199,37 @@ async function callOpenAICompatible(
     },
     body: JSON.stringify({
       model: modelToUse,
-      messages: [{ role: 'system', content: systemContent }, ...messages],
+      messages: [{ role: 'system', content: systemContent }, ...truncated],
       max_tokens: Math.min(maxTokens, 4000),
       temperature: Math.min(Math.max(temperature, 0), 2),
       ...(useStream ? { stream: true } : {}),
     }),
   });
 
+  // Faz a requisição (com fallback de modelo em 429) e valida o status ANTES
+  // de decidir streaming. Assim, se a chave falhar, lançamos um erro
+  // classificável (com httpStatus + errText) e o rodízio de chaves troca pra
+  // próxima na hora (failover) — o usuário nunca vê o erro.
+  let res = await doFetch(model, streaming);
+  if (res.status === 429 && fallbackModel && fallbackModel !== model) {
+    await res.text().catch(() => {});
+    res = await doFetch(fallbackModel, streaming);
+  }
+
+  if (!res.ok) {
+    const errText = await res.text().catch(() => '');
+    throw new ProviderError(`${errorLabel} ${res.status}: ${errText.slice(0, 300)}`, res.status, errText, errorCode);
+  }
+
   if (streaming) {
-    // Streaming via SSE
+    // res já OK — só repassa o SSE convertendo pro nosso formato { content }
     const encoder = new TextEncoder();
+    const reader = res.body!.getReader();
     const stream = new ReadableStream({
       async start(controller) {
+        const decoder = new TextDecoder();
+        let buffer = '';
         try {
-          let res = await doFetch(model, true);
-          // Rate limit no modelo principal → tenta o fallback (limite separado)
-          if (res.status === 429 && fallbackModel && fallbackModel !== model) {
-            await res.text().catch(() => {});
-            res = await doFetch(fallbackModel, true);
-          }
-
-          if (!res.ok) {
-            const err = await res.text();
-            // 429 depois dos retries: mensagem amigável e código específico
-            const code = res.status === 429 ? 'rate_limit' : errorCode;
-            const msg = res.status === 429
-              ? 'Muitas requisições em pouco tempo. Aguarde alguns segundos e tente de novo.'
-              : err.slice(0, 300);
-            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: code, message: msg })}\n\n`));
-            controller.close();
-            return;
-          }
-
-          const reader = res.body!.getReader();
-          const decoder = new TextDecoder();
-          let buffer = '';
-
           while (true) {
             const { done, value } = await reader.read();
             if (done) break;
@@ -225,21 +272,6 @@ async function callOpenAICompatible(
     });
   }
 
-  // Non-streaming
-  let res = await doFetch(model, false);
-  if (res.status === 429 && fallbackModel && fallbackModel !== model) {
-    await res.text().catch(() => {});
-    res = await doFetch(fallbackModel, false);
-  }
-
-  if (!res.ok) {
-    const err = await res.text();
-    if (res.status === 429) {
-      throw new Error(`rate_limit: Muitas requisições em pouco tempo. Aguarde alguns segundos e tente de novo.`);
-    }
-    throw new Error(`${errorLabel} ${res.status}: ${err.slice(0, 300)}`);
-  }
-
   return await res.json();
 }
 
@@ -248,9 +280,11 @@ async function callOpenAI(opts: ChatOptions) {
 }
 
 async function callGroq(opts: ChatOptions) {
-  // Fallback pro modelo leve quando o principal estoura o rate limit do free
-  // tier (limite é por modelo; o 8b-instant tem cota bem maior).
-  const fallback = opts.model === 'llama-3.1-8b-instant' ? undefined : 'llama-3.1-8b-instant';
+  // Fallback pro modelo versátil (70b) quando o principal estoura rate limit.
+  // O 8b-instant é usado só quando é o modelo explicitamente selecionado.
+  const fallback = opts.model === 'llama-3.1-8b-instant' || opts.model === 'llama-3.3-70b-versatile'
+    ? undefined
+    : 'llama-3.3-70b-versatile';
   return callOpenAICompatible(opts, 'https://api.groq.com/openai/v1/chat/completions', 'Groq', 'groq_error', fallback);
 }
 
@@ -556,6 +590,124 @@ async function callProvider(opts: ChatOptions) {
   }
 }
 
+// ─── Rodízio de chaves + failover automático ────────────────────────────────
+
+interface ChaveRodizio {
+  id: string;
+  provider: string;
+  key_ciphertext: string;
+  modelo_padrao: string | null;
+}
+
+// deno-lint-ignore no-explicit-any
+async function pegarProximaChave(sbAdmin: any): Promise<ChaveRodizio | null> {
+  const { data, error } = await sbAdmin.rpc('pegar_proxima_chave', { p_provider: null });
+  if (error || !data) return null;
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row || !row.key_ciphertext) return null;
+  return row as ChaveRodizio;
+}
+
+// deno-lint-ignore no-explicit-any
+async function marcarChaveErro(sbAdmin: any, id: string, tipo: 'rate_limit' | 'quota' | 'invalida', cooldownSeg: number) {
+  try {
+    await sbAdmin.rpc('marcar_chave_erro', { p_id: id, p_tipo: tipo, p_cooldown_seg: cooldownSeg });
+  } catch { /* best-effort */ }
+}
+
+// Distingue rate limit por minuto (pausa curta) de cota dura (pausa longa) de
+// chave inválida (desativa). Baseado no status HTTP + texto do provedor.
+function classificarErroChave(status: number, text: string): 'rate_limit' | 'quota' | 'invalida' | 'outro' {
+  const t = (text || '').toLowerCase();
+  if (status === 401 || t.includes('invalid_api_key') || t.includes('invalid api key') || t.includes('incorrect api key') || t.includes('revoked')) {
+    return 'invalida';
+  }
+  if (status === 429 || status === 402) {
+    if (
+      t.includes('insufficient_quota') || t.includes('exceeded your current quota') || t.includes('billing') ||
+      t.includes('per day') || t.includes('daily') || t.includes('tokens per day') || t.includes('rpd') || t.includes('tpd') ||
+      t.includes('no credit') || t.includes('out of credit') || t.includes('quota')
+    ) {
+      return 'quota';
+    }
+    // TPM (tokens per minute) é rate limit, não quota — pausa curta
+    return 'rate_limit';
+  }
+  return 'outro';
+}
+
+type RodizioBase = {
+  messages: Array<{ role: string; content: string }>;
+  systemContent: string;
+  maxTokens: number;
+  temperature: number;
+  streaming: boolean;
+  /** Força um modelo específico (ex: config do agente). Sem isso, usa o modelo da chave. */
+  modelOverride?: string;
+};
+
+// Executa a chamada ao provedor com rodízio + failover: tenta até MAX chaves;
+// pausa/desativa as que estouram limite e segue pra próxima. Se não houver
+// chave no banco, cai na chave do env (último recurso).
+// deno-lint-ignore no-explicit-any
+async function callComRodizio(
+  sbAdmin: any,
+  base: RodizioBase,
+  fallbackKey?: string,
+  fallbackProvider = 'openai',
+): Promise<{ result: any; provider: string; model: string }> {
+  const MAX = 6;
+  let ultimoErro: unknown = null;
+
+  for (let i = 0; i < MAX; i++) {
+    const chave = await pegarProximaChave(sbAdmin);
+    if (!chave) break;
+
+    const provider = chave.provider || fallbackProvider;
+    const model = base.modelOverride || chave.modelo_padrao || 'gpt-4o-mini';
+    try {
+      const result = await callProvider({
+        provider,
+        apiKey: chave.key_ciphertext,
+        model,
+        messages: base.messages,
+        systemContent: base.systemContent,
+        maxTokens: base.maxTokens,
+        temperature: base.temperature,
+        streaming: base.streaming,
+      });
+      return { result, provider, model };
+    } catch (e) {
+      ultimoErro = e;
+      const status = e instanceof ProviderError ? e.httpStatus : 0;
+      const text = e instanceof ProviderError ? e.errText : ((e as Error)?.message ?? '');
+      const tipo = classificarErroChave(status, text);
+      if (tipo === 'rate_limit') await marcarChaveErro(sbAdmin, chave.id, 'rate_limit', 60);
+      else if (tipo === 'quota') await marcarChaveErro(sbAdmin, chave.id, 'quota', 86400);
+      else if (tipo === 'invalida') await marcarChaveErro(sbAdmin, chave.id, 'invalida', 0);
+      // 'outro' (rede / 5xx transitório) → não pune a chave; só tenta a próxima
+    }
+  }
+
+  // Sem chave no banco (ou todas indisponíveis) → chave do env como último recurso
+  if (fallbackKey) {
+    const model = base.modelOverride || 'gpt-4o-mini';
+    const result = await callProvider({
+      provider: fallbackProvider,
+      apiKey: fallbackKey,
+      model,
+      messages: base.messages,
+      systemContent: base.systemContent,
+      maxTokens: base.maxTokens,
+      temperature: base.temperature,
+      streaming: base.streaming,
+    });
+    return { result, provider: fallbackProvider, model };
+  }
+
+  throw ultimoErro ?? new ProviderError('Nenhuma chave de IA disponível no momento.', 503, '', 'no_api_key');
+}
+
 // ─── Helpers de custo ───────────────────────────────────────────────────────
 
 function estimarCusto(provider: string, model: string, tokensInput: number, tokensOutput: number): number {
@@ -748,31 +900,10 @@ serve(async (req) => {
       }
     }
 
-    // Obter API key ativa do banco.
-    // Não filtramos por `provider` aqui: o frontend nunca envia esse campo
-    // explicitamente (sempre cai no default 'openai'), então filtrar por ele
-    // faria a chave ativa de qualquer outro provedor (ex: Groq) nunca ser
-    // encontrada. O admin escolhe qual provedor fica "ativo" — usamos esse.
-    const { data: keyData } = await sbAdmin
-      .from('api_keys')
-      .select('key_ciphertext, provider, modelo_padrao')
-      .eq('ativo', true)
-      .order('atualizado_em', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    let apiKey = keyData?.key_ciphertext;
-    // provider efetivo: o da chave ativa encontrada, ou o solicitado como fallback
-    const effectiveProviderChat = keyData?.provider ?? provider;
-
-    // Fallback: se não houver key no banco, tenta env var (compatibilidade)
-    if (!apiKey) {
-      apiKey = Deno.env.get('OPENAI_API_KEY');
-    }
-
-    if (!apiKey) {
-      return jsonError(500, 'no_api_key', `Nenhuma chave de IA configurada. Solicite ao administrador que cadastre uma chave na aba API Keys do painel admin.`);
-    }
+    // Chave de API: rodízio automático entre TODAS as chaves ativas
+    // (ver callComRodizio + RPC pegar_proxima_chave). Aqui só preparamos a
+    // chave do env como último recurso, caso não haja nenhuma no banco.
+    const envKey = Deno.env.get('OPENAI_API_KEY') || undefined;
 
     // ── CHAT MODE: resposta rápida, sem overhead de esboço ─────────────────────
     if (modo === 'chat') {
@@ -781,21 +912,44 @@ serve(async (req) => {
       // Prompt leve: usa o que o frontend enviou, ou fallback mínimo
       const systemContent = systemPrompt || systemAppend || SYSTEM_BASE_LIGHT;
 
-      const effectiveModelChat = keyData?.modelo_padrao || model;
-
-      const result = await callProvider({
-        provider: effectiveProviderChat,
-        apiKey,
-        model: effectiveModelChat,
-        messages: messages.map((m: { role: string; content: string }) => ({
-          role: m.role,
-          content: m.content,
-        })),
-        systemContent,
-        maxTokens,
-        temperature,
-        streaming: stream,
-      });
+      // deno-lint-ignore no-explicit-any
+      let result: any;
+      let effectiveProviderChat = provider;
+      let effectiveModelChat = model;
+      try {
+        // Se o frontend enviou apiKey direto, usa sem passar pelo rodízio de chaves
+        const apiKeyDireto = (body as { apiKey?: string }).apiKey;
+        if (apiKeyDireto) {
+          result = await callProvider({
+            provider: provider || 'groq',
+            apiKey: apiKeyDireto,
+            model: model || 'llama-3.3-70b-versatile',
+            messages: messages.map((m: { role: string; content: string }) => ({ role: m.role, content: m.content })),
+            systemContent,
+            maxTokens,
+            temperature,
+            streaming: stream,
+          });
+          effectiveProviderChat = provider || 'groq';
+          effectiveModelChat = model || 'llama-3.3-70b-versatile';
+        } else {
+          const r = await callComRodizio(sbAdmin, {
+            messages: messages.map((m: { role: string; content: string }) => ({ role: m.role, content: m.content })),
+            systemContent,
+            maxTokens,
+            temperature,
+            streaming: stream,
+          }, envKey, provider);
+          result = r.result;
+          effectiveProviderChat = r.provider;
+          effectiveModelChat = r.model;
+        }
+      } catch (e) {
+        if (e instanceof ProviderError && e.errorCode === 'no_api_key') {
+          return jsonError(500, 'no_api_key', 'Nenhuma chave de IA configurada. Cadastre chaves na aba API Keys do painel admin.');
+        }
+        throw e;
+      }
 
       if (stream) {
         // Log básico assíncrono (sem extrair esboço)
@@ -953,8 +1107,11 @@ serve(async (req) => {
       agentModelOverride = agentData.modelo;
     }
 
-    const effectiveProvider = keyData?.provider ?? provider;
-    const effectiveModel = agentModelOverride || ministerialConfig.modelo || model || keyData?.modelo_padrao || 'gpt-4o-mini';
+    // Modelo forçado pela config do agente/ministerial; se não houver, o
+    // rodízio usa o modelo_padrao de cada chave.
+    const modelOverrideSermon = agentModelOverride || ministerialConfig.modelo || undefined;
+    let effectiveProvider = provider;
+    let effectiveModel = modelOverrideSermon || model || 'gpt-4o-mini';
     const effectiveTemp = agentTemp || ministerialConfig.temperatura;
     const effectiveMaxTokens = agentMaxTokens || ministerialConfig.maxTokens;
 
@@ -1068,20 +1225,27 @@ serve(async (req) => {
 
     const start = Date.now();
 
-    // Chamar provider com configs do agente
-    const result = await callProvider({
-      provider: effectiveProvider,
-      apiKey,
-      model: effectiveModel,
-      messages: messages.map((m: { role: string; content: string }) => ({
-        role: m.role,
-        content: m.content,
-      })),
-      systemContent,
-      maxTokens: effectiveMaxTokens,
-      temperature: effectiveTemp,
-      streaming: stream,
-    });
+    // Chamar provider com rodízio + failover (configs do agente aplicadas)
+    // deno-lint-ignore no-explicit-any
+    let result: any;
+    try {
+      const r = await callComRodizio(sbAdmin, {
+        messages: messages.map((m: { role: string; content: string }) => ({ role: m.role, content: m.content })),
+        systemContent,
+        maxTokens: effectiveMaxTokens,
+        temperature: effectiveTemp,
+        streaming: stream,
+        modelOverride: modelOverrideSermon,
+      }, envKey, provider);
+      result = r.result;
+      effectiveProvider = r.provider;
+      effectiveModel = r.model;
+    } catch (e) {
+      if (e instanceof ProviderError && e.errorCode === 'no_api_key') {
+        return jsonError(500, 'no_api_key', 'Nenhuma chave de IA configurada. Cadastre chaves na aba API Keys do painel admin.');
+      }
+      throw e;
+    }
 
     // Se é streaming, a resposta já é um stream — loga depois
     if (stream) {

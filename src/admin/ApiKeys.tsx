@@ -23,6 +23,14 @@ interface ApiKeyConfig {
   streaming: boolean | null; memoria_contexto: string | null;
   ultimo_teste_em: string | null; ultimo_status: string | null;
   ultimo_teste_latency_ms: number | null; criado_em: string; atualizado_em: string;
+  // Rodízio automático (migração 20260705)
+  apelido?: string | null;
+  ultimo_uso_em?: string | null;
+  req_count?: number | null;
+  erro_count?: number | null;
+  cooldown_ate?: string | null;
+  desativado_em?: string | null;
+  motivo_desativacao?: string | null;
 }
 
 interface ProviderMeta { id: string; label: string; logo: string; modelos: { id: string; label: string }[]; docsUrl: string; }
@@ -115,6 +123,20 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
   return <h2 className="mb-3 text-[13px] font-semibold text-ink-900 dark:text-white">{children}</h2>;
 }
 
+// Status de rodízio de uma chave: ativa / em pausa / desativada.
+function statusChave(c: ApiKeyConfig): { label: string; cls: string } {
+  const emPausa = c.cooldown_ate && new Date(c.cooldown_ate).getTime() > Date.now();
+  if (!c.ativo) {
+    return { label: 'desativada', cls: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300' };
+  }
+  if (emPausa) {
+    const min = Math.max(1, Math.round((new Date(c.cooldown_ate!).getTime() - Date.now()) / 60000));
+    const rotulo = c.motivo_desativacao === 'quota' ? `cota — volta em ${min}min` : `pausada ${min}min`;
+    return { label: rotulo, cls: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300' };
+  }
+  return { label: 'ativa', cls: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300' };
+}
+
 function StatusBadge({ ok, label }: { ok: boolean; label: string }) {
   return (
     <span className={cn(
@@ -152,6 +174,11 @@ function ApiKeysSection() {
   const [streaming, setStreaming] = useState(true);
   const [memoria, setMemoria] = useState('sermon');
 
+  // Cadastro em massa (rodízio): colar várias chaves, uma por linha
+  const [bulkKeys, setBulkKeys] = useState('');
+  const [bulkAdding, setBulkAdding] = useState(false);
+  const [bulkMsg, setBulkMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
   function editarKey(c: ApiKeyConfig) {
     setEditingKeyId(c.id);
     setProvider(c.provider);
@@ -166,6 +193,71 @@ function ApiKeysSection() {
     setTestResults([]);
     setTestOk(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // Cadastra várias chaves de uma vez (uma por linha) — todas ativas no rodízio.
+  async function cadastrarEmMassa() {
+    const linhas = Array.from(new Set(
+      bulkKeys.split('\n').map((l) => l.trim()).filter(Boolean),
+    ));
+    if (linhas.length === 0) {
+      setBulkMsg({ ok: false, text: 'Cole ao menos uma chave (uma por linha).' });
+      return;
+    }
+    // Ignora chaves que já existem no banco
+    const existentes = new Set(configs.map((c) => c.key_ciphertext).filter(Boolean));
+    const novas = linhas.filter((k) => !existentes.has(k));
+    if (novas.length === 0) {
+      setBulkMsg({ ok: false, text: 'Todas essas chaves já estão cadastradas.' });
+      return;
+    }
+    setBulkAdding(true);
+    setBulkMsg(null);
+    try {
+      const sb = supabase();
+      const agora = new Date().toISOString();
+      const rows = novas.map((k) => ({
+        provider,
+        key_ciphertext: k,
+        modelo_padrao: modelo,
+        ativo: true,
+        temperature: temp,
+        max_tokens: maxTok,
+        timeout_ms: timeoutMs,
+        context_window: ctxWin,
+        streaming,
+        memoria_contexto: memoria,
+        criado_em: agora,
+      }));
+      const { error } = await sb!.from('api_keys').insert(rows);
+      if (error) throw error;
+      const puladas = linhas.length - novas.length;
+      setBulkMsg({ ok: true, text: `✅ ${novas.length} chave(s) adicionada(s) ao rodízio${puladas ? ` · ${puladas} já existia(m)` : ''}.` });
+      setBulkKeys('');
+      await carregar();
+    } catch (e) {
+      setBulkMsg({ ok: false, text: `❌ ${(e as Error).message ?? String(e)}` });
+    } finally {
+      setBulkAdding(false);
+    }
+  }
+
+  // Reativa todas as chaves pausadas/desativadas (volta pro rodízio).
+  async function reativarTodas() {
+    const sb = supabase();
+    const { error } = await sb!.from('api_keys').update({
+      ativo: true,
+      cooldown_ate: null,
+      desativado_em: null,
+      motivo_desativacao: null,
+      atualizado_em: new Date().toISOString(),
+    }).neq('id', '00000000-0000-0000-0000-000000000000'); // todas
+    if (error) {
+      setBulkMsg({ ok: false, text: `❌ ${error.message}` });
+      return;
+    }
+    setBulkMsg({ ok: true, text: '✅ Todas as chaves foram reativadas.' });
+    await carregar();
   }
 
   async function excluirKey(c: ApiKeyConfig) {
@@ -324,17 +416,11 @@ function ApiKeysSection() {
         setTestResults(prev => [...prev, { name: 'Salvar', passed: true, message: `✅ Chave editada e salva com sucesso!` }]);
         resetForm();
       } else {
-        // Modo novo: desativa as ativas do mesmo provider
-        await sb!.from('api_keys').update({ ativo: false, atualizado_em: new Date().toISOString() }).eq('provider', provider).eq('ativo', true);
-        const inactiveExisting = configs.find((c) => c.provider === provider && !c.ativo);
-        if (inactiveExisting) {
-          const { error } = await sb!.from('api_keys').update({ ...payload, atualizado_em: new Date().toISOString() }).eq('id', inactiveExisting.id);
-          if (error) throw error;
-        } else {
-          const { error } = await sb!.from('api_keys').insert({ ...payload, criado_em: new Date().toISOString() });
-          if (error) throw error;
-        }
-        setTestResults(prev => [...prev, { name: 'Salvar', passed: true, message: `✅ Chave ${provider} salva com sucesso!` }]);
+        // Modo novo: só INSERE como ativa. Não desativa as outras — o rodízio
+        // usa TODAS as chaves ativas, então cada chave nova soma à rotação.
+        const { error } = await sb!.from('api_keys').insert({ ...payload, criado_em: new Date().toISOString() });
+        if (error) throw error;
+        setTestResults(prev => [...prev, { name: 'Salvar', passed: true, message: `✅ Chave ${provider} adicionada ao rodízio!` }]);
         setApiKeyRaw('');
       }
       await carregar();
@@ -472,20 +558,71 @@ function ApiKeysSection() {
         )}
       </Card>
 
+      {/* Cadastro em massa — rodízio */}
+      <Card className="p-4">
+        <div className="mb-1 flex items-center gap-2">
+          <GitBranch className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+          <h3 className="text-[13.5px] font-semibold text-ink-900 dark:text-white">Cadastro em massa (rodízio)</h3>
+        </div>
+        <p className="mb-3 text-[11.5px] text-ink-500 dark:text-ink-400">
+          Cole várias chaves <strong>{provMeta.label}</strong> (uma por linha). Todas entram ativas no rodízio,
+          usando o modelo <strong>{modelo}</strong> selecionado acima. O sistema alterna entre elas
+          automaticamente e pausa/desativa a que atingir limite.
+        </p>
+        <textarea
+          value={bulkKeys}
+          onChange={(e) => setBulkKeys(e.target.value)}
+          placeholder={"gsk_xxxxxxxx...\ngsk_yyyyyyyy...\ngsk_zzzzzzzz..."}
+          rows={5}
+          className="w-full resize-y rounded-xl border border-ink-200 bg-white px-3 py-2 font-mono text-[12px] text-ink-900 outline-none focus:border-indigo-400 dark:border-ink-700 dark:bg-ink-900/40 dark:text-white"
+        />
+        <div className="mt-1 flex items-center justify-between">
+          <span className="text-[11px] text-ink-400">
+            {bulkKeys.split('\n').map((l) => l.trim()).filter(Boolean).length} chave(s) coladas
+          </span>
+          <button
+            onClick={() => void cadastrarEmMassa()}
+            disabled={bulkAdding}
+            className="flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-[12.5px] font-semibold text-white transition hover:bg-indigo-500 active:scale-95 disabled:opacity-60"
+          >
+            {bulkAdding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+            {bulkAdding ? 'Cadastrando…' : 'Cadastrar todas'}
+          </button>
+        </div>
+        {bulkMsg && (
+          <div className={cn('mt-2 rounded-xl px-3 py-2 text-[11.5px]', bulkMsg.ok ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300' : 'bg-red-50 text-red-800 dark:bg-red-900/30 dark:text-red-300')}>
+            {bulkMsg.text}
+          </div>
+        )}
+      </Card>
+
       {/* Keys cadastradas */}
       {configs.length > 0 && (
         <>
-          <SectionTitle>Keys Cadastradas</SectionTitle>
+          <div className="flex items-center justify-between">
+            <SectionTitle>Keys Cadastradas ({configs.length})</SectionTitle>
+            <button
+              onClick={() => void reativarTodas()}
+              className="mb-2 flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-white px-3 py-1.5 text-[11.5px] font-medium text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800 dark:bg-transparent dark:text-emerald-400"
+            >
+              <RotateCcw className="h-3.5 w-3.5" /> Reativar todas
+            </button>
+          </div>
           <div className="space-y-2">
             {configs.map(c => {
               const prov = PROVIDERS.find(p => p.id === c.provider);
+              const st = statusChave(c);
               return (
                 <Card key={c.id} className="flex items-center gap-3 p-3">
                   <span className="text-2xl">{prov?.logo}</span>
-                  <div className="flex-1">
-                    <div className="text-[13px] font-semibold text-ink-900 dark:text-white">{prov?.label}</div>
-                    <div className="text-[11px] text-ink-500 dark:text-ink-400">
-                      {c.modelo_padrao} · {c.ativo ? '🟢 Ativo' : '⚫ Inativo'} · {c.key_ciphertext ? `${c.key_ciphertext.slice(0, 6)}…${c.key_ciphertext.slice(-4)}` : 'sem chave'}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 text-[13px] font-semibold text-ink-900 dark:text-white">
+                      {prov?.label}
+                      <span className={cn('rounded-full px-1.5 py-0.5 text-[9.5px] font-bold uppercase tracking-wide', st.cls)}>{st.label}</span>
+                    </div>
+                    <div className="truncate text-[11px] text-ink-500 dark:text-ink-400">
+                      {c.modelo_padrao} · {c.key_ciphertext ? `${c.key_ciphertext.slice(0, 6)}…${c.key_ciphertext.slice(-4)}` : 'sem chave'}
+                      {typeof c.req_count === 'number' && c.req_count > 0 ? ` · ${c.req_count} usos` : ''}
                     </div>
                   </div>
                   <div className="flex items-center gap-2">

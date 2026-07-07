@@ -69,17 +69,17 @@ function getSaudação(): string {
   return 'Boa noite!';
 }
 
-/** Converte erros técnicos (OpenAI/rede) em mensagem clara em português. */
+/** Converte erros técnicos (Groq/OpenAI/rede) em mensagem clara em português. */
 function traduzirErroIA(raw: string): string {
   const m = raw.toLowerCase();
   if (m.includes('insufficient_quota') || m.includes('exceeded your current quota') || m.includes('429')) {
-    return 'A chave da OpenAI está sem créditos. Adicione saldo em platform.openai.com (Billing) ou cadastre uma chave com créditos no painel admin → API Keys.';
+    return 'Limite de requisições atingido. Aguarde alguns minutos e tente novamente, ou cadastre outra chave no painel admin → API Keys.';
   }
-  if (m.includes('invalid_api_key') || m.includes('incorrect api key') || m.includes('401')) {
-    return 'A chave da OpenAI é inválida ou foi revogada. Cadastre uma chave válida no painel admin → API Keys.';
+  if (m.includes('invalid_api_key') || m.includes('incorrect api key') || m.includes('401') || m.includes('invalid_api_key')) {
+    return 'A chave de API está inválida ou foi revogada. Cadastre uma nova chave Groq no painel admin → API Keys.';
   }
   if (m.includes('no_api_key') || m.includes('nenhuma chave')) {
-    return 'Nenhuma chave de IA configurada. Cadastre uma chave da OpenAI no painel admin → API Keys.';
+    return 'Nenhuma chave de IA configurada. Cadastre uma chave Groq no painel admin → API Keys.';
   }
   if (m.includes('rate_limit') || m.includes('rate limit')) {
     return 'Muitas requisições em pouco tempo. Aguarde alguns segundos e tente de novo.';
@@ -353,6 +353,19 @@ export function ChatContainer({ onTogglePanel, onEsboçoPending }: ChatContainer
           content: m.content,
         }));
 
+        // Inicializa Supabase ANTES de buscar chave
+        const supabaseLib = await import('@/lib/supabase');
+        const sb = supabaseLib.supabase();
+
+        // Busca chave Groq ANTES de qualquer chamada
+        let groqApiKey: string | undefined;
+        try {
+          const { data: chaveData } = await sb!.rpc('pegar_proxima_chave', { p_provider: 'groq' });
+          if (chaveData && chaveData[0]?.key_ciphertext) {
+            groqApiKey = chaveData[0].key_ciphertext;
+          }
+        } catch { /* usa rodízio se falhar */ }
+
         const timeoutId = window.setTimeout(() => controller.abort(), 90_000);
         let chatRes: Response | null = null;
         try {
@@ -367,9 +380,7 @@ export function ChatContainer({ onTogglePanel, onEsboçoPending }: ChatContainer
         // Fallback: Supabase ai-chat (modo chat) — cobre dev local (Vite não
         // serve /api/*) e qualquer indisponibilidade da função Vercel.
         if (!chatRes || !chatRes.ok) {
-          const supabaseLib = await import('@/lib/supabase');
-          const sb = supabaseLib.supabase();
-          const { data: sessData } = await sb?.auth.getSession() ?? {};
+          const { data: sessData } = await sb!.auth.getSession() ?? {};
           const userToken = (sessData?.session as { access_token?: string } | null | undefined)?.access_token;
           const token = userToken ?? supabaseLib.SUPABASE_ANON_KEY;
           if (!token) throw new Error('Não autenticado');
@@ -388,6 +399,9 @@ export function ChatContainer({ onTogglePanel, onEsboçoPending }: ChatContainer
               maxTokens: 600,
               modo: 'chat',
               systemPrompt,
+              provider: 'groq',
+              model: 'llama-3.3-70b-versatile',
+              ...(groqApiKey ? { apiKey: groqApiKey } : {}),
             }),
             signal: controller.signal,
           });
@@ -434,6 +448,15 @@ export function ChatContainer({ onTogglePanel, onEsboçoPending }: ChatContainer
         content: m.content,
       }));
 
+      // Busca chave Groq do banco (via RPC que descriptografa)
+      let groqApiKey: string | undefined;
+      try {
+        const { data: chaveData } = await sb!.rpc('pegar_proxima_chave', { p_provider: 'groq' });
+        if (chaveData && chaveData[0]?.key_ciphertext) {
+          groqApiKey = chaveData[0].key_ciphertext;
+        }
+      } catch { /* usa rodízio se falhar */ }
+
       const timeoutId = window.setTimeout(() => controller.abort(), 120_000);
       const res = await fetch(`${supabaseLib.SUPABASE_URL}/functions/v1/ai-chat`, {
         method: 'POST',
@@ -451,6 +474,9 @@ export function ChatContainer({ onTogglePanel, onEsboçoPending }: ChatContainer
           systemPrompt,
           session_context: useCopilotOutlineStore.getState(),
           systemAppend,
+          provider: 'groq',
+          model: 'llama-3.3-70b-versatile',
+          ...(groqApiKey ? { apiKey: groqApiKey } : {}),
         }),
         signal: controller.signal,
       });

@@ -107,9 +107,11 @@ function SlideThumbnail({
       )}
     >
       <button type="button" onClick={onClick} className="flex flex-col gap-1.5 p-1.5 text-left">
-        {/* Mini preview — compact mode, sem motion, sem scale */}
-        <div className="aspect-video w-full overflow-hidden rounded-lg bg-[#0c0c14]">
-          <SlideRenderer slide={slide} compact />
+        {/* Mini preview — slide preenche o container 16:9 */}
+        <div className="relative w-full overflow-hidden rounded-lg bg-[#0c0c14]" style={{ aspectRatio: '16/9' }}>
+          <div className="absolute inset-0">
+            <SlideRenderer slide={slide} compact />
+          </div>
         </div>
 
         {/* Índice + tipo */}
@@ -214,8 +216,10 @@ function AddSlideModal({ onAdd, onClose }: { onAdd: (tipo: SlideType) => void; o
                 className="group flex flex-col items-center gap-3 rounded-2xl border border-ink-200 bg-white p-4 text-center transition-all hover:border-violet-300 hover:bg-violet-50/40 active:scale-95 dark:border-ink-700 dark:bg-ink-900/40 dark:hover:border-violet-700 dark:hover:bg-violet-950/20"
               >
                 {/* Mini preview do slide */}
-                <div className="h-20 w-full overflow-hidden rounded-xl bg-[#0c0c14]">
-                  <SlideRenderer slide={novoSlide(tipo)} compact />
+                <div className="relative w-full overflow-hidden rounded-xl bg-[#0c0c14]" style={{ height: '80px' }}>
+                  <div className="absolute inset-0">
+                    <SlideRenderer slide={novoSlide(tipo)} compact />
+                  </div>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <Icon className="h-4 w-4 text-ink-500 group-hover:text-violet-600 dark:text-ink-400 dark:group-hover:text-violet-400" />

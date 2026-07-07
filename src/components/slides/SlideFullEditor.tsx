@@ -151,15 +151,11 @@ export function SlideFullEditor({
           </button>
         </div>
 
-        {/* Preview — 40% da altura, não corta */}
-        <div
-          className="relative flex-shrink-0 overflow-hidden bg-[#0c0c14]"
-          style={{ height: '40%' }}
-        >
-          <div className="absolute inset-0 flex items-center justify-center px-4">
-            <div className="relative w-full max-w-lg overflow-hidden rounded-xl" style={{ aspectRatio: '16/9' }}>
-              <SlideRenderer slide={slide} />
-            </div>
+        {/* Preview — slide preenche mantendo 16:9, navegações dentro do container */}
+        <div className="relative flex-shrink-0 overflow-hidden bg-[#0c0c14]">
+          {/* Slide 16:9 centralizado */}
+          <div className="relative mx-auto max-h-[45vh] w-full overflow-hidden" style={{ aspectRatio: '16/9' }}>
+            <SlideRenderer slide={slide} />
           </div>
           {/* Navegação lateral */}
           <button
@@ -276,7 +272,7 @@ export function SlideFullEditor({
       transition={{ duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
       className="fixed inset-0 z-50 flex overflow-hidden bg-[#0c0c14] pt-safe"
     >
-      {/* Preview — esquerda 55% */}
+        {/* Preview — esquerda 55% */}
       <div className="relative flex w-[55%] flex-col">
         {/* Header mini */}
         <div className="flex flex-shrink-0 items-center gap-2 border-b border-white/10 px-3 py-2">
@@ -290,7 +286,7 @@ export function SlideFullEditor({
 
         {/* Preview */}
         <div className="flex flex-1 items-center justify-center px-6">
-          <div className="relative w-full max-w-xl overflow-hidden rounded-2xl shadow-2xl" style={{ aspectRatio: '16/9' }}>
+          <div className="relative max-h-[80vh] w-full overflow-hidden rounded-2xl shadow-2xl" style={{ aspectRatio: '16/9' }}>
             <SlideRenderer slide={slide} />
           </div>
         </div>
