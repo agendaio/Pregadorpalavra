@@ -601,11 +601,26 @@ interface ChaveRodizio {
 
 // deno-lint-ignore no-explicit-any
 async function pegarProximaChave(sbAdmin: any): Promise<ChaveRodizio | null> {
-  const { data, error } = await sbAdmin.rpc('pegar_proxima_chave', { p_provider: null });
+  // Tenta RPC primeiro (rodízio LRU completo). Se não existir, cai no SELECT direto.
+  try {
+    const { data, error } = await sbAdmin.rpc('pegar_proxima_chave', { p_provider: null });
+    if (!error && data) {
+      const row = Array.isArray(data) ? data[0] : data;
+      if (row?.key_ciphertext) return row as ChaveRodizio;
+    }
+  } catch { /* RPC não existe — segue pro SELECT */ }
+
+  // Fallback direto: pega a primeira chave Groq ativa do banco (sem rodízio LRU).
+  // Útil quando as RPCs de rodízio ainda não foram criadas no banco.
+  const { data, error } = await sbAdmin
+    .from('api_keys')
+    .select('id, provider, key_ciphertext, modelo_padrao')
+    .eq('ativo', true)
+    .eq('provider', 'groq')
+    .limit(1)
+    .maybeSingle();
   if (error || !data) return null;
-  const row = Array.isArray(data) ? data[0] : data;
-  if (!row || !row.key_ciphertext) return null;
-  return row as ChaveRodizio;
+  return { id: data.id, provider: data.provider, key_ciphertext: data.key_ciphertext, modelo_padrao: data.modelo_padrao };
 }
 
 // deno-lint-ignore no-explicit-any
@@ -654,7 +669,7 @@ async function callComRodizio(
   sbAdmin: any,
   base: RodizioBase,
   fallbackKey?: string,
-  fallbackProvider = 'openai',
+  fallbackProvider = 'groq',
 ): Promise<{ result: any; provider: string; model: string }> {
   const MAX = 6;
   let ultimoErro: unknown = null;
@@ -903,7 +918,8 @@ serve(async (req) => {
     // Chave de API: rodízio automático entre TODAS as chaves ativas
     // (ver callComRodizio + RPC pegar_proxima_chave). Aqui só preparamos a
     // chave do env como último recurso, caso não haja nenhuma no banco.
-    const envKey = Deno.env.get('OPENAI_API_KEY') || undefined;
+    // Fallback usa Groq (gratuito) em vez de OpenAI.
+    const envKey = Deno.env.get('GROQ_API_KEY') || Deno.env.get('OPENAI_API_KEY') || undefined;
 
     // ── CHAT MODE: resposta rápida, sem overhead de esboço ─────────────────────
     if (modo === 'chat') {
