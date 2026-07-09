@@ -21,6 +21,8 @@ interface RequestBody {
   temperature?: number;
   maxTokens?: number;
   model?: string;
+  provider?: string;
+  apiKey?: string;
 }
 
 // ─── Cache inteligente em memória (Edge Runtime) ───────────────────────────
@@ -96,11 +98,15 @@ export async function POST(request: Request): Promise<Response> {
     temperature = 0.7,
     maxTokens = 600,
     model = 'gpt-4o-mini',
+    provider = 'openai',
+    apiKey: providedApiKey,
   } = body;
 
-  const apiKey = process.env.OPENAI_API_KEY;
+  // Usa key do body (Groq do banco de dados) se fornecida,
+  // caso contrário usa OPENAI_API_KEY do ambiente Vercel.
+  const apiKey = providedApiKey ?? process.env.OPENAI_API_KEY;
   if (!apiKey) {
-    return new Response(JSON.stringify({ error: 'OPENAI_API_KEY not configured' }), {
+    return new Response(JSON.stringify({ error: 'Nenhuma API key disponível (nem do banco, nem do ambiente)' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
     });
@@ -130,16 +136,24 @@ export async function POST(request: Request): Promise<Response> {
     }
   }
 
-  // ─── OpenAI API (streaming) ──────────────────────────────────────────────
+  // ─── OpenAI ou Groq API (streaming) ─────────────────────────────────────────
+  const isGroq = provider === 'groq';
+  const apiEndpoint = isGroq
+    ? 'https://api.groq.com/openai/v1/chat/completions'
+    : 'https://api.openai.com/v1/chat/completions';
+  const resolvedModel = isGroq
+    ? (model === 'gpt-4o-mini' ? 'llama-3.3-70b-versatile' : model)
+    : model;
+
   try {
-    const openAIStream = await fetch('https://api.openai.com/v1/chat/completions', {
+    const llmStream = await fetch(apiEndpoint, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model,
+        model: resolvedModel,
         messages: fullMessages,
         temperature,
         max_tokens: maxTokens,
@@ -147,15 +161,15 @@ export async function POST(request: Request): Promise<Response> {
       }),
     });
 
-    if (!openAIStream.ok) {
-      const errText = await openAIStream.text();
-      return new Response(JSON.stringify({ error: `OpenAI error ${openAIStream.status}`, detail: errText }), {
+    if (!llmStream.ok) {
+      const errText = await llmStream.text();
+      return new Response(JSON.stringify({ error: `${isGroq ? 'Groq' : 'OpenAI'} error ${llmStream.status}`, detail: errText }), {
         status: 502,
         headers: { 'Content-Type': 'application/json' },
       });
     }
 
-    if (!openAIStream.body) {
+    if (!llmStream.body) {
       return new Response(JSON.stringify({ error: 'empty_stream' }), {
         status: 502,
         headers: { 'Content-Type': 'application/json' },
@@ -164,7 +178,7 @@ export async function POST(request: Request): Promise<Response> {
 
     if (!stream) {
       // Non-streaming: acumula tudo e retorna
-      const reader = openAIStream.body.getReader();
+      const reader = llmStream.body.getReader();
       const decoder = new TextDecoder();
       let fullContent = '';
       let done = false;
@@ -199,8 +213,8 @@ export async function POST(request: Request): Promise<Response> {
       });
     }
 
-    // Streaming: transforma eventos OpenAI em SSE pro frontend
-    const streamBody = openAIStream.body;
+    // Streaming: transforma eventos da LLM em SSE pro frontend
+    const streamBody = llmStream.body;
     const encoder = new TextEncoder();
     let fullContent = '';
     let cached = false;
