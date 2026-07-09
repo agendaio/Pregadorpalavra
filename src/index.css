@@ -25,9 +25,10 @@
   body {
     @apply bg-paper font-sans text-ink-900;
     font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
-    overscroll-behavior-y: none;
-    overscroll-behavior: none;
+    overscroll-behavior-y: auto;
+    overscroll-behavior: auto;
     touch-action: manipulation;
+    -webkit-overflow-scrolling: touch;
   }
 
   /* Tipografia escalável (controlada pela store) */
@@ -121,6 +122,16 @@
   .touch {
     min-height: 44px;
     min-width: 44px;
+  }
+
+  /* Scroll containers — funciona com mouse E touch */
+  .scroll-container {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    /* Garante que o scroll funcione em flex containers */
+    flex-shrink: 0;
+    min-height: 0;
   }
 }
 

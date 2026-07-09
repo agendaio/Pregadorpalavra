@@ -168,7 +168,7 @@ export function CopilotOutlinePanel({ asBottomSheet = false, onClose, onChangeFo
       </div>
 
       {/* Conteúdo scrollável */}
-      <div className="flex-1 overflow-y-auto px-4 py-3">
+      <div className="flex-1 scroll-container px-4 py-3">
         {!hasContent ? (
           <EmptyState />
         ) : (
@@ -523,7 +523,7 @@ export function CopilotOutlinePanel({ asBottomSheet = false, onClose, onChangeFo
                   Editar Slides
                 </button>
                 <button
-                  onClick={() => {
+                  onClick={async () => {
                     const mensagem = novaMensagem({
                       titulo: store.titulo || 'Pregação',
                       tema: store.tema,
@@ -535,7 +535,7 @@ export function CopilotOutlinePanel({ asBottomSheet = false, onClose, onChangeFo
                     });
                     const { slides } = gerarSlides({ mensagem });
                     mensagem.slides = slides;
-                    db.salvarMensagem(mensagem);
+                    await db.salvarMensagem(mensagem);
                     navigate(`/pulpit/${mensagem.id}`);
                   }}
                   className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-600 px-5 py-2.5 text-[13px] font-semibold text-white shadow-sm transition-all hover:from-emerald-600 hover:to-cyan-700 active:scale-[0.98]"

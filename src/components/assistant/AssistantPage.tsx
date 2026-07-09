@@ -658,7 +658,7 @@ export function AssistantPage() {
       {/* ── Conteúdo principal ── */}
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Área rolável (empty state ou mensagens) — pill flutua só aqui, acima do input */}
-        <div className="relative flex flex-1 flex-col overflow-hidden">
+        <div className="relative flex flex-1 flex-col overflow-visible">
           {/* Card flutuante profissional: Histórico | Ações rápidas */}
           <motion.div
             initial={false}
@@ -713,7 +713,7 @@ export function AssistantPage() {
 
         {/* ── Empty state: cards de especialistas ── */}
         {mostrarEmptyState ? (
-          <div className="flex-1 overflow-y-auto" onScroll={handleScroll}>
+          <div className="flex-1 scroll-container" onScroll={handleScroll}>
             <div className="mx-auto flex min-h-full max-w-3xl flex-col justify-start px-3 pb-24 pt-5">
               <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-blue-600 to-violet-600 shadow-lg shadow-violet-500/25 dark:shadow-violet-500/10">
                 <Sparkles className="h-6 w-6 text-white" />
@@ -777,7 +777,7 @@ export function AssistantPage() {
           </div>
         ) : (
           /* ── Mensagens ── */
-          <div className="flex-1 overflow-y-auto" onScroll={handleScroll}>
+          <div className="flex-1 scroll-container" onScroll={handleScroll}>
             <div className="mx-auto max-w-3xl px-4 pb-24 pt-6">
               {/* Indicador de especialista ativo acima da conversa */}
               {especialistaAtivo && (
