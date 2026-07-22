@@ -121,8 +121,6 @@ export function AssistantPage() {
     açãoIcon: string;
     texto: string;
   } | null>(null);
-  // Pill flutuante de histórico/esboço: some ao rolar pra cima, aparece ao rolar pra baixo
-  const [pillVisivel, setPillVisivel] = useState(true);
   const lastScrollTopRef = useRef(0);
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
 
@@ -227,15 +225,13 @@ export function AssistantPage() {
     setShowScrollToBottom(false);
   }, []);
 
-  // ── Direção do scroll controla a pill e o botão "voltar ao final" ──
+  // ── Scroll: mostra botão "voltar ao final" quando não está no final ──
   const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
     const el = e.currentTarget;
     const st = el.scrollTop;
     const last = lastScrollTopRef.current;
     if (Math.abs(st - last) < 6) return; // ignora micro-movimentos
-
-    // Pill some quando rola pra cima, aparece quando volta pro topo ou rola pra baixo
-    setPillVisivel(st > last || st < 40);
+    lastScrollTopRef.current = st;
 
     // Mostra botão "voltar ao final" quando não está no final (150px de tolerância)
     const isNearBottom = el.scrollHeight - st - el.clientHeight < 150;
