@@ -695,7 +695,7 @@ export function AssistantPage() {
       {/* ── Conteúdo principal ── */}
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Área rolável (empty state ou mensagens) */}
-        <div className="relative flex flex-1 flex-col overflow-visible">
+        <div className="relative flex flex-1 flex-col overflow-hidden">
         {/* ── Empty state: cards de especialistas ── */}
         {mostrarEmptyState ? (
           <div className="flex-1 scroll-container h-full" onScroll={handleScroll}>
