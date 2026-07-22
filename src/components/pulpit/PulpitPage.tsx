@@ -49,6 +49,7 @@ import {
   FileText,
   FileType2,
   FileCode,
+  Layers,
 } from 'lucide-react';
 import { db } from '@/db/schema';
 import { usePulpitStore } from '@/stores/pulpit';
@@ -57,7 +58,7 @@ import { useUIStore } from '@/stores/ui';
 import { exportarMensagem, type FormatoExport } from '@/lib/exporters';
 import { parsearEsboco } from '@/lib/esbocoParser';
 import { cn, formatarRelogio, formatarDuracao } from '@/lib/utils';
-import { SlideRenderer } from './SlideRenderer';
+import { SlideRenderer, MiniSlideRenderer } from './SlideRenderer';
 import type { Slide } from '@/types/mensagem';
 
 // â”€â”€â”€ Tipos internos â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -528,6 +529,7 @@ export function PulpitPage() {
   const [modoApresentacao, setModoApresentacao] = useState(false);
   const [slideIndex, setSlideIndex] = useState(0);
   const [espacamentoLinhas, setEspacamentoLinhas] = useState(1.55);
+  const [slidePainelAberto, setSlidePainelAberto] = useState(true); // painel de slides inline
 
   // Auto-abre modo apresentação quando tem slides
   useEffect(() => {
@@ -971,6 +973,130 @@ return (
               Recomeçar
             </button>
           )}
+        </div>
+      )}
+
+      {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• PAINEL DE SLIDES INLINE â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
+      {mensagem.slides && mensagem.slides.length > 0 && (
+        <div className="border-b border-amber-300/10 bg-black/30">
+          {/* Header do painel de slides */}
+          <div className="flex items-center justify-between px-4 py-2">
+            <div className="flex items-center gap-2">
+              <div className="flex h-6 w-6 items-center justify-center rounded-md bg-amber-300/20">
+                <PanelTopOpen className="h-3.5 w-3.5 text-amber-300" />
+              </div>
+              <span className="text-[11px] font-semibold text-amber-200">Slides</span>
+              <span className="font-mono text-[10px] text-white/40">{slideIndex + 1}/{mensagem.slides.length}</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => setSlideIndex(Math.max(0, slideIndex - 1))}
+                disabled={slideIndex === 0}
+                className="flex h-7 w-7 items-center justify-center rounded-lg text-amber-300/70 transition-colors hover:bg-amber-300/10 disabled:opacity-30"
+                aria-label="Slide anterior"
+              >
+                <ChevronRight className="h-4 w-4 rotate-180" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setSlideIndex(Math.min(mensagem.slides.length - 1, slideIndex + 1))}
+                disabled={slideIndex >= mensagem.slides.length - 1}
+                className="flex h-7 w-7 items-center justify-center rounded-lg text-amber-300/70 transition-colors hover:bg-amber-300/10 disabled:opacity-30"
+                aria-label="Próximo slide"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setSlidePainelAberto((v) => !v)}
+                className="ml-1 flex h-7 w-7 items-center justify-center rounded-lg text-white/40 transition-colors hover:bg-white/10"
+                aria-label={slidePainelAberto ? 'Recolher painel' : 'Expandir painel'}
+              >
+                <ChevronDown className={cn('h-4 w-4 transition-transform', slidePainelAberto ? '' : '-rotate-90')} />
+              </button>
+            </div>
+          </div>
+
+          {/* Slide em si — recolhe/expand */}
+          <AnimatePresence>
+            {slidePainelAberto && (
+              <motion.div
+                key="slide-panel"
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="overflow-hidden"
+              >
+                <div className="flex gap-3 px-4 pb-3">
+                  {/* Miniaturas */}
+                  <div className="flex flex-col gap-1.5 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+                    {mensagem.slides.map((s, i) => (
+                      <button
+                        key={s.id}
+                        type="button"
+                        onClick={() => setSlideIndex(i)}
+                        className={cn(
+                          'relative flex-shrink-0 overflow-hidden rounded-lg border transition-all',
+                          i === slideIndex
+                            ? 'border-amber-300/60 ring-1 ring-amber-300/40'
+                            : 'border-white/10 opacity-60 hover:opacity-100',
+                        )}
+                        style={{ width: 52, height: 29 }}
+                      >
+                        <MiniSlideRenderer slide={s as Slide} />
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Slide principal */}
+                  <div
+                    className="flex-1 cursor-pointer overflow-hidden rounded-xl border border-amber-300/15 bg-[#0c0c14]"
+                    style={{ aspectRatio: '16/9', maxHeight: 120 }}
+                    onClick={() => {
+                      if (slideIndex < mensagem.slides.length - 1) setSlideIndex((i) => i + 1);
+                    }}
+                  >
+                    <AnimatePresence mode="wait">
+                      <motion.div
+                        key={slideIndex}
+                        initial={{ opacity: 0, x: 8 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -8 }}
+                        transition={{ duration: 0.15 }}
+                        className="h-full"
+                      >
+                        <SlideRenderer
+                          slide={mensagem.slides[slideIndex] as Slide}
+                          indice={slideIndex}
+                          total={mensagem.slides.length}
+                        />
+                      </motion.div>
+                    </AnimatePresence>
+                  </div>
+
+                  {/* Info + ações */}
+                  <div className="flex w-20 flex-shrink-0 flex-col items-center justify-between">
+                    <div className="text-center">
+                      <div className="font-mono text-[10px] font-bold text-amber-300">
+                        {slideIndex + 1}/{mensagem.slides.length}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => { setModoApresentacao(true); setSlideIndex(0); }}
+                      className="flex h-8 w-full items-center justify-center gap-1 rounded-lg bg-amber-300/15 text-[10px] font-semibold text-amber-200 transition-colors hover:bg-amber-300/25"
+                      title="Modo apresentação (tela cheia)"
+                    >
+                      <Maximize2 className="h-3 w-3" />
+                      Tela cheia
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       )}
 

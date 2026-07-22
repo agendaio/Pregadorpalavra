@@ -15,11 +15,11 @@ import {
   Layers, Sparkles, X,
   Share2, Download, ExternalLink,
   LayoutTemplate, BookOpen, ListOrdered, LayoutGrid, Megaphone, Heart,
+  ChevronLeft, ChevronRight,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { SlideRenderer } from './SlideRenderer';
-import { SlideFullEditor } from './SlideFullEditor';
 import { useMensagensStore } from '@/stores/mensagens';
 import { FormCapa, FormVerso, FormConteudo, FormCategorias, FormChamada, FormOracao } from './SlideForm';
 import type {
@@ -501,36 +501,96 @@ export function SlideEditor({ slides, onChange, mensagem, onGerarSlides, podeReg
         )}
       </AnimatePresence>
 
-      {/* Edição do slide em tela cheia */}
+      {/* Edição do slide INLINE (painel inferior, sem popup) */}
       <AnimatePresence>
         {editingId && (() => {
           const idx = slides.findIndex((s) => s.id === editingId);
           const slide = slides[idx];
           if (!slide) return null;
+          const tipoMeta = getTipoMeta(slide.tipo);
+          const IconComp = tipoMeta.icon;
+          const prevSlide = slides[idx - 1];
+          const nextSlide = slides[idx + 1];
+
+          const handleClose = () => {
+            setEditingId(null);
+            void useMensagensStore.getState().flushSalvar();
+          };
+
+          const handlePrev = () => {
+            if (prevSlide) { setSelectedId(prevSlide.id); setEditingId(prevSlide.id); }
+          };
+
+          const handleNext = () => {
+            if (nextSlide) { setSelectedId(nextSlide.id); setEditingId(nextSlide.id); }
+          };
+
+          const renderForm = () => {
+            switch (slide.content.tipo) {
+              case 'capa':       return <FormCapa content={slide.content} onChange={(c: any) => updateContent(slide.id, c)} />;
+              case 'verso':      return <FormVerso content={slide.content} onChange={(c: any) => updateContent(slide.id, c)} />;
+              case 'conteudo':   return <FormConteudo content={slide.content} onChange={(c: any) => updateContent(slide.id, c)} />;
+              case 'categorias': return <FormCategorias content={slide.content} onChange={(c: any) => updateContent(slide.id, c)} />;
+              case 'chamada':    return <FormChamada content={slide.content} onChange={(c: any) => updateContent(slide.id, c)} />;
+              case 'oracao':     return <FormOracao content={slide.content} onChange={(c: any) => updateContent(slide.id, c)} />;
+            }
+          };
+
           return (
-            <SlideFullEditor
-              key={slide.id}
-              slide={slide}
-              indice={idx}
-              total={slides.length}
-              mensagem={mensagem}
-              onChange={(c) => updateContent(slide.id, c)}
-              onClose={() => {
-                setEditingId(null);
-                // Não espera o debounce de 4s — fecha e já garante que salvou
-                void useMensagensStore.getState().flushSalvar();
-              }}
-              onDelete={() => {
-                removeSlide(slide.id);
-                setEditingId(null);
-                void useMensagensStore.getState().flushSalvar();
-              }}
-              onDuplicate={() => duplicateSlide(slide.id)}
-              onPrev={() => { const p = slides[idx - 1]; if (p) { setSelectedId(p.id); setEditingId(p.id); } }}
-              onNext={() => { const n = slides[idx + 1]; if (n) { setSelectedId(n.id); setEditingId(n.id); } }}
-              onMoveUp={() => moveSlide(idx, idx - 1)}
-              onMoveDown={() => moveSlide(idx, idx + 1)}
-            />
+            <motion.div
+              key="inline-editor"
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.25, ease: [0.22, 0.9, 0.3, 1] }}
+              className="border-t border-ink-200/70 dark:border-ink-700 overflow-hidden"
+            >
+              {/* Header do editor inline */}
+              <div className="flex items-center gap-2 border-b border-ink-200/70 bg-white px-4 py-2.5 dark:border-ink-700 dark:bg-ink-900/50">
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-violet-100 dark:bg-violet-900/40">
+                  <IconComp className="h-4 w-4 text-violet-600 dark:text-violet-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <span className="text-[12px] font-semibold text-ink-900 dark:text-white">{tipoMeta.label}</span>
+                  <span className="ml-2 text-[10.5px] text-ink-400">{idx + 1} / {slides.length}</span>
+                </div>
+                <button onClick={handlePrev} disabled={!prevSlide}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg text-ink-400 transition-colors hover:bg-ink-100 disabled:opacity-30 dark:hover:bg-ink-800 disabled:dark:opacity-20">
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <button onClick={handleNext} disabled={!nextSlide}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg text-ink-400 transition-colors hover:bg-ink-100 disabled:opacity-30 dark:hover:bg-ink-800 disabled:dark:opacity-20">
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+                <button onClick={() => duplicateSlide(slide.id)}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg text-ink-400 transition-colors hover:bg-ink-100 dark:hover:bg-ink-800">
+                  <Copy className="h-3.5 w-3.5" />
+                </button>
+                <button onClick={() => { removeSlide(slide.id); setEditingId(null); void useMensagensStore.getState().flushSalvar(); }}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg text-red-400 transition-colors hover:bg-red-50 dark:hover:bg-red-900/20">
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+                <button onClick={handleClose}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg text-ink-400 transition-colors hover:bg-ink-100 dark:hover:bg-ink-800">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              {/* Conteúdo: preview + form lado a lado */}
+              <div className="flex gap-0 bg-white dark:bg-[#0c0c14]">
+                {/* Preview缩小版 */}
+                <div className="w-40 flex-shrink-0 border-r border-ink-200/70 p-3 dark:border-ink-700">
+                  <div className="overflow-hidden rounded-xl bg-[#0c0c14]" style={{ aspectRatio: '16/9' }}>
+                    <SlideRenderer slide={slide} preview />
+                  </div>
+                  <p className="mt-2 truncate text-center text-[9.5px] text-ink-400">{idx + 1} de {slides.length}</p>
+                </div>
+                {/* Form de edição */}
+                <div className="flex-1 overflow-y-auto p-4">
+                  {renderForm()}
+                </div>
+              </div>
+            </motion.div>
           );
         })()}
       </AnimatePresence>

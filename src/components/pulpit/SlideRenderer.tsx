@@ -529,3 +529,39 @@ export const SlideRenderer = memo(function SlideRenderer({ slide, indice, total,
     </motion.div>
   );
 });
+
+// ─── Mini Slide Renderer — para miniaturas no painel inline ───────────────────
+
+/** Miniatura compacta de um slide (sem animações, cor de fundo + texto básico) */
+export function MiniSlideRenderer({ slide }: { slide: Slide }) {
+  const t = TEMA[slide.content.tipo] ?? TEMA.conteudo;
+  const c = slide.content;
+
+  let label = '';
+  switch (c.tipo) {
+    case 'capa':        label = c.referencia || c.titulo || 'Capa'; break;
+    case 'verso':        label = c.referencia || 'Verso'; break;
+    case 'conteudo':     label = c.titulo || 'Conteúdo'; break;
+    case 'categorias':   label = c.titulo || 'Temas'; break;
+    case 'chamada':      label = c.titulo || 'Aplicação'; break;
+    case 'oracao':       label = 'Oração'; break;
+    default:             label = 'Slide';
+  }
+
+  return (
+    <div className={cn('relative flex h-full w-full flex-col overflow-hidden', t.fundo)}>
+      {/* Tipo tag */}
+      <div className="absolute left-1.5 top-1.5 z-10">
+        <span className={cn('rounded px-1 py-0.5 text-[7px] font-bold uppercase tracking-wide', t.tagBg, t.tagText)}>
+          {c.tipo}
+        </span>
+      </div>
+      {/* Texto centralizado */}
+      <div className="flex flex-1 items-center justify-center px-1.5 text-center">
+        <span className="line-clamp-2 text-[8px] font-medium leading-tight text-white/80">
+          {label}
+        </span>
+      </div>
+    </div>
+  );
+}

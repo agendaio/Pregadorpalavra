@@ -60,7 +60,7 @@ export default defineConfig({
       // só acontece quando o novo precache está 100% íntegro (tudo-ou-nada).
       registerType: 'prompt',
       injectRegister: 'auto',
-      filename: 'sw.js',
+      filename: 'sw-v2.js',
       manifestFilename: 'manifest.webmanifest',
       includeAssets: [
         'favicon.svg',

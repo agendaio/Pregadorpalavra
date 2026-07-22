@@ -625,8 +625,40 @@ async function pegarProximaChave(sbAdmin: any): Promise<ChaveRodizio | null> {
 
 // deno-lint-ignore no-explicit-any
 async function marcarChaveErro(sbAdmin: any, id: string, tipo: 'rate_limit' | 'quota' | 'invalida', cooldownSeg: number) {
+  // Tenta RPC primeiro (versão completa com cooldown). Se não existir, UPDATE direto.
   try {
     await sbAdmin.rpc('marcar_chave_erro', { p_id: id, p_tipo: tipo, p_cooldown_seg: cooldownSeg });
+    return;
+  } catch { /* RPC não existe — segue pro UPDATE direto */ }
+
+  // Fallback direto: replica o comportamento da RPC manualmente
+  try {
+    if (tipo === 'invalida') {
+      // Primeiro busca o erro_count atual
+      const { data: existing } = await sbAdmin
+        .from('api_keys')
+        .select('erro_count')
+        .eq('id', id)
+        .single();
+      await sbAdmin.from('api_keys').update({
+        ativo: false,
+        desativado_em: new Date().toISOString(),
+        motivo_desativacao: 'invalida',
+        erro_count: (existing?.erro_count ?? 0) + 1,
+      }).eq('id', id);
+    } else {
+      const cooldownIso = new Date(Date.now() + Math.max(cooldownSeg, 1) * 1000).toISOString();
+      const { data: existing } = await sbAdmin
+        .from('api_keys')
+        .select('erro_count')
+        .eq('id', id)
+        .single();
+      await sbAdmin.from('api_keys').update({
+        cooldown_ate: cooldownIso,
+        motivo_desativacao: tipo,
+        erro_count: (existing?.erro_count ?? 0) + 1,
+      }).eq('id', id);
+    }
   } catch { /* best-effort */ }
 }
 

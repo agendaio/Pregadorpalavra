@@ -7,6 +7,7 @@ import {
   Sparkles, Share2, Wand2, BookOpen, Megaphone, ClipboardList,
   Globe, Users, HelpCircle, GraduationCap, Drama, Scroll,
   History, ListChecks, ChevronLeft, Sun, Moon, User, Settings,
+  ArrowDown,
 } from 'lucide-react';
 import { supabase, SUPABASE_ANON_KEY } from '@/lib/supabase';
 import { aiDB } from '@/lib/ai';
@@ -123,8 +124,10 @@ export function AssistantPage() {
   // Pill flutuante de histórico/esboço: some ao rolar pra cima, aparece ao rolar pra baixo
   const [pillVisivel, setPillVisivel] = useState(true);
   const lastScrollTopRef = useRef(0);
+  const [showScrollToBottom, setShowScrollToBottom] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const streamAbortRef = useRef<AbortController | null>(null);
 
@@ -144,9 +147,14 @@ export function AssistantPage() {
     aiDB.sessoes.orderBy('updatedAt').reverse().limit(30).toArray() as Promise<ChatSession[]>,
   );
 
-  // Auto-scroll
+  // Auto-scroll — só rola se usuário estiver perto do final (dentro de 150px)
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (!messagesContainerRef.current) return;
+    const el = messagesContainerRef.current;
+    const isNearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 150;
+    if (isNearBottom) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
   }, [messages, loading, speech.interimTranscript]);
 
   // ── Sessão: criar / carregar ──
@@ -213,12 +221,26 @@ export function AssistantPage() {
     setShowSessoes(true);
   }, []);
 
-  // ── Direção do scroll controla a pill: baixo = mostra, cima = esconde ──
+  // ── Voltar ao final da conversa ──
+  const scrollToBottom = useCallback(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    setShowScrollToBottom(false);
+  }, []);
+
+  // ── Direção do scroll controla a pill e o botão "voltar ao final" ──
   const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
-    const st = e.currentTarget.scrollTop;
+    const el = e.currentTarget;
+    const st = el.scrollTop;
     const last = lastScrollTopRef.current;
     if (Math.abs(st - last) < 6) return; // ignora micro-movimentos
+
+    // Pill some quando rola pra cima, aparece quando volta pro topo ou rola pra baixo
     setPillVisivel(st > last || st < 40);
+
+    // Mostra botão "voltar ao final" quando não está no final (150px de tolerância)
+    const isNearBottom = el.scrollHeight - st - el.clientHeight < 150;
+    setShowScrollToBottom(!isNearBottom);
+
     lastScrollTopRef.current = st;
   }, []);
 
@@ -777,7 +799,11 @@ export function AssistantPage() {
           </div>
         ) : (
           /* ── Mensagens ── */
-          <div className="flex-1 scroll-container" onScroll={handleScroll}>
+          <div
+            ref={messagesContainerRef}
+            className="flex-1 scroll-container"
+            onScroll={handleScroll}
+          >
             <div className="mx-auto max-w-3xl px-4 pb-24 pt-6">
               {/* Indicador de especialista ativo acima da conversa */}
               {especialistaAtivo && (
@@ -794,6 +820,22 @@ export function AssistantPage() {
                   </div>
                 </div>
               )}
+
+              {/* Botão flutuante "Voltar ao final" — aparece quando rola pra cima */}
+              <AnimatePresence>
+                {showScrollToBottom && messages.length > 0 && (
+                  <motion.button
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.8 }}
+                    onClick={scrollToBottom}
+                    className="fixed bottom-28 right-4 z-20 flex h-10 w-10 items-center justify-center rounded-full bg-violet-600 text-white shadow-lg shadow-violet-900/30 active:scale-95 sm:right-auto sm:left-1/2 sm:-translate-x-1/2"
+                    aria-label="Voltar ao final da conversa"
+                  >
+                    <ArrowDown className="h-5 w-5" />
+                  </motion.button>
+                )}
+              </AnimatePresence>
 
               {messages.map((msg) => (
                 <MessageBubble

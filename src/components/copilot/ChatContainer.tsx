@@ -20,7 +20,7 @@ import {
   Send, Sparkles, Loader2, RotateCcw, Trash2, Copy, CheckCheck,
   AlertCircle, Plus, MessageSquare, ChevronLeft, ChevronRight,
   BookOpen, ArrowRight, PanelRightOpen, Share2, Wand2, Download,
-  Pencil, Mic, MicOff, Square, X,
+  Pencil, Mic, MicOff, Square, X, ArrowDown,
 } from 'lucide-react';
 import { SYSTEM_PROMPT, SYSTEM_PROMPT_CHAT, SERMON_PARSING_INSTRUCTION } from '@/lib/ai/prompt';
 import { construirContextoMemoria } from '@/lib/ai/memory';
@@ -144,17 +144,40 @@ export function ChatContainer({ onTogglePanel, onEsboçoPending }: ChatContainer
   } | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const [showScrollToBottom, setShowScrollToBottom] = useState(false);
   const outline = useCopilotOutlineStore();
 
   const sessoes = useLiveQuery(() => aiDB.sessoes.orderBy('updatedAt').reverse().limit(20).toArray(), []);
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    setShowScrollToBottom(false);
   }, []);
 
-  useEffect(() => { scrollToBottom(); }, [mensagens, loading, scrollToBottom]);
+  // Auto-scroll — só rola se usuário estiver perto do final
+  useEffect(() => {
+    if (!messagesContainerRef.current) return;
+    const el = messagesContainerRef.current;
+    const isNearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 150;
+    if (isNearBottom) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [mensagens, loading, scrollToBottom]);
+
+  // Detecta direção do scroll para mostrar/esconder botão
+  const lastScrollTopRef = useRef(0);
+  const handleMessagesScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    const el = e.currentTarget;
+    const st = el.scrollTop;
+    const last = lastScrollTopRef.current;
+    if (Math.abs(st - last) < 6) return;
+    const isNearBottom = el.scrollHeight - st - el.clientHeight < 150;
+    setShowScrollToBottom(!isNearBottom);
+    lastScrollTopRef.current = st;
+  }, []);
 
   const carregarSessao = useCallback(async (sessao: Sessao) => {
     setSessaoId(sessao.id);
@@ -377,34 +400,57 @@ export function ChatContainer({ onTogglePanel, onEsboçoPending }: ChatContainer
           });
         } catch { /* rede falhou — cai pro fallback abaixo */ }
 
-        // Fallback: Supabase ai-chat (modo chat) — cobre dev local (Vite não
-        // serve /api/*) e qualquer indisponibilidade da função Vercel.
+        // Fallback: chat-fast com Groq (key do banco) — evita o caminho
+        // via Supabase Edge quando Vercel está disponível.
         if (!chatRes || !chatRes.ok) {
-          const { data: sessData } = await sb!.auth.getSession() ?? {};
-          const userToken = (sessData?.session as { access_token?: string } | null | undefined)?.access_token;
-          const token = userToken ?? supabaseLib.SUPABASE_ANON_KEY;
-          if (!token) throw new Error('Não autenticado');
+          const timeoutId2 = window.setTimeout(() => controller.abort(), 90_000);
+          try {
+            chatRes = await fetch('/api/chat-fast', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'x-stream': 'true' },
+              body: JSON.stringify({
+                messages: messagesForApi,
+                systemPrompt,
+                temperature: 0.7,
+                maxTokens: 600,
+                provider: 'groq',
+                model: 'llama-3.3-70b-versatile',
+                ...(groqApiKey ? { apiKey: groqApiKey } : {}),
+              }),
+              signal: controller.signal,
+            });
+          } finally {
+            window.clearTimeout(timeoutId2);
+          }
 
-          chatRes = await fetch(`${supabaseLib.SUPABASE_URL}/functions/v1/ai-chat`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${token}`,
-              'apikey': supabaseLib.SUPABASE_ANON_KEY,
-            },
-            body: JSON.stringify({
-              messages: messagesForApi,
-              stream: true,
-              temperature: 0.7,
-              maxTokens: 600,
-              modo: 'chat',
-              systemPrompt,
-              provider: 'groq',
-              model: 'llama-3.3-70b-versatile',
-              ...(groqApiKey ? { apiKey: groqApiKey } : {}),
-            }),
-            signal: controller.signal,
-          });
+          // Se ainda falhar, tenta ai-chat via Supabase (último recurso)
+          if (!chatRes || !chatRes.ok) {
+            const { data: sessData } = await sb!.auth.getSession() ?? {};
+            const userToken = (sessData?.session as { access_token?: string } | null | undefined)?.access_token;
+            const token = userToken ?? supabaseLib.SUPABASE_ANON_KEY;
+            if (!token) throw new Error('Não autenticado');
+
+            chatRes = await fetch(`${supabaseLib.SUPABASE_URL}/functions/v1/ai-chat`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`,
+                'apikey': supabaseLib.SUPABASE_ANON_KEY,
+              },
+              body: JSON.stringify({
+                messages: messagesForApi,
+                stream: true,
+                temperature: 0.7,
+                maxTokens: 600,
+                modo: 'chat',
+                systemPrompt,
+                provider: 'groq',
+                model: 'llama-3.3-70b-versatile',
+                ...(groqApiKey ? { apiKey: groqApiKey } : {}),
+              }),
+              signal: controller.signal,
+            });
+          }
         }
         window.clearTimeout(timeoutId);
 
@@ -657,7 +703,11 @@ export function ChatContainer({ onTogglePanel, onEsboçoPending }: ChatContainer
       </AnimatePresence>
 
       {/* Mensagens */}
-      <div className="flex-1 overflow-y-auto px-4 py-4">
+      <div
+        ref={messagesContainerRef}
+        className="flex-1 overflow-y-auto px-4 py-4"
+        onScroll={handleMessagesScroll}
+      >
         {mensagens.length === 0 && !loading && (
           <Greeting onSugestão={handleSugestão} />
         )}
@@ -780,6 +830,22 @@ export function ChatContainer({ onTogglePanel, onEsboçoPending }: ChatContainer
         )}
 
         <div ref={messagesEndRef} />
+
+        {/* Botão flutuante "Voltar ao final" */}
+        <AnimatePresence>
+          {showScrollToBottom && mensagens.length > 0 && (
+            <motion.button
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              onClick={scrollToBottom}
+              className="fixed bottom-28 right-4 z-20 flex h-10 w-10 items-center justify-center rounded-full bg-sky-600 text-white shadow-lg shadow-sky-900/30 active:scale-95 sm:right-auto sm:left-1/2 sm:-translate-x-1/2"
+              aria-label="Voltar ao final da conversa"
+            >
+              <ArrowDown className="h-5 w-5" />
+            </motion.button>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Input — Layout ChatGPT */}

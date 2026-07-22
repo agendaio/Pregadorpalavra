@@ -64,16 +64,18 @@ function SlidePreview({ mensagem, onClick }: { mensagem: import('@/types/mensage
       style={{ aspectRatio: '16/9' }}
       title="Tocar apresentação"
     >
-      {slide ? (
-        <SlideRenderer slide={slide} />
-      ) : (
-        <div className="flex h-full w-full flex-col items-center justify-center gap-3">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10">
-            <Layers className="h-7 w-7 text-white/40" />
+      <div className="absolute inset-0 flex items-center justify-center">
+        {slide ? (
+          <SlideRenderer slide={slide} preview />
+        ) : (
+          <div className="flex h-full w-full flex-col items-center justify-center gap-3">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10">
+              <Layers className="h-7 w-7 text-white/40" />
+            </div>
+            <span className="text-[13px] font-medium text-white/40">Toque para criar slides</span>
           </div>
-          <span className="text-[13px] font-medium text-white/40">Toque para criar slides</span>
-        </div>
-      )}
+        )}
+      </div>
       {/* Overlay play */}
       <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/20">
         <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm opacity-0 transition-opacity group-hover:opacity-100">
@@ -369,6 +371,13 @@ export function EditorPage() {
     patch({ slides: slides ?? [] });
   };
 
+  /** Salva e navega pro púlpito — garante que edits estão persistidos */
+  const navegarPulpit = async () => {
+    setSalvando(true);
+    await salvar(); // Salva imediatamente (sem debounce)
+    navigate(`/pulpit/${mensagem!.id}`);
+  };
+
   if (!mensagem) {
     return (
       <div className="flex h-full items-center justify-center text-ink-500 dark:text-ink-400">
@@ -417,7 +426,7 @@ export function EditorPage() {
           <div className="px-4 pt-4">
             <SlidePreview
               mensagem={mensagem}
-              onClick={() => navigate(`/pulpit/${mensagem.id}`)}
+              onClick={navegarPulpit}
             />
           </div>
 
@@ -612,7 +621,7 @@ export function EditorPage() {
           {/* Preview — esquerda */}
           <div className="flex w-1/2 flex-col overflow-hidden border-r border-ink-200/70 dark:border-ink-800">
             <div className="flex-1 overflow-y-auto p-3">
-              <SlidePreview mensagem={mensagem} onClick={() => navigate(`/pulpit/${mensagem.id}`)} />
+              <SlidePreview mensagem={mensagem} onClick={navegarPulpit} />
               <div className="mt-3 space-y-2">
                 <h3 className="text-[11px] font-semibold uppercase tracking-wider text-ink-400">Slides</h3>
                 <SlideEditor
@@ -769,7 +778,7 @@ export function EditorPage() {
         <div className="flex flex-1 flex-col overflow-hidden">
           {/* Preview */}
           <div className="border-b border-ink-200/70 p-4 dark:border-ink-800">
-            <SlidePreview mensagem={mensagem} onClick={() => navigate(`/pulpit/${mensagem.id}`)} />
+            <SlidePreview mensagem={mensagem} onClick={navegarPulpit} />
           </div>
           {/* Editor de slides */}
           <div className="flex-1 overflow-y-auto p-4">
