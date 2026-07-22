@@ -127,11 +127,14 @@
   /* Scroll containers — funciona com mouse E touch */
   .scroll-container {
     overflow-y: auto;
+    overflow-x: hidden;
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
-    /* Garante que o scroll funcione em flex containers */
-    flex-shrink: 0;
+    /* Permite encolher e preenche o espaço disponível */
+    flex-shrink: 1;
+    flex-grow: 1;
     min-height: 0;
+    height: 100%;
   }
 }
 

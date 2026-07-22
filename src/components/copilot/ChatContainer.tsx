@@ -705,7 +705,7 @@ export function ChatContainer({ onTogglePanel, onEsboçoPending }: ChatContainer
       {/* Mensagens */}
       <div
         ref={messagesContainerRef}
-        className="flex-1 overflow-y-auto px-4 py-4"
+        className="flex-1 overflow-y-auto h-full px-4 py-4"
         onScroll={handleMessagesScroll}
       >
         {mensagens.length === 0 && !loading && (

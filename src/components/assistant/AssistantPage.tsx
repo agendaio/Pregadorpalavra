@@ -556,9 +556,7 @@ export function AssistantPage() {
         </div>
 
         {/* Direita: quando há especialista ativo, abre o menu (histórico/esboço).
-            Sem especialista, "Nova conversa" já existe dentro do painel de
-            Histórico — botão duplicado aqui só ocupava espaço; um espaçador
-            invisível mantém o título centralizado. */}
+            Sem especialista, mostra tema e perfil no header. */}
         {especialistaAtivo ? (
           <button
             onClick={() => openPainel()}
@@ -568,7 +566,34 @@ export function AssistantPage() {
             <Menu className="h-5 w-5" />
           </button>
         ) : (
-          <div className="h-10 w-10 flex-shrink-0" aria-hidden="true" />
+          <div className="flex items-center gap-1">
+            {/* Toggle Tema */}
+            <button
+              onClick={alternarTema}
+              aria-label={tema === 'dark' ? 'Modo claro' : 'Modo escuro'}
+              className="flex h-9 w-9 items-center justify-center rounded-full text-ink-500 transition-all hover:bg-ink-100 active:scale-95 dark:text-ink-300 dark:hover:bg-ink-800/60"
+            >
+              {tema === 'dark' ? (
+                <Sun className="h-4 w-4 text-amber-400" />
+              ) : (
+                <Moon className="h-4 w-4 text-violet-500" />
+              )}
+            </button>
+            {/* Perfil */}
+            <button
+              onClick={() => navigate('/config')}
+              aria-label="Perfil e configurações"
+              className="flex h-9 w-9 items-center justify-center rounded-full text-ink-500 transition-all hover:bg-ink-100 active:scale-95 dark:text-ink-300 dark:hover:bg-ink-800/60"
+            >
+              {user ? (
+                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-violet-600 text-white shadow-sm">
+                  <User className="h-3.5 w-3.5" />
+                </div>
+              ) : (
+                <User className="h-4 w-4" />
+              )}
+            </button>
+          </div>
         )}
       </header>
 
@@ -679,63 +704,11 @@ export function AssistantPage() {
 
       {/* ── Conteúdo principal ── */}
       <div className="flex flex-1 flex-col overflow-hidden">
-        {/* Área rolável (empty state ou mensagens) — pill flutua só aqui, acima do input */}
+        {/* Área rolável (empty state ou mensagens) */}
         <div className="relative flex flex-1 flex-col overflow-visible">
-          {/* Card flutuante profissional: Histórico | Ações rápidas */}
-          <motion.div
-            initial={false}
-            animate={pillVisivel ? { opacity: 1, y: 0, x: '-50%', pointerEvents: 'auto' } : { opacity: 0, y: 18, x: '-50%', pointerEvents: 'none' }}
-            transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-            className="absolute bottom-3 left-1/2 z-20 -translate-x-1/2"
-          >
-            {/* Pill principal com fundo blur premium */}
-            <div className="flex items-center gap-1 rounded-2xl border border-ink-200/70 bg-white/90 px-1 py-1 shadow-xl shadow-ink-900/10 backdrop-blur-xl dark:border-ink-800/60 dark:bg-ink-900/85">
-              {/* Histórico */}
-              <button
-                onClick={() => openPainel()}
-                aria-label="Abrir histórico"
-                className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-[13px] font-semibold text-ink-700 transition-all hover:bg-ink-100 active:scale-95 dark:text-ink-200 dark:hover:bg-ink-800/60"
-              >
-                <History className="h-4 w-4 text-violet-500 dark:text-violet-400" />
-                Histórico
-              </button>
-
-              {/* Divisor */}
-              <div className="h-5 w-px bg-ink-200/60 dark:bg-ink-700/60" aria-hidden="true" />
-
-              {/* Toggle Tema */}
-              <button
-                onClick={alternarTema}
-                aria-label={tema === 'dark' ? 'Modo claro' : 'Modo escuro'}
-                className="flex h-9 w-9 items-center justify-center rounded-xl text-ink-500 transition-all hover:bg-ink-100 active:scale-95 dark:text-ink-300 dark:hover:bg-ink-800/60"
-              >
-                {tema === 'dark' ? (
-                  <Sun className="h-4 w-4 text-amber-400" />
-                ) : (
-                  <Moon className="h-4 w-4 text-violet-500" />
-                )}
-              </button>
-
-              {/* Perfil */}
-              <button
-                onClick={() => navigate('/config')}
-                aria-label="Perfil e configurações"
-                className="flex h-9 w-9 items-center justify-center rounded-xl text-ink-500 transition-all hover:bg-ink-100 active:scale-95 dark:text-ink-300 dark:hover:bg-ink-800/60"
-              >
-                {user ? (
-                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-violet-600 text-white shadow-sm">
-                    <User className="h-3.5 w-3.5" />
-                  </div>
-                ) : (
-                  <User className="h-4 w-4" />
-                )}
-              </button>
-            </div>
-          </motion.div>
-
         {/* ── Empty state: cards de especialistas ── */}
         {mostrarEmptyState ? (
-          <div className="flex-1 scroll-container" onScroll={handleScroll}>
+          <div className="flex-1 scroll-container h-full" onScroll={handleScroll}>
             <div className="mx-auto flex min-h-full max-w-3xl flex-col justify-start px-3 pb-24 pt-5">
               <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-blue-600 to-violet-600 shadow-lg shadow-violet-500/25 dark:shadow-violet-500/10">
                 <Sparkles className="h-6 w-6 text-white" />
@@ -801,7 +774,7 @@ export function AssistantPage() {
           /* ── Mensagens ── */
           <div
             ref={messagesContainerRef}
-            className="flex-1 scroll-container"
+            className="flex-1 scroll-container h-full"
             onScroll={handleScroll}
           >
             <div className="mx-auto max-w-3xl px-4 pb-24 pt-6">
