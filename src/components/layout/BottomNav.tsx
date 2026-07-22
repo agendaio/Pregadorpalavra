@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from 'react-router-dom';
-import { Library, Sparkles, MoreHorizontal } from 'lucide-react';
+import { Library, Sparkles, MoreHorizontal, History, ClipboardList, BookOpen, BarChart3 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const TABS: ReadonlyArray<{
@@ -10,7 +10,10 @@ const TABS: ReadonlyArray<{
 }> = [
   // Assistente é a tela principal (raiz). Início saiu do menu.
   { to: '/',           label: 'Assistente',  icon: Sparkles,       end: true },
-  { to: '/biblioteca', label: 'Esboço',  icon: Library },
+  { to: '/biblioteca', label: 'Biblioteca',  icon: Library },
+  { to: '/esbocos',    label: 'Esboços',     icon: ClipboardList },
+  { to: '/estudo',     label: 'Estudo',      icon: BookOpen },
+  { to: '/analista',   label: 'Análise',     icon: BarChart3 },
   { to: '/mais',       label: 'Mais',        icon: MoreHorizontal },
 ];
 

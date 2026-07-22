@@ -11,6 +11,9 @@ import {
   Settings as SettingsIcon,
   Plus,
   MoreHorizontal,
+  ClipboardList,
+  BookOpen,
+  BarChart3,
 } from 'lucide-react';
 import { useUIStore } from '@/stores/ui';
 import { useMensagensStore } from '@/stores/mensagens';
@@ -24,7 +27,10 @@ import { LogIn, LogOut, User, Shield } from 'lucide-react';
 const NAV = [
   // Assistente é a tela principal (raiz). Início saiu do menu.
   { to: '/', label: 'Assistente', icon: Sparkles, end: true },
-  { to: '/biblioteca', label: 'Esboço', icon: Library },
+  { to: '/biblioteca', label: 'Biblioteca', icon: Library },
+  { to: '/esbocos', label: 'Esboços', icon: ClipboardList },
+  { to: '/estudo', label: 'Estudo', icon: BookOpen },
+  { to: '/analista', label: 'Analista', icon: BarChart3 },
   { to: '/mais', label: 'Mais', icon: MoreHorizontal },
 ];
 
