@@ -18,7 +18,6 @@ import { ProfilePage } from '@/components/profile/ProfilePage';
 import { Toast } from '@/components/ui/Toast';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { AlertCircle, RefreshCw } from 'lucide-react';
-import { PWAUpdatePrompt } from '@/components/pwa/PWAUpdatePrompt';
 import { InstallPrompt } from '@/components/pwa/InstallPrompt';
 import { semearExemplos } from '@/db/seed';
 import { initTema } from '@/stores/ui';
@@ -183,7 +182,6 @@ export function App() {
           <AnimatedRoutes />
         </ErrorBoundary>
         <Toast />
-        <PWAUpdatePrompt />
         <InstallPrompt />
       </div>
     </BrowserRouter>
