@@ -522,13 +522,7 @@ export function AssistantPage() {
             <span className="text-[13px] font-semibold">Voltar</span>
           </button>
         ) : (
-          <button
-            onClick={() => openPainel()}
-            aria-label="Conversas"
-            className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-ink-700 transition-colors hover:bg-ink-100 dark:text-ink-200 dark:hover:bg-ink-800/60"
-          >
-            <Menu className="h-5 w-5" />
-          </button>
+          <div className="h-10 w-10 flex-shrink-0" aria-hidden="true" />
         )}
 
           <div className="min-w-0 flex-1 text-center">
@@ -551,46 +545,46 @@ export function AssistantPage() {
           )}
         </div>
 
-        {/* Direita: quando há especialista ativo, abre o menu (histórico/esboço).
-            Sem especialista, mostra tema e perfil no header. */}
-        {especialistaAtivo ? (
+        {/* Direita: mostra histórico, tema e perfil no header */}
+        <div className="flex items-center gap-1">
+          {/* Histórico */}
           <button
             onClick={() => openPainel()}
-            aria-label="Menu de histórico e esboço"
-            className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-ink-700 transition-colors hover:bg-ink-100 dark:text-ink-200 dark:hover:bg-ink-800/60"
+            aria-label="Abrir histórico"
+            className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-[13px] font-medium text-ink-600 transition-all hover:bg-ink-100 active:scale-95 dark:text-ink-300 dark:hover:bg-ink-800/60 md:px-4"
           >
-            <Menu className="h-5 w-5" />
+            <History className="h-4 w-4 text-violet-500 dark:text-violet-400" />
+            <span className="hidden sm:inline">Histórico</span>
           </button>
-        ) : (
-          <div className="flex items-center gap-1">
-            {/* Toggle Tema */}
-            <button
-              onClick={alternarTema}
-              aria-label={tema === 'dark' ? 'Modo claro' : 'Modo escuro'}
-              className="flex h-9 w-9 items-center justify-center rounded-full text-ink-500 transition-all hover:bg-ink-100 active:scale-95 dark:text-ink-300 dark:hover:bg-ink-800/60"
-            >
-              {tema === 'dark' ? (
-                <Sun className="h-4 w-4 text-amber-400" />
-              ) : (
-                <Moon className="h-4 w-4 text-violet-500" />
-              )}
-            </button>
-            {/* Perfil */}
-            <button
-              onClick={() => navigate('/config')}
-              aria-label="Perfil e configurações"
-              className="flex h-9 w-9 items-center justify-center rounded-full text-ink-500 transition-all hover:bg-ink-100 active:scale-95 dark:text-ink-300 dark:hover:bg-ink-800/60"
-            >
-              {user ? (
-                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-violet-600 text-white shadow-sm">
-                  <User className="h-3.5 w-3.5" />
-                </div>
-              ) : (
-                <User className="h-4 w-4" />
-              )}
-            </button>
-          </div>
-        )}
+
+          {/* Toggle Tema */}
+          <button
+            onClick={alternarTema}
+            aria-label={tema === 'dark' ? 'Modo claro' : 'Modo escuro'}
+            className="flex h-9 w-9 items-center justify-center rounded-full text-ink-500 transition-all hover:bg-ink-100 active:scale-95 dark:text-ink-300 dark:hover:bg-ink-800/60"
+          >
+            {tema === 'dark' ? (
+              <Sun className="h-4 w-4 text-amber-400" />
+            ) : (
+              <Moon className="h-4 w-4 text-violet-500" />
+            )}
+          </button>
+
+          {/* Perfil */}
+          <button
+            onClick={() => navigate('/config')}
+            aria-label="Perfil e configurações"
+            className="flex h-9 w-9 items-center justify-center rounded-full text-ink-500 transition-all hover:bg-ink-100 active:scale-95 dark:text-ink-300 dark:hover:bg-ink-800/60"
+          >
+            {user ? (
+              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-violet-600 text-white shadow-sm">
+                <User className="h-3.5 w-3.5" />
+              </div>
+            ) : (
+              <User className="h-4 w-4" />
+            )}
+          </button>
+        </div>
       </header>
 
       {/* ── Sidebar de sessões ── */}
